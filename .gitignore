@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.beast/
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+.DS_Store
+
+src/generated/
+.runtime-build/
+playwright-report/
+test-results/

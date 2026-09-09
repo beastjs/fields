@@ -1,0 +1,3 @@
+setup const value = ;
+
+h1 #{value}

@@ -1,0 +1,49 @@
+{
+  "name": "play",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prepare:runtime": "node scripts/prepare-runtime.mjs",
+    "dev": "bun run prepare:runtime && rsbuild dev",
+    "build": "bun run prepare:runtime && rsbuild build",
+    "preview": "rsbuild preview",
+    "typecheck": "bun run prepare:runtime && tsrx-tsc --noEmit && tsc -p tsconfig.tests.json",
+    "test": "bun run prepare:runtime && bun test tests",
+    "test:browser": "playwright test",
+    "check": "bun run typecheck && bun run test && bun run build"
+  },
+  "dependencies": {
+    "@codemirror/commands": "6.11.0",
+    "@codemirror/lang-css": "6.3.1",
+    "@codemirror/lang-javascript": "6.2.5",
+    "@codemirror/language": "6.12.4",
+    "@codemirror/lint": "6.9.7",
+    "@codemirror/state": "6.7.4",
+    "@codemirror/view": "6.43.11",
+    "@jridgewell/remapping": "2.3.5",
+    "@jridgewell/trace-mapping": "0.3.31",
+    "@lezer/highlight": "1.2.3",
+    "@octanejs/base-ui": "0.1.51",
+    "beast-tsrx": "0.2.60",
+    "clsx": "^2.1.1",
+    "codemirror": "6.0.2",
+    "es-module-lexer": "3.0.2",
+    "magic-string": "1.2.3",
+    "octane": "0.2.6",
+    "path-browserify": "1.0.1",
+    "tailwind-merge": "^3.6.0"
+  },
+  "devDependencies": {
+    "@octanejs/rsbuild-plugin": "0.1.48",
+    "@playwright/test": "1.63.0",
+    "@rsbuild/core": "^2.2.2",
+    "@rsbuild/plugin-tailwindcss": "^2.0.3",
+    "@tsrx/typescript-plugin": "0.3.135",
+    "@types/bun": "1.4.2",
+    "@types/node": "^26.2.0",
+    "esbuild": "0.28.2",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.9.3"
+  }
+}

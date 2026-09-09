@@ -1,0 +1,5 @@
+import Button from './Button.btsx'
+
+main
+  h1 Multiple components
+  Button
