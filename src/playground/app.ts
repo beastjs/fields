@@ -4,6 +4,8 @@ import { ProjectEditor } from './editor';
 import { helloWorld } from './examples';
 import { Preview } from './preview';
 import { normalizePath, VirtualFileSystem } from './virtual-fs';
+import { canNavigateRuntimeLocation, type RuntimeStackFrame } from './runtime-diagnostics';
+import { readEditorKeymap, writeEditorKeymap } from './editor-preferences';
 
 export function mountPlayground(): () => void {
   const element = <T extends HTMLElement>(id: string) => {
@@ -21,7 +23,8 @@ export function mountPlayground(): () => void {
   let hasPreview = false;
   let previewFailed = false;
   let compileFailed = false;
-  const consoleEntries: { level: string; message: string; timestamp: number }[] = [];
+  let editorKeymap = readEditorKeymap();
+  const consoleEntries: { level: string; message: string; timestamp: number; frames?: RuntimeStackFrame[] }[] = [];
   const project = () => ({ files: fs.snapshot(), entry: helloWorld.entry });
   const status = (text: string, error = false) => {
     element('build-status').textContent = text;
@@ -42,8 +45,8 @@ export function mountPlayground(): () => void {
       ? lastResult?.intermediate[activeFile] ?? 'No Beast transform for this file. Select a .btsx component.'
       : lastResult?.modules.find(module => module.source === activeFile)?.code ?? 'No generated JavaScript for this file.';
   };
-  const appendConsole = (level: string, message: string, timestamp = Date.now()) => {
-    consoleEntries.push({ level, message, timestamp });
+  const appendConsole = (level: string, message: string, timestamp = Date.now(), frames?: RuntimeStackFrame[]) => {
+    consoleEntries.push({ level, message, timestamp, frames });
     if (consoleEntries.length > 200) consoleEntries.shift();
     renderConsole();
   };
@@ -56,12 +59,48 @@ export function mountPlayground(): () => void {
       const row = document.createElement('div');
       row.className = 'console-row';
       row.dataset.level = entry.level;
-      for (const [className, text] of [['console-time', new Date(entry.timestamp).toLocaleTimeString('en-GB')], ['console-level', entry.level], ['console-message', entry.message]]) {
+      for (const [className, text] of [['console-time', new Date(entry.timestamp).toLocaleTimeString('en-GB')], ['console-level', entry.level]]) {
         const span = document.createElement('span');
         span.className = className;
         span.textContent = text;
         row.append(span);
       }
+      const body = document.createElement('div');
+      body.className = 'console-body';
+      const message = document.createElement('div');
+      message.className = 'console-message';
+      message.textContent = entry.message;
+      body.append(message);
+      if (entry.frames?.length) {
+        const frames = document.createElement('div');
+        frames.className = 'runtime-stack';
+        for (const frame of entry.frames) {
+          const location = frame.location;
+          if (location) {
+            const link = document.createElement('button');
+            link.type = 'button';
+            link.className = 'runtime-source-link';
+            const label = `${location.file.replace(/^\/src\//, '')}:${location.position.line}:${location.position.column}`;
+            link.disabled = !canNavigateRuntimeLocation(location, fs.read(location.file));
+            link.textContent = `${label}${link.disabled ? ' (source changed)' : ''}`;
+            link.title = link.disabled ? 'This stack frame belongs to an older version of the file.' : `Open ${label}`;
+            link.onclick = () => {
+              // Recheck on activation: the file may have changed since the row rendered.
+              if (!canNavigateRuntimeLocation(location, fs.read(location.file))) { renderConsole(); return; }
+              openFile(location.file);
+              editor.focus(location.position);
+            };
+            frames.append(link);
+          } else {
+            const raw = document.createElement('div');
+            raw.className = 'runtime-frame-unmapped';
+            raw.textContent = frame.raw;
+            frames.append(raw);
+          }
+        }
+        body.append(frames);
+      }
+      row.append(body);
       list.append(row);
     }
   };
@@ -78,7 +117,14 @@ export function mountPlayground(): () => void {
       element('preview-error').textContent = event.message!;
       element('preview-status').textContent = 'Runtime error';
       status('Runtime error', true);
-      appendConsole('error', event.stack ?? event.message!);
+      appendConsole('error', event.message!, Date.now(), event.frames);
+      const location = event.frames?.find(frame => frame.location && canNavigateRuntimeLocation(frame.location, fs.read(frame.location.file)))?.location;
+      if (location) {
+        diagnostics = [...diagnostics.filter(d => d.source !== 'runtime'), {
+          file: location.file, source: 'runtime', severity: 'error', message: event.message!, start: location.position,
+        }];
+        renderDiagnostics();
+      }
       showPanel('console');
     }
     if (event.type === 'console') appendConsole(event.level!, event.args!.join(' '), event.timestamp);
@@ -162,8 +208,17 @@ export function mountPlayground(): () => void {
     diagnostics = [];
     // Clear obsolete markers after the current CodeMirror update finishes.
     queueMicrotask(() => { if (!abort.signal.aborted) renderDiagnostics(); });
+    renderConsole();
     coordinator.schedule(project());
-  }, run);
+  }, run, editorKeymap);
+  const renderKeymap = () => {
+    const button = element<HTMLButtonElement>('vim-toggle');
+    button.setAttribute('aria-pressed', String(editorKeymap === 'vim'));
+    button.title = editorKeymap === 'vim' ? 'Disable Vim keybindings' : 'Enable Vim keybindings';
+    element('editor').dataset.keymap = editorKeymap;
+    document.querySelector<HTMLElement>('.editor-hint')!.textContent = editorKeymap === 'vim'
+      ? 'i to insert · Esc for normal · :w to run' : '⌘ ↵ to run · edits compile automatically';
+  };
   const icon = (path: string) => path.endsWith('.btsx') ? 'B' : path.endsWith('.css') ? '#' : 'TS';
   const renderFiles = () => {
     const files = element('file-list');
@@ -198,6 +253,7 @@ export function mountPlayground(): () => void {
           if (activeFile === path) openFile(fs.list()[0]);
           editor.forget(path);
           renderFiles();
+          renderConsole();
           coordinator.schedule(project());
         };
         row.append(remove);
@@ -225,6 +281,13 @@ export function mountPlayground(): () => void {
     output();
   };
   listen(element('run-build'), 'click', run);
+  listen(element('vim-toggle'), 'click', () => {
+    editorKeymap = editorKeymap === 'vim' ? 'default' : 'vim';
+    editor.setKeymap(editorKeymap);
+    writeEditorKeymap(editorKeymap);
+    renderKeymap();
+    editor.focus();
+  });
   listen(element('reload-preview'), 'click', () => {
     previewFailed = false;
     element('preview-error').hidden = true;
@@ -280,6 +343,7 @@ export function mountPlayground(): () => void {
     strip.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus();
   });
   openFile(activeFile);
+  renderKeymap();
   renderDiagnostics();
   renderConsole();
   showPanel('problems');

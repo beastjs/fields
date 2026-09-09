@@ -15,6 +15,16 @@ Open the URL printed by Rsbuild. Edit `App.btsx` or `Counter.btsx`; compilation
 starts automatically after 220 ms. Use **Run project**, **⌘/Ctrl + Enter**, or
 **⌘/Ctrl + S** to compile immediately.
 
+Enable **VIM** in the editor footer for modal editing. Use `i` to insert, `Esc`
+for normal mode, `v` for visual selection, `u` to undo, and `:w` to run the
+project. The mode indicator appears below the editor. The toggle preserves
+file contents and undo history and remembers your preference on this browser.
+
+Runtime errors appear in the console with clickable source locations. Click a
+frame such as `Counter.btsx:3:5` to open the authored file and highlight the line.
+Frames from changed or deleted files are marked **source changed** and cannot
+navigate into a different version of the code.
+
 The actual Beast syntax is indentation-based BTSX, not the illustrative `.beast`
 syntax in the master plan:
 
@@ -26,6 +36,7 @@ h1 Hello World
 
 - CodeMirror editor with file tabs, independent undo history, highlighting,
   search, line numbers, and compiler markers.
+- Optional Vim keybindings, a mode indicator, and a remembered editor preference.
 - Virtual files, relative imports, extension/index resolution, reexports,
   module cycles, and literal dynamic imports.
 - Actual `beast-tsrx@0.2.60` and `octane@0.2.6` compiler stages, off the UI thread.
@@ -39,6 +50,8 @@ h1 Hello World
   preview remains visible during compile errors.
 - Inspectable generated TSRX/JavaScript and stage timings.
 - Composed Beast → Octane → JavaScript source maps for authored modules.
+- Runtime stack mapping and navigation to authored BTSX/TSRX/TypeScript/JavaScript,
+  with raw fallbacks for runtime or unmappable frames.
 
 Supported virtual files: `.btsx`, `.tsrx`, `.ts`, `.js`, `.json`, and `.css`.
 Supported runtime imports are declared in `scripts/prepare-runtime.mjs`.
@@ -64,10 +77,11 @@ version until its browser export contract is available upstream.
 Files live in memory and reset when the host page reloads. Successful builds
 start a fresh iframe document and reset application state. Persistence, sharing,
 state-preserving HMR, arbitrary npm dependencies, full TypeScript semantic
-checking, formatting, and runtime stack-to-editor navigation remain future work.
-Source maps are available to browser tooling; the console currently shows raw
-runtime stacks. Import attributes/phases and computed dynamic imports are not
-supported. Preview code has no network access under the initial CSP.
+checking, and formatting remain future work.
+Source maps are available to browser tooling and console navigation. Frames with
+missing maps or unsupported stack formats remain raw. Import attributes/phases
+and computed dynamic imports are not supported. Preview code has no network
+access under the initial CSP.
 
 The sandbox blocks parent DOM/storage access; it is not a resource quota for
 infinite loops or excessive memory allocation. Browser smoke tests currently

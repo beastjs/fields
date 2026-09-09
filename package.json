@@ -25,6 +25,7 @@
     "@jridgewell/trace-mapping": "0.3.31",
     "@lezer/highlight": "1.2.3",
     "@octanejs/base-ui": "0.1.51",
+    "@replit/codemirror-vim": "6.4.0",
     "beast-tsrx": "0.2.60",
     "clsx": "^2.1.1",
     "codemirror": "6.0.2",

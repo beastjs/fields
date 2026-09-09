@@ -42,7 +42,7 @@ checks, and a changelog entry, as required by the master plan.
 | 11 | Compiler diagnostics and source navigation | Complete for compiler errors; full semantic checking later |
 | 12 | Responsive presets, reload, preview states | Complete for milestone; zoom/fullscreen later |
 | 13 | Bounded console capture and runtime failures | Complete for milestone |
-| 14 | Compose multi-stage maps; map runtime stacks to editor | Maps complete; runtime stack navigation next |
+| 14 | Compose multi-stage maps; map runtime stacks to editor | Complete for authored modules; raw fallback for unmappable frames |
 | 15 | Record stage timings and measure transfer overhead | Baseline complete; incremental compilation later |
 | 16 | Integrate real Octane HMR, preserve component state | Pending; depends on stable reload baseline |
 | 17 | Versioned local persistence and restore validation | Pending |
@@ -52,13 +52,10 @@ checks, and a changelog entry, as required by the master plan.
 
 ## Recommended next tickets
 
-1. Runtime diagnostic navigation: translate Blob stack URLs through the module
-   manifest and composed maps, then open the authored file/line. Test thrown
-   errors inside nested components and unmappable third-party/runtime frames.
-2. Versioned local persistence: add a separate serializer/store for files,
+1. Versioned local persistence: add a separate serializer/store for files,
    active tab, and preview settings. Test corrupt records, schema migration,
    reload restoration, and explicit reset.
-3. Investigate production Octane HMR contracts without modifying the compiler.
+2. Investigate production Octane HMR contracts without modifying the compiler.
    Prove style-only and component updates, state retention, error recovery, and
    disposal before replacing the fresh-document baseline.
 
@@ -73,3 +70,27 @@ These are follow-on tickets, not claims that the full master plan is complete.
   serialized transfer from 2,973,678 bytes to approximately 442,794 bytes (85%).
   Authored source maps remain intact. These are local sample measurements, not
   a latency guarantee; timings vary by hardware and compiler warm-up.
+
+## Milestone 2 — Runtime source navigation and Vim
+
+Implemented on 2026-09-09. Phase 14 now connects runtime Blob stack frames to
+the existing composed source maps and opens the authored BTSX/TypeScript line.
+Nested component event failures and rejected promises are covered. The first
+mapped frame appears as a runtime diagnostic; console entries keep their
+individual stack links. Missing/malformed maps and runtime frames stay raw.
+Changed/deleted source disables old links rather than navigating to a wrong line.
+Per-build manifests are validated against the host's compiled module records.
+
+Added a VIM toggle in the editor footer using `@replit/codemirror-vim@6.4.0`.
+Normal/insert/visual modes, motions, undo/redo, search, and `:w` are provided by
+the extension. Mode switching preserves per-file documents and undo history;
+the keymap preference survives reload. Project persistence remains separate.
+
+Verification: 23 unit/fixture tests (137 assertions), eight Chromium browser
+tests, TSRX/TypeScript checks, and production build passed. New browser coverage
+proves mapped nested errors, authored line navigation, stale links, async errors,
+Vim edits, undo/redo, file switching, `:w`, and preference restoration.
+
+The production gzip total increased from approximately 734 KB to 776 KB, mainly
+for the Vim extension and runtime map reader in the host. Compiler/preview module
+payloads are unchanged; runtime tracing is performed only when an error arrives.

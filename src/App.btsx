@@ -61,6 +61,7 @@ main.playground
       div.editor-footer
         span#editor-file-info BTSX
         span UTF-8
+        button#vim-toggle.editor-vim-toggle(type='button' aria-label='Vim mode' aria-pressed='false' title='Enable Vim keybindings') VIM
         span.editor-hint ⌘ ↵ to run · edits compile automatically
     section.preview-pane(aria-label='Application preview')
       div.preview-toolbar

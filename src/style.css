@@ -64,6 +64,9 @@ button { color: inherit; }
 .editor-mount { min-height: 0; flex: 1; overflow: hidden; }
 .editor-footer { display: flex; gap: 16px; height: 26px; min-height: 26px; align-items: center; padding: 0 17px; font-size: 9px; color: #586750; border-top: 1px solid #242c24; }
 .editor-hint { margin-left: auto; color: #65705f; }
+.editor-vim-toggle { font: inherit; font-size: 9px; letter-spacing: .5px; padding: 2px 5px; line-height: 1.25; background: transparent; border: 1px solid #3a4631; border-radius: 3px; color: #8a9e77; }
+.editor-vim-toggle[aria-pressed='true'] { background: #b8ce98; color: #26331f; border-color: #b8ce98; }
+.cm-vim-panel { font: 10px/1.8 "SFMono-Regular", Consolas, monospace; color: #b9d199; padding: 2px 12px !important; }
 .preview-pane { min-width: 0; display: flex; flex-direction: column; background: #e6e9e0; }
 .preview-toolbar { display: flex; align-items: center; gap: 14px; padding: 0 16px; min-height: 43px; background: #19201a; border-bottom: 1px solid #2a3329; }
 .preview-label { display: flex; align-items: center; gap: 7px; font-size: 11px; }
@@ -101,6 +104,12 @@ button { color: inherit; }
 .console-time { color: #526747; }
 .console-level { color: #9aac83; width: 35px; flex-shrink: 0; }
 .console-message { color: #a2b191; white-space: pre-wrap; overflow-wrap: anywhere; }
+.console-body { min-width: 0; flex: 1; }
+.runtime-stack { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; margin-top: 6px; }
+.runtime-source-link { border: 0; padding: 2px 0; font: inherit; background: none; color: #bdd39e; text-decoration: underline; text-underline-offset: 3px; text-align: left; overflow-wrap: anywhere; }
+.runtime-source-link:hover { color: #deebca; }
+.runtime-source-link:disabled { color: #7f8b75; cursor: default; text-decoration: none; }
+.runtime-frame-unmapped { max-width: 100%; color: #6c7f5e; overflow-wrap: anywhere; white-space: pre-wrap; font-size: 9px; }
 .console-row[data-level='error'] .console-message { color: #dfac94; }
 .console-row[data-level='warn'] .console-message { color: #d9c186; }
 .output-content { display: flex; gap: 25px; }

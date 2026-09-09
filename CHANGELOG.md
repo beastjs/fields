@@ -6,6 +6,10 @@ All notable changes to `play` will be recorded here.
 
 ### Added
 
+- Runtime stack navigation through composed source maps, authored runtime
+  diagnostic markers, stale-source checks, and validated per-build Blob manifests.
+- Optional Vim editing with a status indicator, `:w` compilation, preserved
+  per-file undo history, and a remembered browser preference.
 - First functional Beast Playground milestone with CodeMirror, a virtual project,
   actual Beast/Octane compiler adapters, worker coordination, structured diagnostics,
   native ESM preview loading, console capture, responsive presets, and generated code.

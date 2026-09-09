@@ -58,7 +58,7 @@ last successful result. `dispose()` removes listeners and clears the document.
 The iframe is always `sandbox="allow-scripts"`, without same-origin privileges.
 
 Host → frame: version, random channel, build ID, `type: 'load'`, modules, entry.
-Frame → host: the same envelope with `ready`, `rendered`, `console`, or
+Frame → host: the same envelope with `ready`, `module-manifest`, `rendered`, `console`, or
 `runtime-error`. Both ends validate source window, envelope, and payload shape.
 The host checks bounded console strings and retains at most 200 entries.
 Opaque iframe origins require `postMessage` target `*`; the specific window and
@@ -70,3 +70,39 @@ CSP denies remote scripts, network fetches, navigation through forms, and base
 URL changes. Sandbox denies parent access, storage, popups and top navigation.
 Replacing the document disposes the old realm; Blob URLs are revoked on pagehide.
 Preview startup has a 10-second timeout. Runtime failures preserve compiler state.
+
+## Runtime source navigation
+
+Before executing the entry, the iframe sends `module-manifest` with `{ id, url }`
+entries for every Blob module. The host's `RuntimeSourceMapper` accepts it
+atomically only when it matches the compiled module IDs exactly, with no duplicate
+IDs or URLs. A new mapper is created per preview build. Compiler maps remain on
+the host; source locations supplied by preview code are never trusted as authored
+navigation targets.
+
+`mapStack(stack, fallbackPosition?)` returns bounded `RuntimeStackFrame[]` with
+the original raw line, known module ID, and an optional authored `RuntimeLocation`.
+It accepts V8 and Firefox/WebKit Blob stack shapes and one-based browser positions.
+The optional ErrorEvent location handles errors without stacks. Each known frame
+is traced through the final composed map; runtime modules, malformed or missing
+maps, and unknown URLs retain raw frames. Relative map sources are resolved
+against the authored module directory and must match that module's source file.
+
+`RuntimeLocation` includes the authored snapshot. Console navigation rechecks it
+against the current VFS content both when rendering and when clicked. Changed or
+deleted source disables the link. The first current authored frame also becomes
+a structured runtime diagnostic in Problems and the editor.
+
+## Editor keybindings
+
+`ProjectEditor` accepts an initial `EditorKeymap` (`default` or `vim`).
+`setKeymap(keymap)` reconfigures a CodeMirror compartment in both active and saved
+file states, retaining document contents and undo history. Vim uses the installed
+`@replit/codemirror-vim` extension, includes its mode/status panel, and binds the
+editor's `:w` command to the compilation coordinator. The usual run shortcuts
+remain available. Each newly opened file starts in Vim normal mode.
+
+The host remembers the keymap under `beast-playground.editor-keymap.v1`.
+Unknown values fall back to standard editing. Unavailable browser storage makes
+the preference session-only; it does not prevent the editor from working. This
+preference does not persist project files or imply full project persistence.

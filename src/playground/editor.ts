@@ -1,5 +1,5 @@
 import { basicSetup } from 'codemirror';
-import { EditorState } from '@codemirror/state';
+import { Compartment, EditorState, Prec } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
 import { indentWithTab } from '@codemirror/commands';
 import { StreamLanguage, syntaxHighlighting, HighlightStyle } from '@codemirror/language';
@@ -7,7 +7,9 @@ import { javascript } from '@codemirror/lang-javascript';
 import { css } from '@codemirror/lang-css';
 import { setDiagnostics, lintGutter } from '@codemirror/lint';
 import { tags } from '@lezer/highlight';
+import { getCM, vim } from '@replit/codemirror-vim';
 import type { Diagnostic, Position } from './contracts';
+import type { EditorKeymap } from './editor-preferences';
 
 // A lexical highlighting mode only. Compilation and validation belong to Beast.
 const beast = StreamLanguage.define({
@@ -53,7 +55,9 @@ export class ProjectEditor {
   private states = new Map<string, EditorState>();
   private active = '';
   private diagnostics: Diagnostic[] = [];
-  constructor(parent: HTMLElement, private onChange: (path: string, source: string) => void, run: () => void) {
+  private keymapCompartment = new Compartment();
+  private vimExtension = vim({ status: true });
+  constructor(parent: HTMLElement, private onChange: (path: string, source: string) => void, run: () => void, private keymap: EditorKeymap = 'default') {
     this.view = new EditorView({ parent });
     this.run = run;
   }
@@ -62,14 +66,32 @@ export class ProjectEditor {
     if (this.active) this.states.set(this.active, this.view.state);
     this.active = path;
     const state = this.states.get(path) ?? EditorState.create({ doc: source, extensions: [
+      this.keymapCompartment.of(this.keymap === 'vim' ? this.vimExtension : []),
       basicSetup, theme, syntaxHighlighting(highlight), lintGutter(),
       path.endsWith('.css') ? css() : path.endsWith('.btsx') ? beast : javascript({ typescript: true, jsx: path.endsWith('.tsrx') }),
-      keymap.of([indentWithTab, { key: 'Mod-Enter', run: () => { this.run(); return true; } }, { key: 'Mod-s', run: () => { this.run(); return true; } }]),
+      keymap.of([indentWithTab]),
+      Prec.highest(keymap.of([{ key: 'Mod-Enter', run: () => { this.run(); return true; } }, { key: 'Mod-s', run: () => { this.run(); return true; } }])),
       EditorView.contentAttributes.of({ 'aria-label': 'Source editor', spellcheck: 'false' }),
       EditorView.updateListener.of(update => { if (update.docChanged) this.onChange(this.active, update.state.doc.toString()); }),
     ] });
     this.view.setState(state);
+    this.bindVimWrite();
     this.setDiagnostics(this.diagnostics);
+  }
+  setKeymap(keymap: EditorKeymap) {
+    if (this.keymap === keymap) return;
+    this.keymap = keymap;
+    const effects = this.keymapCompartment.reconfigure(keymap === 'vim' ? this.vimExtension : []);
+    // Reconfigure saved states as well, preserving each file's document and undo history.
+    for (const [path, state] of this.states) {
+      if (path !== this.active) this.states.set(path, state.update({ effects }).state);
+    }
+    this.view.dispatch({ effects });
+    this.bindVimWrite();
+  }
+  private bindVimWrite() {
+    const cm = this.keymap === 'vim' ? getCM(this.view) : null;
+    if (cm) cm.save = this.run;
   }
   setDiagnostics(diagnostics: Diagnostic[]) {
     this.diagnostics = diagnostics;
@@ -85,8 +107,8 @@ export class ProjectEditor {
   }
   focus(position?: Position) {
     if (position) {
-      const line = this.view.state.doc.line(Math.min(position.line, this.view.state.doc.lines));
-      const anchor = Math.min(line.to, line.from + position.column - 1);
+      const line = this.view.state.doc.line(Math.max(1, Math.min(position.line, this.view.state.doc.lines)));
+      const anchor = Math.min(line.to, line.from + Math.max(0, position.column - 1));
       this.view.dispatch({ selection: { anchor }, effects: EditorView.scrollIntoView(anchor, { y: 'center' }) });
     }
     this.view.focus();

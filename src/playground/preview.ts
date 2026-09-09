@@ -1,23 +1,33 @@
 import type { CompilationResult } from './contracts';
+import { RuntimeSourceMapper, type PreviewModuleURL, type RuntimePosition, type RuntimeStackFrame } from './runtime-diagnostics';
 
 export interface PreviewEvent {
   version: 1;
   channel: string;
   build: number;
-  type: 'ready' | 'rendered' | 'console' | 'runtime-error';
+  type: 'ready' | 'rendered' | 'module-manifest' | 'console' | 'runtime-error';
   level?: string;
   args?: string[];
   message?: string;
   stack?: string;
   timestamp?: number;
+  modules?: PreviewModuleURL[];
+  position?: RuntimePosition;
 }
+/** Host-derived frames are never trusted from the wire. */
+export interface ResolvedPreviewEvent extends PreviewEvent { frames?: RuntimeStackFrame[] }
 export function isPreviewEvent(value: unknown, channel: string, build: number): value is PreviewEvent {
   if (!value || typeof value !== 'object') return false;
   const event = value as PreviewEvent;
   if (event.version !== 1 || event.channel !== channel || event.build !== build) return false;
   if (event.type === 'ready' || event.type === 'rendered') return true;
+  if (event.type === 'module-manifest') return Array.isArray(event.modules) && event.modules.length <= 1000 &&
+    event.modules.every(module => module && typeof module.id === 'string' && module.id.length <= 2048 &&
+      typeof module.url === 'string' && module.url.startsWith('blob:') && module.url.length <= 2048);
   if (event.type === 'runtime-error') return typeof event.message === 'string' && event.message.length < 20000 &&
-    (event.stack === undefined || (typeof event.stack === 'string' && event.stack.length < 20000));
+    (event.stack === undefined || (typeof event.stack === 'string' && event.stack.length < 20000)) &&
+    (event.position === undefined || (!!event.position && typeof event.position.url === 'string' && event.position.url.length <= 2048 &&
+      Number.isSafeInteger(event.position.line) && event.position.line > 0 && Number.isSafeInteger(event.position.column) && event.position.column > 0));
   return event.type === 'console' && ['log', 'info', 'warn', 'error', 'debug'].includes(event.level ?? '') &&
     Array.isArray(event.args) && event.args.length <= 30 && event.args.every(arg => typeof arg === 'string' && arg.length <= 4000) &&
     typeof event.timestamp === 'number' && Number.isFinite(event.timestamp);
@@ -41,12 +51,13 @@ function bootstrap(channel: string, build: number) {
       send('console', { level, args: args.slice(0, 30).map(describe), timestamp: Date.now() });
     };
   }
-  const report = (error: unknown) => {
+  const report = (error: unknown, position?: { url: string; line: number; column: number }) => {
     const message = error instanceof Error ? error.message : describe(error);
     const stack = error instanceof Error ? error.stack : undefined;
-    send('runtime-error', { message: message.slice(0, 16000), stack: stack?.slice(0, 16000) });
+    send('runtime-error', { message: message.slice(0, 16000), stack: stack?.slice(0, 16000), position });
   };
-  window.addEventListener('error', event => report(event.error ?? event.message));
+  window.addEventListener('error', event => report(event.error ?? event.message,
+    event.filename && event.lineno > 0 && event.colno > 0 ? { url: event.filename, line: event.lineno, column: event.colno } : undefined));
   window.addEventListener('unhandledrejection', event => { event.preventDefault(); report(event.reason); });
   const urls: string[] = [];
   let loaded = false;
@@ -71,6 +82,8 @@ function bootstrap(channel: string, build: number) {
         urls.push(url);
         imports[module.id] = url;
       }
+      // Sent before evaluation, so even a top-level throw has a known module URL.
+      send('module-manifest', { modules: Object.entries(imports).map(([id, url]) => ({ id, url })) });
       const map = document.createElement('script');
       map.type = 'importmap';
       map.textContent = JSON.stringify({ imports });
@@ -94,23 +107,29 @@ export class Preview {
   private channel = crypto.randomUUID();
   private build = 0;
   private result?: CompilationResult;
+  private mapper?: RuntimeSourceMapper;
   private timeout?: ReturnType<typeof setTimeout>;
-  constructor(private iframe: HTMLIFrameElement, private onEvent: (event: PreviewEvent) => void) {
+  constructor(private iframe: HTMLIFrameElement, private onEvent: (event: ResolvedPreviewEvent) => void) {
     iframe.setAttribute('sandbox', 'allow-scripts');
     window.addEventListener('message', this.receive);
   }
   private receive = (event: MessageEvent) => {
     if (event.source !== this.iframe.contentWindow || !isPreviewEvent(event.data, this.channel, this.build)) return;
+    if (event.data.type === 'module-manifest') {
+      this.mapper?.registerManifest(event.data.modules!);
+      return;
+    }
     if (event.data.type === 'ready' && this.result) {
       this.iframe.contentWindow?.postMessage({ version: 1, channel: this.channel, build: this.build, type: 'load', modules: this.result.modules, entry: this.result.entry }, '*');
     }
     if (event.data.type === 'rendered' || event.data.type === 'runtime-error') clearTimeout(this.timeout);
-    this.onEvent(event.data);
+    this.onEvent({ ...event.data, frames: event.data.type === 'runtime-error' ? this.mapper?.mapStack(event.data.stack, event.data.position) : undefined });
   };
   load(result: CompilationResult) {
     if (!result.entry) return;
     clearTimeout(this.timeout);
     this.result = result;
+    this.mapper = new RuntimeSourceMapper(result.modules);
     ++this.build;
     this.channel = crypto.randomUUID();
     this.iframe.srcdoc = previewDocument(this.channel, this.build);
