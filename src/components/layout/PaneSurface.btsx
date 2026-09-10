@@ -1,0 +1,9 @@
+import { useSyncExternalStore } from 'octane'
+import type { OctaneNode } from 'octane'
+import type { PaneId, WorkspaceLayout } from '../../playground/workspace-layout'
+
+props { layout, pane, label, className, children }: { layout: WorkspaceLayout; pane: PaneId; label: string; className: string; children?: OctaneNode }
+setup const visible = useSyncExternalStore(layout.subscribe, layout.getSnapshot);
+
+section(id={'pane-' + pane} className={'pane-surface ' + className} aria-label={label} inert={!visible[pane]} aria-hidden={!visible[pane]} data-collapsed={!visible[pane]})
+  | #{children}

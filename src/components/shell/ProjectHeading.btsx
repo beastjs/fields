@@ -1,0 +1,11 @@
+div.workspace-heading
+  div.project-title
+    span.project-symbol ◈
+    span Hello world
+    span.project-kind BTSX PROJECT
+  div.pipeline-label
+    span Beast
+    span.arrow →
+    span Octane
+    span.arrow →
+    span Web

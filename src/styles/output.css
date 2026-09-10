@@ -1,0 +1,45 @@
+.bottom-panel { display: flex; flex-direction: column; background: #2b2b2b; container-type: size; container-name: output-pane; }
+.tools-toolbar { height: 39px; min-height: 39px; display: flex; align-items: center; border-bottom: 1px solid #444444; padding: 0 16px; gap: 12px; }
+.tools-tabs { align-self: stretch; display: flex; gap: 22px; }
+.tool-tab { display: flex; align-items: center; gap: 7px; border: 0; border-bottom: 2px solid transparent; background: transparent; padding: 0 1px; font-size: 10px; color: #919191; }
+.tool-tab.active { border-bottom-color: var(--accent); color: #e0e0e0; }
+.count { background: #3d3d3d; font: 8px var(--mono); border-radius: 3px; padding: 1px 5px; color: #bababa; min-width: 14px; }
+.build-summary { margin-left: auto; font: 8px var(--mono); color: #8d8d8d; }
+.clear-button { border: none; background: none; font-size: 9px; color: #b2b2b2; }
+.tools-content { overflow: auto; padding: 12px 16px; flex: 1; font: 10px var(--mono); }
+.empty-problems { color: #a6a6a6; font-family: Inter, sans-serif; font-size: 10px; margin-bottom: 10px; }
+.build-overview { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px; }
+.measurement-card { min-width: 0; padding: 11px 15px; background: #333333; border: 1px solid #484848; border-radius: 4px; box-shadow: inset 0 1px #5b5b5122; }
+.measurement-label { color: #c6c6c6; font: 10px Inter, sans-serif; }
+.measurement-value { margin: 9px 0 7px; font: 28px/1 var(--mono); color: #d7d7d7; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
+.measurement-value small { margin-left: 6px; font-size: 10px; color: #868686; letter-spacing: 0; }
+.measurement-caption { color: #818181; font-size: 7px; letter-spacing: .7px; }
+.measurement-track { height: 2px; background: #222222; margin-top: 10px; }
+.measurement-track span { display: block; height: 100%; background: var(--accent); max-width: 100%; }
+.diagnostic-row { border: 0; background: none; width: 100%; text-align: left; display: flex; gap: 12px; padding: 7px 0; font-size: 11px; color: #d8b58b; }
+.diagnostic-location { color: #a8a8a8; flex-shrink: 0; }
+.console-row { display: flex; gap: 12px; padding: 6px 0; border-bottom: 1px solid #3a3a3a; }
+.console-time { color: #767676; }
+.console-level { color: #b5b5b5; width: 35px; flex-shrink: 0; }
+.console-message { color: #c1c1c1; white-space: pre-wrap; overflow-wrap: anywhere; }
+.console-body { min-width: 0; flex: 1; }
+.runtime-stack { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; margin-top: 6px; }
+.runtime-source-link { border: 0; padding: 2px 0; font: inherit; background: none; color: #f2a06c; text-decoration: underline; text-underline-offset: 3px; text-align: left; overflow-wrap: anywhere; }
+.runtime-source-link:disabled { color: #888888; cursor: default; text-decoration: none; }
+.runtime-frame-unmapped { max-width: 100%; color: #8f8f8f; overflow-wrap: anywhere; white-space: pre-wrap; font-size: 9px; }
+.console-row[data-level='error'] .console-message { color: #e9b98f; }
+.console-row[data-level='warn'] .console-message { color: #e2c278; }
+.output-content { display: flex; gap: 25px; }
+.output-stage-buttons { display: flex; flex-direction: column; gap: 4px; align-items: start; flex-shrink: 0; }
+.output-stage { border: 1px solid transparent; border-radius: 3px; background: transparent; color: #979797; padding: 5px 8px; font-size: 9px; }
+.output-stage.active { border-color: #575757; color: #e3ae7e; background: #343434; }
+#generated-code { margin: 0; color: #c3c3c3; font: 10px/1.7 var(--mono); white-space: pre; }
+@container output-pane (max-height: 180px) {
+  .tools-content { padding: 8px 12px; }
+  .empty-problems { margin-bottom: 7px; font-size: 9px; }
+  .measurement-card { padding: 7px 12px; }
+  .measurement-value { font-size: 22px; margin: 6px 0 4px; }
+  .measurement-label { font-size: 9px; }
+  .measurement-caption { display: none; }
+  .measurement-track { margin-top: 6px; }
+}

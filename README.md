@@ -20,6 +20,13 @@ for normal mode, `v` for visual selection, `u` to undo, and `:w` to run the
 project. The mode indicator appears below the editor. The toggle preserves
 file contents and undo history and remembers your preference on this browser.
 
+Drag the dividers to resize **Files**, **Editor**, **Preview**, and **Output**.
+Use a pane's **−** button to collapse it and its toolbar button to reopen it.
+Focus a divider for arrow-key resizing; **Reset layout** restores the default
+sizes. Collapsing preserves editor history and the running preview. **AI chat**
+opens a reserved placeholder for a future phase. Narrow screens stack Editor
+and Preview and initially collapse Files.
+
 Runtime errors appear in the console with clickable source locations. Click a
 frame such as `Counter.btsx:3:5` to open the authored file and highlight the line.
 Frames from changed or deleted files are marked **source changed** and cannot
@@ -37,6 +44,7 @@ h1 Hello World
 - CodeMirror editor with file tabs, independent undo history, highlighting,
   search, line numbers, and compiler markers.
 - Optional Vim keybindings, a mode indicator, and a remembered editor preference.
+- Modular BTSX pane components with resizable, collapsible workspace views.
 - Virtual files, relative imports, extension/index resolution, reexports,
   module cycles, and literal dynamic imports.
 - Actual `beast-tsrx@0.2.60` and `octane@0.2.6` compiler stages, off the UI thread.
@@ -88,5 +96,6 @@ infinite loops or excessive memory allocation. Browser smoke tests currently
 cover Chromium; cross-browser verification is a production-hardening task.
 
 See [architecture discovery](docs/playground-architecture.md),
+[component structure and state ownership](docs/project-structure.md),
 [API contracts](docs/playground-api.md), and
 [implementation status and tickets](docs/implementation-status.md).

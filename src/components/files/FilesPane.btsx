@@ -1,0 +1,55 @@
+import { useRef, useState, useSyncExternalStore } from 'octane'
+import { useField, useForm } from '@octanejs/tanstack-form'
+import { fileIcon, fileLabel } from '../../playground/presentation'
+import PaneSurface from '../layout/PaneSurface.btsx'
+import CollapseButton from '../layout/CollapseButton.btsx'
+import NewFileForm from './NewFileForm.btsx'
+import type { WorkspaceProps, NavigateToSource } from '../types'
+
+props { session, layout, navigate }: WorkspaceProps & { navigate: NavigateToSource }
+setup
+  const state = useSyncExternalStore(session.subscribe, session.getSnapshot);
+  const [adding, setAdding] = useState(false);
+  const addButton = useRef<HTMLButtonElement | null>(null);
+  const searchForm = useForm({ defaultValues: { search: '' } });
+  const search = useField({ form: searchForm, name: 'search' });
+  const files = Object.keys(state.project.files).filter(path => fileLabel(path).toLowerCase().includes(search.state.value.toLowerCase()));
+  const create = (name: string) => {
+    layout.expand('editor');
+    session.addFile(name);
+    search.handleChange('');
+    setAdding(false);
+  };
+  const cancel = () => { setAdding(false); addButton.current?.focus(); };
+
+PaneSurface(layout={layout} pane='files' label='File explorer' className='explorer')
+  div.file-search
+    svg(width='17' height='17' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.7' aria-hidden={true})
+      circle(cx='10.5' cy='10.5' r='6.5')
+      path(d='m16 16 4.5 4.5')
+    input(type='search' aria-label='Search files' placeholder='Search files…' value={search.state.value} onInput={event => search.handleChange(event.currentTarget.value)})
+  div.panel-heading
+    span PROJECT FILES
+    div.panel-actions
+      button#add-file.icon-button(ref={addButton} type='button' onClick={() => setAdding(true)} aria-label='Add file' title='Add file') +
+      CollapseButton(layout={layout} pane='files')
+  if adding
+    NewFileForm(session={session} onCreate={create} onCancel={cancel})
+  div.folder-label
+    span ▾
+    span.folder-icon ▱
+    | src
+  div#file-list.file-list
+    each path in files key path
+      div(className={'file-row' + (state.activeFile === path ? ' active' : '')})
+        button.file-button(type='button' title={path} aria-label={'Open ' + fileLabel(path)} onClick={() => navigate(path)})
+          span.file-icon #{fileIcon(path)}
+          span #{fileLabel(path)}
+        if path !== state.project.entry
+          button.file-delete(type='button' aria-label={'Delete ' + fileLabel(path)} onClick={() => session.deleteFile(path)}) ×
+    if !files.length
+      p.no-files No matching files.
+  div.explorer-note
+    span.status-dot
+    span In-memory project
+    p Your files stay in this tab.

@@ -1,0 +1,19 @@
+import type { SessionProps } from '../types'
+
+props { session }: SessionProps
+
+header.topbar
+  a.brand(href='/' aria-label='Beast Playground home')
+    img(src='/beast.svg' alt='' width='25' height='25')
+    strong beast
+    span.brand-divider /
+    span.brand-product playground
+    span.milestone WORKBENCH / 01
+  div.topbar-actions
+    span.local-label
+      span.status-dot
+      | LOCAL SESSION
+    button#run-build.run-button(type='button' onClick={session.run} title='Run project (⌘/Ctrl + Enter)')
+      span.play-icon ▷
+      | Run project
+      kbd ⌘ ↵

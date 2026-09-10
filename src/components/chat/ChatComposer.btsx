@@ -1,0 +1,43 @@
+import { useField, useForm } from '@octanejs/tanstack-form'
+import { useSyncExternalStore } from 'octane'
+import { fileLabel } from '../../playground/presentation'
+import type { ChatController } from '../../chat/controller'
+import type { PlaygroundSession } from '../../playground/session'
+
+props { chat, session }: { chat: ChatController; session: PlaygroundSession }
+setup
+  const state = useSyncExternalStore(chat.subscribe, chat.getSnapshot);
+  const project = useSyncExternalStore(session.subscribe, session.getSnapshot);
+  const form = useForm({ defaultValues: { prompt: '', includeFile: true }, onSubmit: ({ value }) => {
+    if (chat.getSnapshot().busy) return;
+    const active = session.getSnapshot().activeFile;
+    const context = value.includeFile ? { file: active, source: session.read(active)! } : undefined;
+    void chat.submit(value.prompt, context);
+    if (!context || context.source.length <= 60000) form.setFieldValue('prompt', '');
+  } });
+  const prompt = useField({ form, name: 'prompt', validators: { onSubmit: ({ value }) => value.trim() ? undefined : 'Write a message first.' } });
+  const includeFile = useField({ form, name: 'includeFile' });
+  const submit = (event: SubmitEvent) => { event.preventDefault(); void form.handleSubmit(); };
+  const keydown = (event: KeyboardEvent) => {
+    if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); if (!state.busy) void form.handleSubmit(); }
+  };
+
+form.chat-composer(onSubmit={submit})
+  if !state.messages.length
+    div.chat-suggestions
+      button(type='button' onClick={() => prompt.handleChange('Explain how the active file works.')} ) Explain this file ↗
+      button(type='button' onClick={() => prompt.handleChange('Review the active file and suggest one useful improvement.')} ) Suggest an improvement ↗
+  label.context-toggle
+    input(type='checkbox' checked={includeFile.state.value} onChange={event => includeFile.handleChange(event.currentTarget.checked)})
+    span Include active file
+    code(title={project.activeFile}) #{fileLabel(project.activeFile)}
+  div.composer-input
+    label.sr-only(for='chat-prompt') Message AI
+    textarea#chat-prompt(value={prompt.state.value} onInput={event => prompt.handleChange(event.currentTarget.value)} onKeyDown={keydown} placeholder='Ask about your code…' rows='3' maxlength='32000')
+    div.composer-actions
+      span Enter to send · Shift Enter for a new line
+      if state.busy
+        button.stop-button(type='button' onClick={chat.stop} aria-label='Stop response') ■
+      else
+        button.send-button(type='submit' disabled={!prompt.state.value.trim()} aria-label='Send message') ↑
+  p.context-disclosure #{includeFile.state.value ? 'Conversation + active file' : 'Conversation only'} → #{state.settings.provider === 'cohere' ? 'Cohere' : state.settings.provider === 'openrouter' ? 'OpenRouter' : 'your endpoint'}

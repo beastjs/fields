@@ -1,0 +1,60 @@
+import { useEffect, useRef } from 'octane'
+import { useForm, useField } from '@octanejs/tanstack-form'
+import { DEFAULT_MODEL, providers } from '../../chat/contracts'
+import type { AIProvider } from '../../chat/contracts'
+import type { ChatController } from '../../chat/controller'
+
+props { chat, onClose }: { chat: ChatController; onClose: () => void }
+setup
+  const initial = chat.getSnapshot();
+  const dialog = useRef<HTMLDialogElement | null>(null);
+  const form = useForm({ defaultValues: { ...initial.settings }, onSubmit: ({ value }) => {
+    chat.configure({ ...value, model: value.model.trim(), baseURL: value.baseURL.trim(), apiKey: value.apiKey.trim() });
+    onClose();
+  } });
+  const provider = useField({ form, name: 'provider' });
+  const model = useField({ form, name: 'model', validators: { onChange: ({ value }) => !value.trim() ? 'Enter a model ID.' : undefined } });
+  const baseURL = useField({ form, name: 'baseURL', validators: { onChange: ({ value }) => {
+    if (form.getFieldValue('provider') !== 'custom') return undefined;
+    try { const url = new URL(value); return ['https:', 'http:'].includes(url.protocol) ? undefined : 'Use an HTTP or HTTPS API URL.'; }
+    catch { return 'Enter the API base URL, including /v1 when required.'; }
+  } } });
+  const apiKey = useField({ form, name: 'apiKey' });
+  const changeProvider = (event: Event) => {
+    const value = (event.currentTarget as HTMLSelectElement).value as AIProvider;
+    provider.handleChange(value);
+    model.handleChange(value === 'custom' ? '' : DEFAULT_MODEL);
+    apiKey.handleChange('');
+    baseURL.handleChange(value === 'custom' ? initial.status?.customBaseURL ?? 'http://127.0.0.1:11434/v1' : '');
+  };
+  useEffect(() => { dialog.current?.showModal(); return () => dialog.current?.close(); }, []);
+  const submit = (event: SubmitEvent) => { event.preventDefault(); void form.handleSubmit(); };
+
+dialog.chat-settings(ref={dialog} aria-labelledby='chat-settings-title' onCancel={onClose})
+  form(onSubmit={submit})
+    div.settings-heading
+      div
+        span.eyebrow-label CONNECTION
+        h2#chat-settings-title AI settings
+      button.icon-button(type='button' aria-label='Close AI settings' onClick={onClose}) ×
+    label(for='ai-provider') Provider
+    select#ai-provider(value={provider.state.value} onChange={changeProvider})
+      each option in providers key option.id
+        option(value={option.id}) #{option.label}
+    label(for='ai-model') Model ID
+    input#ai-model(type='text' value={model.state.value} onInput={event => model.handleChange(event.currentTarget.value)} onBlur={model.handleBlur} maxlength='200' autocomplete='off' aria-describedby='ai-model-error' aria-invalid={model.state.meta.errors.length > 0})
+    p#ai-model-error.field-error(role='alert' hidden={!model.state.meta.errors.length}) #{model.state.meta.errors.join(' ')}
+    if provider.state.value === 'custom'
+      div
+        label(for='ai-base-url') API base URL
+        input#ai-base-url(type='url' value={baseURL.state.value} onInput={event => baseURL.handleChange(event.currentTarget.value)} onBlur={baseURL.handleBlur} autocomplete='off' placeholder='http://127.0.0.1:11434/v1' aria-describedby='ai-base-error')
+        p#ai-base-error.field-error(role='alert' hidden={!baseURL.state.meta.errors.length}) #{baseURL.state.meta.errors.join(' ')}
+    label(for='ai-key') API key
+    input#ai-key(type='password' value={apiKey.state.value} onInput={event => apiKey.handleChange(event.currentTarget.value)} autocomplete='new-password' placeholder={initial.status?.configured[provider.state.value] ? 'Server key configured · optional override' : 'Paste your provider API key'} aria-describedby='ai-key-help')
+    p#ai-key-help.settings-note Keys entered here stay in memory for this tab. Leave blank to use the server connection.
+    div.settings-status
+      span.status-dot
+      span #{initial.status?.configured[provider.state.value] ? 'Server connection configured' : provider.state.value === 'custom' ? 'Local models may not require a key' : 'An API key is required to connect'}
+    div.settings-actions
+      button.secondary-button(type='button' onClick={onClose}) Cancel
+      button.primary-button(type='submit') Save connection

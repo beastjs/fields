@@ -1,0 +1,15 @@
+import { useSyncExternalStore } from 'octane'
+import type { SessionProps } from '../types'
+
+props { session }: SessionProps
+setup const state = useSyncExternalStore(session.subscribe, session.getSnapshot);
+
+footer.statusbar
+  div.statusbar-left
+    span#build-dot.status-dot(style={{ background: state.buildError ? '#e7b54a' : '#ff641b' }})
+    span#build-status(aria-live='polite') #{state.buildStatus}
+  div#stage-timings.stage-timings
+    span Beast #{state.lastResult ? state.lastResult.metadata.timings.beast.toFixed(1) + 'ms' : '—'}
+    span Octane #{state.lastResult ? state.lastResult.metadata.timings.octane.toFixed(1) + 'ms' : '—'}
+    span Web #{state.lastResult ? state.lastResult.metadata.timings.web.toFixed(1) + 'ms' : '—'}
+  span.toolchain Beast 0.2.60 · Octane 0.2.6

@@ -94,3 +94,36 @@ Vim edits, undo/redo, file switching, `:w`, and preference restoration.
 The production gzip total increased from approximately 734 KB to 776 KB, mainly
 for the Vim extension and runtime map reader in the host. Compiler/preview module
 payloads are unchanged; runtime tracing is performed only when an error arrives.
+
+## Milestone 3 — Modular workspace and resizable panes
+
+Implemented on 2026-09-10. `src/App.btsx` now composes focused shell and pane
+components. Project file operations, session/compilation state, and layout state
+have separate owners. CodeMirror and the preview connect through scoped adapters
+and clean up with their component lifetime. See [project structure](project-structure.md)
+for the component map and extension boundaries.
+
+Added `@octanejs/resizable-panels@0.0.10` for Files, Editor, Preview, Output, and
+a reserved AI chat pane. Dividers support pointer and keyboard resizing. Each
+pane has collapse/expand controls; the toolbar stays available to restore hidden
+views. Reset restores initial sizes, and narrow screens stack Editor and Preview.
+AI chat starts closed and displays a future-phase placeholder when opened.
+
+Collapsed content stays mounted, becomes inert, and leaves the accessibility
+tree. Editor history, console/output selection, and the running preview survive
+resizing and hiding. Source navigation restores a hidden editor. A CSS guard
+keeps the nested iframe from capturing pointer drags across a parent separator.
+
+The new-file form uses `@octanejs/tanstack-form@0.0.48`. Path normalization,
+duplicate/extension validation, entry protection, and fallback file selection
+are handled by the independent project model. UI validation and cancellation,
+active-file deletion, and editor restoration have browser coverage.
+
+Verification: 29 Bun tests (181 assertions), 12 Chromium browser tests,
+TSRX/TypeScript checks, and the production build. The browser suite covers
+pointer/keyboard resizing, expansion-size restoration, layout reset, collapse
+focus management, preview state and undo preservation, responsive orientation,
+file form validation, and all earlier compiler/runtime/Vim behavior.
+
+This is a workspace-organization milestone. Durable project/layout persistence,
+HMR, and AI service integration remain follow-on work.

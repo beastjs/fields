@@ -1,0 +1,28 @@
+import { canNavigateRuntimeLocation } from '../../playground/runtime-diagnostics'
+import type { RuntimeLocation } from '../../playground/runtime-diagnostics'
+import { fileLabel } from '../../playground/presentation'
+import type { PlaygroundSession, SessionSnapshot } from '../../playground/session'
+import type { NavigateToSource } from '../types'
+
+props { session, state, navigate }: { session: PlaygroundSession; state: SessionSnapshot; navigate: NavigateToSource }
+setup
+  const open = (location: RuntimeLocation) => {
+    if (canNavigateRuntimeLocation(location, session.read(location.file))) navigate(location.file, location.position);
+  };
+
+div#console-list
+  if !state.console.length
+    p Console output from your application appears here.
+  each entry in state.console key entry.id
+    div.console-row(data-level={entry.level})
+      span.console-time #{new Date(entry.timestamp).toLocaleTimeString('en-GB')}
+      span.console-level #{entry.level}
+      div.console-body
+        div.console-message #{entry.message}
+        if entry.frames?.length
+          div.runtime-stack
+            each frame, index in entry.frames key index
+              if frame.location
+                button.runtime-source-link(type='button' disabled={!canNavigateRuntimeLocation(frame.location, state.project.files[frame.location.file])} onClick={() => open(frame.location!)} title={canNavigateRuntimeLocation(frame.location, state.project.files[frame.location.file]) ? 'Open source location' : 'This stack frame belongs to an older version of the file.'}) #{fileLabel(frame.location.file)}:#{frame.location.position.line}:#{frame.location.position.column}#{canNavigateRuntimeLocation(frame.location, state.project.files[frame.location.file]) ? '' : ' (source changed)'}
+              else
+                div.runtime-frame-unmapped #{frame.raw}

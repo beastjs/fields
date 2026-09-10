@@ -2,6 +2,10 @@
 
 Discovery completed on 2026-09-09, before implementation.
 
+This document records the initial discovery. For the current component tree,
+state ownership, and resizable workspace, see [project structure](project-structure.md).
+Completed milestones are tracked in [implementation status](implementation-status.md).
+
 ## Current pipeline and entry points
 
 This repository is a Beast application starter, with no playground or tests yet.

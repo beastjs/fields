@@ -1,0 +1,35 @@
+import { useSyncExternalStore } from 'octane'
+import { navigateTabs } from '../../playground/presentation'
+import type { ToolPanel } from '../../playground/session'
+import type { WorkspaceProps, NavigateToSource } from '../types'
+import PaneSurface from '../layout/PaneSurface.btsx'
+import CollapseButton from '../layout/CollapseButton.btsx'
+import ProblemsList from './ProblemsList.btsx'
+import ConsoleList from './ConsoleList.btsx'
+import GeneratedCode from './GeneratedCode.btsx'
+
+module
+  const tabs: { id: ToolPanel; label: string }[] = [{ id: 'problems', label: 'Problems' }, { id: 'console', label: 'Console' }, { id: 'output', label: 'Generated code' }];
+
+props { session, layout, navigate }: WorkspaceProps & { navigate: NavigateToSource }
+setup const state = useSyncExternalStore(session.subscribe, session.getSnapshot);
+
+PaneSurface(layout={layout} pane='output' label='Developer tools' className='bottom-panel')
+  div.tools-toolbar
+    div.tools-tabs(role='tablist' aria-label='Developer tools' onKeyDown={navigateTabs})
+      each tab in tabs key tab.id
+        button(type='button' id={tab.id + '-tab'} role='tab' className={'tool-tab' + (state.toolPanel === tab.id ? ' active' : '')} data-panel={tab.id} aria-selected={state.toolPanel === tab.id} aria-controls={tab.id + '-panel'} tabIndex={state.toolPanel === tab.id ? 0 : -1} onClick={() => session.selectTool(tab.id)})
+          | #{tab.label}
+          if tab.id === 'problems'
+            span#problem-count.count #{state.diagnostics.length}
+          elseif tab.id === 'console'
+            span#console-count.count #{state.console.length}
+    button#clear-console.clear-button(type='button' hidden={state.toolPanel !== 'console'} onClick={session.clearConsole}) Clear console
+    span#build-summary.build-summary #{state.lastResult ? state.lastResult.metadata.transformedFiles + ' components · ' + state.lastResult.metadata.duration.toFixed(0) + 'ms total' : 'Waiting for first build'}
+    CollapseButton(layout={layout} pane='output')
+  div#problems-panel.tools-content(role='tabpanel' aria-labelledby='problems-tab' hidden={state.toolPanel !== 'problems'})
+    ProblemsList(state={state} navigate={navigate})
+  div#console-panel.tools-content(role='tabpanel' aria-labelledby='console-tab' hidden={state.toolPanel !== 'console'})
+    ConsoleList(session={session} state={state} navigate={navigate})
+  div#output-panel.tools-content.output-content(role='tabpanel' aria-labelledby='output-tab' hidden={state.toolPanel !== 'output'})
+    GeneratedCode(state={state})

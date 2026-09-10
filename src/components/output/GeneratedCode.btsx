@@ -1,0 +1,14 @@
+import { useState } from 'octane'
+import type { SessionSnapshot } from '../../playground/session'
+
+props { state }: { state: SessionSnapshot }
+setup
+  const [stage, setStage] = useState('octane');
+  const code = stage === 'octane'
+    ? state.lastResult?.intermediate[state.activeFile] ?? 'No Beast transform for this file. Select a .btsx component.'
+    : state.lastResult?.modules.find(module => module.source === state.activeFile)?.code ?? 'No generated JavaScript for this file.';
+
+div.output-stage-buttons
+  button(type='button' className={'output-stage' + (stage === 'octane' ? ' active' : '')} data-stage='octane' aria-pressed={stage === 'octane'} onClick={() => setStage('octane')}) Octane / TSRX
+  button(type='button' className={'output-stage' + (stage === 'web' ? ' active' : '')} data-stage='web' aria-pressed={stage === 'web'} onClick={() => setStage('web')}) Web / JavaScript
+pre#generated-code #{code}

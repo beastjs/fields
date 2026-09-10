@@ -30,24 +30,24 @@ const beast = StreamLanguage.define({
   },
 });
 const highlight = HighlightStyle.define([
-  { tag: tags.keyword, color: '#bd9cce' },
-  { tag: tags.string, color: '#bdcc97' },
-  { tag: [tags.typeName, tags.className], color: '#e0c79a' },
-  { tag: [tags.tagName, tags.attributeName], color: '#96bdcd' },
-  { tag: tags.comment, color: '#626b6a' },
-  { tag: tags.number, color: '#d2aa82' },
+  { tag: tags.keyword, color: '#baa6c4' },
+  { tag: tags.string, color: '#b3bb9e' },
+  { tag: [tags.typeName, tags.className], color: '#d0b18c' },
+  { tag: [tags.tagName, tags.attributeName], color: '#a5b6bd' },
+  { tag: tags.comment, color: '#777774' },
+  { tag: tags.number, color: '#ee9b68' },
 ]);
 const theme = EditorView.theme({
-  '&': { height: '100%', backgroundColor: '#181c1c', color: '#ced3cf', fontSize: '13px' },
+  '&': { height: '100%', backgroundColor: '#292929', color: '#d5d5cf', fontSize: '12px' },
   '.cm-scroller': { fontFamily: '"SFMono-Regular", Consolas, "Liberation Mono", monospace', lineHeight: '1.85' },
-  '.cm-content': { padding: '24px 0', caretColor: '#c5dc99' },
+  '.cm-content': { padding: '20px 0', caretColor: '#ff7438' },
   '.cm-line': { padding: '0 22px 0 10px' },
-  '.cm-gutters': { backgroundColor: '#181c1c', color: '#505957', border: 'none', padding: '0 10px 0 12px' },
-  '.cm-activeLineGutter, .cm-activeLine': { backgroundColor: '#202625' },
-  '.cm-cursor': { borderLeftColor: '#c5dc99' },
-  '&.cm-focused .cm-selectionBackground, .cm-selectionBackground': { background: '#35433b' },
-  '.cm-tooltip': { background: '#252d29', border: '1px solid #414a41' },
-  '.cm-panels': { background: '#222a25', color: '#d6ddcf' },
+  '.cm-gutters': { backgroundColor: '#292929', color: '#747472', border: 'none', padding: '0 10px 0 12px' },
+  '.cm-activeLineGutter, .cm-activeLine': { backgroundColor: '#323232' },
+  '.cm-cursor': { borderLeftColor: '#ff7438' },
+  '&.cm-focused .cm-selectionBackground, .cm-selectionBackground': { background: '#48413b' },
+  '.cm-tooltip': { background: '#303030', border: '1px solid #4b4b48' },
+  '.cm-panels': { background: '#252525', color: '#e3e3db' },
 }, { dark: true });
 
 export class ProjectEditor {

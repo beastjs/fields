@@ -1,0 +1,18 @@
+import type { CompilationResult } from '../../playground/contracts'
+
+props { result }: { result?: CompilationResult }
+setup const timings = result?.metadata.timings;
+
+div.build-overview(aria-label='Build measurements')
+  div.measurement-card
+    span.measurement-label Components
+    div.measurement-value #{result ? String(result.metadata.transformedFiles).padStart(2, '0') : '—'}
+    span.measurement-caption IN THE MODULE GRAPH
+  each stage in ['beast', 'octane', 'web'] as const key stage
+    div.measurement-card
+      span.measurement-label #{stage === 'beast' ? 'Beast transform' : stage === 'octane' ? 'Octane compile' : 'Web output'}
+      div.measurement-value
+        | #{timings ? timings[stage].toFixed(1) : '—'}
+        small ms
+      div.measurement-track(aria-hidden={true})
+        span(style={{ width: timings ? Math.max(1, timings[stage] / Math.max(1, timings.beast + timings.octane + timings.web) * 100) + '%' : '0%' }})

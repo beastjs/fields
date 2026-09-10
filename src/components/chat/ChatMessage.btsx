@@ -1,0 +1,28 @@
+import { useState } from 'octane'
+import { renderChatMarkdown } from '../../chat/markdown'
+import type { ChatMessage } from '../../chat/controller'
+
+props { message }: { message: ChatMessage }
+setup
+  const [copied, setCopied] = useState(false);
+  const copy = async () => { try { await navigator.clipboard.writeText(message.content); setCopied(true); } catch { setCopied(false); } };
+
+article(className={'chat-message ' + message.role} data-message-state={message.state})
+  div.message-heading
+    span.message-avatar #{message.role === 'user' ? '↗' : '✳'}
+    strong #{message.role === 'user' ? 'You' : 'Assistant'}
+    if message.role === 'assistant'
+      span.message-state #{message.state === 'streaming' ? 'WORKING' : message.state === 'stopped' ? 'STOPPED' : message.state === 'error' ? 'INTERRUPTED' : 'DONE'}
+  if message.role === 'user'
+    p.user-message #{message.content}
+  elseif message.content
+    div.chat-markdown(dangerouslySetInnerHTML={{ __html: renderChatMarkdown(message.content) }})
+  elseif message.state === 'streaming'
+    div.thinking-indicator(role='status')
+      span
+      span
+      span
+      | Working on it…
+  if message.content && message.role === 'assistant' && message.state !== 'streaming'
+    div.message-actions
+      button(type='button' onClick={copy} aria-label='Copy response') #{copied ? 'Copied' : 'Copy response'}

@@ -1,0 +1,16 @@
+import type { SessionSnapshot } from '../../playground/session'
+import type { NavigateToSource } from '../types'
+import { fileLabel } from '../../playground/presentation'
+import BuildOverview from './BuildOverview.btsx'
+
+props { state, navigate }: { state: SessionSnapshot; navigate: NavigateToSource }
+
+div#problems-list
+  if !state.diagnostics.length
+    div
+      div.empty-problems #{state.lastResult ? '✓  Looking good. No compiler problems.' : 'Preparing the first build…'}
+      BuildOverview(result={state.lastResult})
+  each diagnostic, index in state.diagnostics key index
+    button.diagnostic-row(type='button' onClick={() => navigate(diagnostic.file, diagnostic.start)})
+      span.diagnostic-location #{fileLabel(diagnostic.file)}:#{diagnostic.start.line}:#{diagnostic.start.column}
+      span #{diagnostic.severity.toUpperCase()} · #{diagnostic.source} · #{diagnostic.message}

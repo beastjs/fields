@@ -1,0 +1,22 @@
+import { useEffect, useRef } from 'octane'
+import { useField, useForm } from '@octanejs/tanstack-form'
+import type { PlaygroundSession } from '../../playground/session'
+
+props { session, onCreate, onCancel }: { session: PlaygroundSession; onCreate: (name: string) => void; onCancel: () => void }
+setup
+  const input = useRef<HTMLInputElement | null>(null);
+  const form = useForm({ defaultValues: { path: '' }, onSubmit: ({ value }) => onCreate(value.path) });
+  const field = useField({ form, name: 'path', validators: {
+    onChange: ({ value }) => session.validateNewFile(value),
+    onSubmit: ({ value }) => session.validateNewFile(value),
+  } });
+  const errors = field.state.meta.errors;
+  useEffect(() => { input.current?.focus(); }, []);
+  const submit = (event: SubmitEvent) => { event.preventDefault(); void form.handleSubmit(); };
+
+form#new-file-form.new-file-form(onSubmit={submit})
+  label(for='new-file-name') New file path
+  input#new-file-name(ref={input} type='text' placeholder='src/Component.btsx' autocomplete='off' value={field.state.value} onInput={(event) => field.handleChange(event.currentTarget.value)} onBlur={field.handleBlur} aria-invalid={errors.length > 0} aria-describedby={errors.length ? 'file-error' : undefined})
+  button(type='submit') Add
+  button#cancel-file(type='button' onClick={onCancel}) Cancel
+  p#file-error.file-error(role='alert' hidden={!errors.length}) #{errors.join(' ')}

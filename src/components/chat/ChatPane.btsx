@@ -1,0 +1,53 @@
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'octane'
+import { ChatController } from '../../chat/controller'
+import { readChatSettings, saveChatSettings } from '../../chat/settings'
+import PaneSurface from '../layout/PaneSurface.btsx'
+import CollapseButton from '../layout/CollapseButton.btsx'
+import ChatSettings from './ChatSettings.btsx'
+import ChatComposer from './ChatComposer.btsx'
+import ChatMessage from './ChatMessage.btsx'
+import type { WorkspaceProps } from '../types'
+
+props { layout, session }: WorkspaceProps
+setup
+  const chat = useMemo(() => new ChatController(readChatSettings(), saveChatSettings), []);
+  const state = useSyncExternalStore(chat.subscribe, chat.getSnapshot);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const scroller = useRef<HTMLDivElement | null>(null);
+  const follow = useRef(true);
+  const connected = !!state.settings.apiKey || !!state.status?.configured[state.settings.provider] || (state.settings.provider === 'custom' && !!state.settings.baseURL);
+  useEffect(() => { void chat.checkConnection(); return () => chat.dispose(); }, [chat]);
+  useEffect(() => { if (state.messages.length && follow.current && scroller.current) scroller.current.scrollTop = scroller.current.scrollHeight; }, [state.messages]);
+  const scroll = () => { const node = scroller.current!; follow.current = node.scrollHeight - node.scrollTop - node.clientHeight < 80; };
+
+PaneSurface(layout={layout} pane='chat' label='AI chat' className='chat-pane')
+  div.panel-heading
+    span ASSISTANT
+    div.panel-actions
+      button.icon-button(type='button' title='New chat' aria-label='New chat' onClick={chat.clear}) +
+      button.icon-button(type='button' title='AI settings' aria-label='AI settings' onClick={() => setSettingsOpen(true)}) ⚙
+      CollapseButton(layout={layout} pane='chat')
+  button.chat-connection(type='button' onClick={() => setSettingsOpen(true)} aria-label='Configure AI provider and model')
+    span.connection-led(data-connected={connected})
+    span.model-name(title={state.settings.model}) #{state.settings.model.replace(/^cohere\//, '')}
+    span.connection-label #{connected ? 'READY' : 'SETUP'}
+  div.chat-history(ref={scroller} onScroll={scroll} role='log' aria-label='Chat messages' aria-live='polite')
+    if !state.messages.length
+      div.chat-welcome
+        div.assistant-dial(aria-hidden={true}) ✳
+        span.eyebrow-label YOUR CODING COMPANION
+        h2 Make something work.
+        p Explore an idea, untangle an error, or find the next step. Start with the file in front of you.
+        button.connection-prompt(type='button' hidden={connected} onClick={() => setSettingsOpen(true)}) Set up your connection ↗
+    each message in state.messages key message.id
+      ChatMessage(message={message})
+    if state.error || state.connectionError
+      div.chat-error(role='alert')
+        p #{state.error || state.connectionError}
+        div
+          button.secondary-button(type='button' hidden={!state.connectionError} onClick={() => { void chat.checkConnection(); }}) Reconnect
+          button.secondary-button(type='button' hidden={!state.error || state.busy} onClick={chat.retry}) Retry response
+          button.secondary-button(type='button' onClick={() => setSettingsOpen(true)}) Settings
+  ChatComposer(chat={chat} session={session})
+  if settingsOpen
+    ChatSettings(chat={chat} onClose={() => setSettingsOpen(false)})
