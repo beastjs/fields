@@ -1,3 +1,4 @@
+import { compilationLimitError } from './resource-limits';
 import { PROTOCOL_VERSION, type CompilationProject, type CompilationResult, type WorkerResponse } from './contracts';
 
 export interface CompilerWorker {
@@ -22,6 +23,7 @@ export class CompilationCoordinator {
     onResult: (result: CompilationResult, revision: number) => void;
     onError: (message: string) => void;
     debounce?: number;
+    timeoutMs?: number;
   }) {}
 
   schedule(project: CompilationProject, immediate = false) {
@@ -31,6 +33,8 @@ export class CompilationCoordinator {
     clearTimeout(this.timeout);
     // Compilers are synchronous: terminating is the only actual mid-compile cancellation.
     if (this.busy) this.stopWorker();
+    const limitError = compilationLimitError(project);
+    if (limitError) { this.options.onError(limitError); return; }
     const snapshot = { entry: project.entry, files: { ...project.files } };
     this.timer = setTimeout(() => this.run(snapshot, revision), immediate ? 0 : (this.options.debounce ?? 220));
   }
@@ -60,7 +64,7 @@ export class CompilationCoordinator {
         if (revision !== this.revision) return;
         this.stopWorker();
         this.options.onError('Compilation timed out. Run to restart the compiler.');
-      }, 15000);
+      }, this.options.timeoutMs ?? 15000);
       worker.postMessage({ version: PROTOCOL_VERSION, type: 'compile', id: revision, project });
     } catch (error) {
       this.stopWorker();

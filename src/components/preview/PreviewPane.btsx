@@ -1,4 +1,4 @@
-import { useEffect, useRef, useSyncExternalStore } from 'octane'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'octane'
 import { connectPreview } from '../../playground/preview-connection'
 import PaneSurface from '../layout/PaneSurface.btsx'
 import CollapseButton from '../layout/CollapseButton.btsx'
@@ -11,26 +11,82 @@ props { session, layout }: WorkspaceProps
 setup
   const state = useSyncExternalStore(session.subscribe, session.getSnapshot);
   const iframe = useRef<HTMLIFrameElement | null>(null);
+  const surface = useRef<HTMLDivElement | null>(null);
+  const stage = useRef<HTMLDivElement | null>(null);
+  const fullscreenButton = useRef<HTMLButtonElement | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [size, setSize] = useState({ width: 0, height: 0 });
+  const [fullscreen, setFullscreen] = useState(false);
+  const [fullscreenPending, setFullscreenPending] = useState(false);
+  const [fullscreenError, setFullscreenError] = useState('');
+  const fullscreenSupported = Boolean(document.fullscreenEnabled && document.documentElement.requestFullscreen);
+  const width = state.previewWidth === '100%' ? size.width : Number.parseInt(state.previewWidth, 10);
+  const toggleFullscreen = async () => {
+    setFullscreenError('');
+    setFullscreenPending(true);
+    try {
+      if (document.fullscreenElement === surface.current) await document.exitFullscreen();
+      else await surface.current?.requestFullscreen();
+    } catch {
+      setFullscreenError('Fullscreen could not be changed. Try again or use your browser’s fullscreen control.');
+    } finally {
+      setFullscreenPending(false);
+    }
+  };
+  useEffect(() => {
+    const observer = new ResizeObserver(entries => {
+      const rect = entries[0]?.contentRect;
+      if (rect) setSize({ width: rect.width, height: rect.height });
+    });
+    observer.observe(stage.current!);
+    return () => observer.disconnect();
+  }, []);
+  useEffect(() => {
+    const element = surface.current;
+    let wasFullscreen = false;
+    const sync = () => {
+      const active = document.fullscreenElement === element;
+      setFullscreen(active);
+      if (wasFullscreen && !active) fullscreenButton.current?.focus();
+      wasFullscreen = active;
+    };
+    document.addEventListener('fullscreenchange', sync);
+    return () => {
+      document.removeEventListener('fullscreenchange', sync);
+      if (document.fullscreenElement === element) void document.exitFullscreen().catch(() => {});
+    };
+  }, []);
   useEffect(() => connectPreview(iframe.current!, session), [session]);
 
 PaneSurface(layout={layout} pane='preview' label='Application preview' className='preview-pane')
-  div.preview-toolbar
-    div.preview-label
-      span.status-dot
-      strong Preview
-    div.viewport-controls(role='group' aria-label='Preview size')
-      each viewport in viewports key viewport.width
-        button(type='button' className={'viewport-button' + (state.previewWidth === viewport.width ? ' active' : '')} data-width={viewport.width} aria-label={viewport.label + ' preview'} aria-pressed={state.previewWidth === viewport.width} title={viewport.label} onClick={() => session.setPreviewWidth(viewport.width)}) #{viewport.symbol}
-    button#reload-preview.icon-button(type='button' aria-label='Reload preview' title='Reload preview' onClick={session.reloadPreview}) ↻
-    CollapseButton(layout={layout} pane='preview')
-  div.preview-address
-    span ◇
-    span playground.local
-    span#preview-status.preview-status #{state.previewStatus}
-  div.preview-stage
-    iframe#preview-frame(ref={iframe} title='Application preview' sandbox='allow-scripts' style={{ width: state.previewWidth }} data-build-revision={state.previewBuild?.revision})
-    div#preview-overlay.preview-overlay(role='status' hidden={state.hasPreview || state.previewFailed})
-      span.overlay-symbol ◈
-      strong #{state.compileFailed ? 'Your code needs a small fix' : 'Preparing your preview'}
-      p #{state.compileFailed ? 'Open a problem below to jump to its source. The preview will recover when you fix it.' : 'The first build starts automatically.'}
-  div#preview-error.preview-error(role='alert' hidden={!state.previewError}) #{state.previewError}
+  div.preview-surface(ref={surface})
+    div.preview-toolbar
+      div.preview-label
+        span.status-dot
+        strong Preview
+      div.viewport-controls(role='group' aria-label='Preview size')
+        each viewport in viewports key viewport.width
+          button(type='button' className={'viewport-button' + (state.previewWidth === viewport.width ? ' active' : '')} data-width={viewport.width} aria-label={viewport.label + ' preview'} aria-pressed={state.previewWidth === viewport.width} title={viewport.label} onClick={() => session.setPreviewWidth(viewport.width)}) #{viewport.symbol}
+      select.preview-zoom(aria-label='Preview zoom' value={String(zoom)} onChange={event => setZoom(Number(event.currentTarget.value))})
+        option(value='0.5') 50%
+        option(value='0.75') 75%
+        option(value='1') 100%
+        option(value='1.25') 125%
+        option(value='1.5') 150%
+      button.icon-button(ref={fullscreenButton} type='button' aria-label={fullscreen ? 'Exit fullscreen preview' : 'Enter fullscreen preview'} aria-pressed={fullscreen} title={fullscreenSupported ? (fullscreen ? 'Exit fullscreen (Esc)' : 'Fullscreen preview') : 'Fullscreen is unavailable in this browser'} disabled={!fullscreenSupported || fullscreenPending} onClick={toggleFullscreen}) #{fullscreen ? '⊡' : '⛶'}
+      button#reload-preview.icon-button(type='button' aria-label='Reload preview' title='Reload preview' onClick={session.reloadPreview}) ↻
+      if !fullscreen
+        CollapseButton(layout={layout} pane='preview')
+    p.fullscreen-notice(role='status' hidden={!fullscreenError}) #{fullscreenError}
+    div.preview-address
+      span ◇
+      span playground.local
+      span#preview-status.preview-status #{state.previewStatus}
+    div.preview-stage(ref={stage})
+      div.preview-canvas(style={{ width: `${width * zoom}px`, height: `${size.height}px` }})
+        iframe#preview-frame(ref={iframe} title='Application preview' sandbox='allow-scripts' style={{ width: `${width}px`, height: `${size.height / zoom}px`, transform: `scale(${zoom})` }} data-build-revision={state.previewBuild?.revision})
+      div#preview-overlay.preview-overlay(role='status' hidden={state.hasPreview || state.previewFailed})
+        span.overlay-symbol ◈
+        strong #{state.compileFailed ? 'Your code needs a small fix' : 'Preparing your preview'}
+        p #{state.compileFailed ? 'Open a problem below to jump to its source. The preview will recover when you fix it.' : 'The first build starts automatically.'}
+    div#preview-error.preview-error(role='alert' hidden={!state.previewError}) #{state.previewError}

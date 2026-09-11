@@ -63,7 +63,7 @@ setup
     return () => { revision.current++; window.removeEventListener('hashchange', readLink); };
   }, [session]);
 
-button.share-project(type='button' aria-label='Share project' title='Share project' onClick={share})
+button.share-project(type='button' aria-label='Share project' title='Share project' onClick={event => { event.currentTarget.focus(); void share(); }})
   span(aria-hidden='true') ↗
   span.share-label Share
 if transfer

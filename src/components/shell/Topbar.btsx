@@ -2,6 +2,7 @@ import type { SessionProps } from '../types'
 import { useSyncExternalStore } from 'octane'
 import { resetPlaygroundProject } from '../../playground/app'
 import ProjectHeading from './ProjectHeading.btsx'
+import ExampleLibrary from './ExampleLibrary.btsx'
 import ProjectSharing from './ProjectSharing.btsx'
 
 props { session }: SessionProps
@@ -15,7 +16,8 @@ div.topbar-container
         strong beast
         span.brand-divider /
         span.brand-product playground
-      ProjectHeading
+      ProjectHeading(session={session})
+      ExampleLibrary(session={session})
     div.topbar-actions
       span#save-status.local-label(role='status' title={state.saveStatus.issue ?? 'Project files and preview size are saved in this browser.'})
         span.status-dot

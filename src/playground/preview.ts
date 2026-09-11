@@ -41,16 +41,55 @@ export function isPreviewEvent(value: unknown, channel: string, build: number): 
 function bootstrap(channel: string, build: number) {
   const send = (type: string, fields: Record<string, unknown> = {}) =>
     parent.postMessage({ version: 1, channel, build, type, ...fields }, '*');
+  // Share one budget across all console levels. Drop before inspecting arguments
+  // or forwarding to devtools so a log burst cannot flood the host message queue.
+  let consoleWindow = performance.now();
+  let consoleCount = 0;
   const describe = (value: unknown): string => {
     try {
       if (value instanceof Error) return `${value.name}: ${value.message}`.slice(0, 4000);
       if (typeof value === 'string') return value.slice(0, 4000);
-      return (JSON.stringify(value) ?? String(value)).slice(0, 4000);
+      let remaining = 100;
+      const seen = new WeakSet<object>();
+      const summarize = (item: unknown, depth: number): unknown => {
+        if (--remaining < 0) return '[Truncated]';
+        if (typeof item === 'string') return item.slice(0, 1000);
+        if (!item || typeof item !== 'object') return typeof item === 'bigint' ? `${item}n` : item;
+        if (seen.has(item)) return '[Circular]';
+        if (depth >= 3) return '[Object]';
+        seen.add(item);
+        if (Array.isArray(item)) {
+          const output: unknown[] = [];
+          for (let index = 0; index < Math.min(item.length, 20) && remaining > 0; index++) {
+            const descriptor = Object.getOwnPropertyDescriptor(item, String(index));
+            output.push(descriptor && 'value' in descriptor ? summarize(descriptor.value, depth + 1) : '[Getter]');
+          }
+          if (output.length < item.length) output.push('[Truncated]');
+          return output;
+        }
+        const output: Record<string, unknown> = Object.create(null);
+        let count = 0;
+        for (const key in item) {
+          if (!Object.hasOwn(item, key)) continue;
+          if (count++ >= 20 || remaining <= 0) { output['…'] = '[Truncated]'; break; }
+          const descriptor = Object.getOwnPropertyDescriptor(item, key);
+          output[key.slice(0, 200)] = descriptor && 'value' in descriptor
+            ? summarize(descriptor.value, depth + 1) : '[Getter]';
+        }
+        return output;
+      };
+      return (JSON.stringify(summarize(value, 0)) ?? String(value)).slice(0, 4000);
     } catch { return '[Unserializable value]'; }
   };
   for (const level of ['log', 'info', 'warn', 'error', 'debug'] as const) {
     const original = console[level].bind(console);
     console[level] = (...args: unknown[]) => {
+      const now = performance.now();
+      if (now - consoleWindow >= 1000) { consoleWindow = now; consoleCount = 0; }
+      if (++consoleCount > 100) {
+        if (consoleCount === 101) send('console', { level: 'warn', args: ['Console rate limit reached (100 messages/second). Additional messages suppressed.'], timestamp: Date.now() });
+        return;
+      }
       original(...args);
       send('console', { level, args: args.slice(0, 30).map(describe), timestamp: Date.now() });
     };
@@ -192,6 +231,10 @@ export class Preview {
   private updates = 0;
   constructor(private iframe: HTMLIFrameElement, private onEvent: (event: ResolvedPreviewEvent) => void, private theme: Theme = 'dark') {
     iframe.setAttribute('sandbox', 'allow-scripts');
+    // The preview is always opaque-origin. WebKit can expose a document proxy
+    // during focus traversal that throws later, outside Octane's access guard.
+    // Keep this host-side DOM boundary opaque; transport uses contentWindow only.
+    Object.defineProperty(iframe, 'contentDocument', { configurable: true, get: () => null });
     window.addEventListener('message', this.receive);
   }
   private receive = (event: MessageEvent) => {

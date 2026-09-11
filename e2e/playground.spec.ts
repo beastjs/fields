@@ -241,8 +241,9 @@ test('panes resize by pointer and keyboard, remember expansion size, and reset w
   expect((await dimensions()).files).toBeGreaterThan(initial.files + 50);
   const expandedWidth = (await dimensions()).files;
   await page.locator('[data-view="files"]').click();
+  await expect(page.locator('[data-view="files"]')).toHaveAttribute('aria-pressed', 'false');
   await page.locator('[data-view="files"]').click();
-  expect(Math.abs((await dimensions()).files - expandedWidth)).toBeLessThan(2);
+  await expect.poll(async () => Math.abs((await dimensions()).files - expandedWidth)).toBeLessThan(2);
   const editorBefore = (await dimensions()).editor;
   await drag('Resize editor and preview', -80, 0);
   expect((await dimensions()).editor).toBeLessThan(editorBefore - 60);
@@ -261,8 +262,9 @@ test('panes resize by pointer and keyboard, remember expansion size, and reset w
   await drag('Resize AI chat', -70, 0);
   expect((await page.locator('#pane-chat').boundingBox())!.width).toBeGreaterThan(chatBefore + 50);
   await page.getByRole('button', { name: 'Reset layout', exact: true }).click();
-  const reset = await dimensions();
-  for (const key of ['files', 'editor', 'output'] as const) expect(Math.abs(reset[key] - initial[key])).toBeLessThan(2);
+  for (const key of ['files', 'editor', 'output'] as const) {
+    await expect.poll(async () => Math.abs((await dimensions())[key] - initial[key])).toBeLessThan(2);
+  }
   await expect(page.locator('#pane-chat')).toBeHidden();
   await expect(page.locator('#preview-frame')).toHaveAttribute('srcdoc', previewDocument!);
   expect(errors).toEqual([]);

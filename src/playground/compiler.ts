@@ -1,3 +1,4 @@
+import { compilationLimitError } from './resource-limits';
 import { compileBeastResult } from 'beast-tsrx';
 import { compile as compileOctane } from 'octane/compiler';
 import { init, parse } from 'es-module-lexer';
@@ -69,6 +70,8 @@ export async function compileProject(project: CompilationProject): Promise<Compi
   let fs: VirtualFileSystem;
   let entry: string;
   try {
+    const limitError = compilationLimitError(project);
+    if (limitError) throw new Error(limitError);
     fs = new VirtualFileSystem(project.files);
     if (fs.list().some(path => path.startsWith('/@runtime/'))) throw new Error('The /@runtime/ directory is reserved for the compiler runtime.');
     entry = fs.resolve(normalizePath(project.entry));

@@ -46,3 +46,40 @@ test('idle workers are reused, project snapshots are isolated, and disposal canc
   coordinator.schedule(project); await tick();
   expect(worker.request!.id).toBe(2);
 });
+
+test('oversized edits cancel pending work without posting and recover after reduction', async () => {
+  const workers: FakeWorker[] = [];
+  const errors: string[] = [];
+  const results: string[] = [];
+  const coordinator = new CompilationCoordinator({
+    createWorker: () => { const worker = new FakeWorker(); workers.push(worker); return worker; },
+    onStart() {}, onError: message => errors.push(message), onResult: result => results.push(result.entry!),
+  });
+  coordinator.schedule(project, true); await tick();
+  coordinator.schedule({ ...project, files: { '/main.ts': 'x'.repeat(2_000_000) } }, true);
+  expect(workers[0].terminated).toBe(true);
+  workers[0].reply();
+  expect(results).toEqual([]);
+  expect(errors[0]).toContain('Compilation limit');
+  coordinator.schedule(project, true); await tick(); workers[1].reply();
+  expect(results).toEqual(['3']);
+  coordinator.dispose();
+});
+
+test('timeout terminates the compiler, rejects its late reply and permits restart', async () => {
+  const workers: FakeWorker[] = [];
+  const errors: string[] = [];
+  const results: string[] = [];
+  const coordinator = new CompilationCoordinator({
+    createWorker: () => { const worker = new FakeWorker(); workers.push(worker); return worker; },
+    onStart() {}, onError: message => errors.push(message), onResult: result => results.push(result.entry!), timeoutMs: 20,
+  });
+  coordinator.schedule(project, true);
+  await new Promise(resolve => setTimeout(resolve, 50));
+  expect(workers[0].terminated).toBe(true);
+  expect(errors).toEqual(['Compilation timed out. Run to restart the compiler.']);
+  workers[0].reply(); expect(results).toEqual([]);
+  coordinator.schedule(project, true); await tick(); workers[1].reply();
+  expect(results).toEqual(['2']);
+  coordinator.dispose();
+});

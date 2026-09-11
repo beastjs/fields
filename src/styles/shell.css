@@ -39,3 +39,8 @@
 .shared-file summary { padding: 10px 12px; cursor: pointer; font: 10px var(--mono); overflow-wrap: anywhere; }
 .shared-file pre { margin: 0; padding: 12px; overflow: auto; max-height: 200px; font: 10px/1.7 var(--mono); background: var(--inset); }
 .shared-file .transfer-note { padding: 0 12px; }
+
+.examples-button { padding: 6px 8px; border: 1px solid var(--edge); border-radius: 4px; background: var(--surface-recessed); color: var(--text-secondary); font-size: 10px; white-space: nowrap; }
+.examples-button:hover { color: var(--accent); }
+.example-choice { width: 100%; min-width: 0; padding: 10px; margin-bottom: 16px; border: 1px solid var(--edge-strong); border-radius: 4px; background: var(--inset); color: var(--text); font: 12px var(--mono); }
+@media (max-width: 760px) { .topbar .project-title { display: none; } }

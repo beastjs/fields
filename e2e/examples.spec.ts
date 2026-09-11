@@ -1,0 +1,81 @@
+import { expect, test, type Page } from '@playwright/test';
+
+async function load(page: Page, id: string, title: string) {
+  await page.getByRole('button', { name: 'Examples', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Example library' });
+  await expect(dialog).toBeVisible();
+  await dialog.getByLabel('Choose an example').selectOption(id);
+  await dialog.getByRole('button', { name: 'Load example', exact: true }).click();
+  await expect(dialog).not.toBeVisible();
+  await expect(page.frameLocator('#preview-frame').getByRole('heading', { name: title, exact: true })).toBeVisible();
+}
+
+test('examples render props, native events, independent nested state, and async recovery', async ({ page }) => {
+  await page.goto('/');
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  const preview = page.frameLocator('#preview-frame');
+  await expect(preview.getByRole('heading', { name: 'Hello, world.' })).toBeVisible();
+  await load(page, 'props', 'Props & components');
+  await preview.getByLabel('Your name').fill('Lin');
+  await expect(preview.getByRole('heading', { name: 'Hello, Lin!' })).toBeVisible();
+  await expect(preview.getByRole('heading', { name: 'Hello, Grace!' })).toBeVisible();
+  await load(page, 'events', 'State & events');
+  await expect(preview.getByText('No ideas yet.')).toBeVisible();
+  await preview.getByLabel('New idea').fill('Build a compiler');
+  await preview.getByLabel('New idea').press('Enter');
+  await expect(preview.getByRole('listitem')).toHaveText(['Build a compiler']);
+  await preview.getByLabel('New idea').fill('Build a compiler');
+  await preview.getByRole('button', { name: 'Add idea' }).click();
+  await expect(preview.getByRole('listitem')).toHaveCount(1);
+  await preview.getByRole('button', { name: 'Clear ideas' }).click();
+  await expect(preview.getByText('No ideas yet.')).toBeVisible();
+  await load(page, 'nested-components', 'Nested components');
+  await preview.getByRole('button', { name: 'Applaud Ada' }).click();
+  await preview.getByRole('button', { name: 'Applaud Ada' }).click();
+  await expect(preview.getByRole('article').filter({ has: preview.getByRole('heading', { name: 'Ada', exact: true }) })).toContainText('2 applause');
+  await expect(preview.getByRole('article').filter({ has: preview.getByRole('heading', { name: 'Grace', exact: true }) })).toContainText('0 applause');
+  await load(page, 'async', 'Async loading & recovery');
+  await preview.getByRole('button', { name: 'Simulate failure' }).click();
+  await expect(preview.getByRole('status')).toHaveText('Loading message…');
+  await expect(preview.getByRole('button', { name: 'Load message' })).toBeDisabled();
+  await expect(preview.getByRole('alert')).toContainText('The simulated request failed.');
+  await preview.getByRole('button', { name: 'Load message' }).click();
+  await expect(preview.getByRole('status')).toHaveText('Your async message has arrived.');
+  await load(page, 'hello-world', 'Hello, world.');
+  await preview.getByRole('button', { name: 'Increase count' }).click();
+  await expect(preview.locator('.value')).toHaveText('1');
+  expect(errors).toEqual([]);
+});
+
+test('example review protects edits; loading replaces cached files and survives reload on mobile', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  const editor = page.getByRole('textbox', { name: 'Source editor' });
+  await expect(editor).toBeVisible();
+  await editor.focus();
+  await page.keyboard.press('ControlOrMeta+a');
+  await page.keyboard.insertText('h1 My current work\n');
+  await expect(page.frameLocator('#preview-frame').getByRole('heading', { name: 'My current work' })).toBeVisible();
+  await page.getByRole('button', { name: 'Examples', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Example library' });
+  await dialog.getByLabel('Choose an example').selectOption('props');
+  await dialog.getByText('/src/Greeting.btsx', { exact: true }).click();
+  await expect(dialog.locator('pre').filter({ hasText: 'props { name, role }' })).toBeVisible();
+  await page.screenshot({ path: 'test-results/examples-mobile.png', fullPage: true });
+  await dialog.getByRole('button', { name: 'Keep current project' }).click();
+  await expect(editor).toContainText('My current work');
+  await page.getByRole('button', { name: 'Examples', exact: true }).click();
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(dialog).not.toBeVisible();
+  await expect(editor).toContainText('My current work');
+  await load(page, 'props', 'Props & components');
+  await editor.focus();
+  await page.keyboard.press('ControlOrMeta+z');
+  await expect(editor).not.toContainText('My current work');
+  await expect(page.getByRole('tab', { name: 'Counter.btsx', exact: true })).toHaveCount(0);
+  await page.reload();
+  await expect(page.frameLocator('#preview-frame').getByRole('heading', { name: 'Props & components', exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});

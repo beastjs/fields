@@ -11,7 +11,8 @@ it remains a small example that composes `Button`.
 src/App.btsx
   components/shell/
     Topbar.btsx              Run/reset actions, save status, recovery notices, branding
-    ProjectHeading.btsx      Project title and compiler pipeline
+    ProjectHeading.btsx      Matched example title (or Your project) and project kind
+    ExampleLibrary.btsx      Example selection, source review, and explicit loading
     Statusbar.btsx           Build status and stage timings
   components/layout/
     ViewToolbar.btsx         Always-visible pane toggles and reset
@@ -24,7 +25,7 @@ src/App.btsx
   components/editor/
     EditorPane.btsx          File tabs, CodeMirror mount, and Vim preference
   components/preview/
-    PreviewPane.btsx         Iframe mount, viewport presets, and preview status
+    PreviewPane.btsx         Iframe mount, viewport/zoom/fullscreen controls, and preview status
   components/output/
     OutputPane.btsx          Problems, console, and generated-code tabs
     ProblemsList.btsx        Compiler/runtime diagnostics
@@ -41,6 +42,8 @@ and imports; pane geometry and responsive rules live in `styles/workspace.css`.
 
 | Owner | Responsibility |
 | --- | --- |
+| `playground/examples.ts` | Typed example catalog and complete virtual projects, independent of UI |
+| `playground/resource-limits.ts` | Shared compiler input bounds, checked before worker transfer and parsing |
 | `playground/project.ts` | Virtual files, path validation, active file, creation/deletion, protected entry |
 | `playground/session.ts` | Compilation requests/results, diagnostics, console, source navigation, keymap/viewport, project reset generation |
 | `playground/app.ts` | Restore before session creation, inject Worker/storage, connect page lifecycle flushing |

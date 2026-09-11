@@ -35,6 +35,20 @@ Preview and initially collapse Files. The shell fits the viewport at every size;
 editor, preview, output, and chat scroll inside their own panes. Hidden panes
 also hide their resize handles.
 
+The preview toolbar offers desktop/tablet/mobile widths, **50–150% zoom**, and
+**fullscreen**. Zoom scales the view while keeping the selected CSS viewport width;
+wide views scroll inside the pane with their left edge reachable. Fullscreen keeps
+the running app and zoom, and exits through its toolbar button or the browser's
+Escape control. Unsupported browsers disable the button; denied requests show a
+message. Zoom and fullscreen are session-only view controls, excluded from shares.
+
+Open **Examples** in the top bar to browse five self-contained projects: Hello
+World/counter, props/components, state/events, nested components, and async
+loading/recovery. Inspect their source before choosing **Load example**; loading
+replaces the current files, saved copy, undo history, and running preview. Cancel
+or Escape keeps your work. Save a Share link first if you want to return to it.
+The async example uses a local simulated request and works without network access.
+
 Use **Share** to create and copy a snapshot link. It includes project files, the
 active tab, and preview size; chat, connection credentials, and personal settings
 are excluded. The project travels in a compressed URL fragment without a project
@@ -102,8 +116,9 @@ render or validate it.
 
 ```sh
 bun run check                  # Type checks, unit/fixture tests, production build
-bunx playwright install chromium
-bun run test:browser            # Production browser integration tests
+bunx playwright install chromium firefox webkit
+bun run test:browser            # Full Chromium, Firefox, and WebKit suites
+bun run test:browser --project=chromium # Chromium only
 ```
 
 Runtime source is generated from installed packages before builds/tests and is
@@ -141,9 +156,22 @@ missing maps or unsupported stack formats remain raw. Import attributes/phases
 and computed dynamic imports are not supported. Preview code has no network
 access under the initial CSP.
 
-The sandbox blocks parent DOM/storage access; it is not a resource quota for
-infinite loops or excessive memory allocation. Browser smoke tests currently
-cover Chromium; cross-browser verification is a production-hardening task.
+Compilation rejects projects exceeding 200 files or 2 million source/path UTF-16
+characters before worker transfer and parsing. Oversized edits retain the last
+working preview; reducing the project allows compilation again. This is separate
+from the serialized local-save and share limits. Hung compiler workers terminate
+after 15 seconds and can restart on the next Run.
+
+Preview console forwarding allows 100 messages per second across all levels,
+with one suppression notice per window. Object summaries cap depth, entries, and
+string length and skip property getters; later logs resume automatically.
+The host retains the latest 200 entries. The sandbox blocks parent DOM/storage
+access but cannot enforce CPU or memory quotas on arbitrary preview JavaScript;
+infinite loops, custom proxy traps, and excessive allocation remain limitations.
+
+The complete browser suite runs against production output in Chromium, Firefox,
+and WebKit, including editor/Vim, layout, persistence, chat, examples, HMR,
+sharing, preview controls, and console burst recovery.
 
 See [architecture discovery](docs/playground-architecture.md),
 [component structure and state ownership](docs/project-structure.md),

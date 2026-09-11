@@ -40,21 +40,20 @@ checks, and a changelog entry, as required by the master plan.
 | 9 | Editor, explorer, tabs, highlighting, diagnostic markers | Complete for milestone; formatting/completions later |
 | 10 | Debounce and stale-result protection | Complete |
 | 11 | Compiler diagnostics and source navigation | Complete for compiler errors; full semantic checking later |
-| 12 | Responsive presets, reload, preview states | Complete for milestone; zoom/fullscreen later |
+| 12 | Responsive presets, reload, preview states | Complete including zoom/fullscreen controls |
 | 13 | Bounded console capture and runtime failures | Complete for milestone |
 | 14 | Compose multi-stage maps; map runtime stacks to editor | Complete for authored modules; raw fallback for unmappable frames |
 | 15 | Record stage timings and measure transfer overhead | Baseline complete; incremental compilation later |
 | 16 | Integrate real Octane HMR, preserve component state | Complete for component/style boundaries; reload fallback for unsupported changes |
 | 17 | Versioned local persistence and restore validation | Complete for current project/editor/preview settings |
 | 18 | Serializable projects and sharing transport | Complete for bounded snapshot links and reviewed imports |
-| 19 | Expand validated example library | Hello World/counter complete; remaining examples pending |
-| 20 | Broaden browser tests and production hardening | Initial Chromium suite complete; cross-browser/resource limits pending |
+| 19 | Expand validated example library | Core library complete: five reviewed projects; advanced recipes later |
+| 20 | Broaden browser tests and production hardening | Full Chromium/Firefox/WebKit matrix; compiler input bounds and console throttling; strict runtime CPU/memory isolation remains open |
 
 ## Recommended next tickets
 
-1. Expand the example library with validated projects for props, state, events,
-   nested components, and async behavior.
-2. Add preview zoom/fullscreen and continue cross-browser hardening.
+1. Extend the example library with advanced recipes as compiler capabilities grow.
+2. Evaluate stronger preview isolation for CPU/memory exhaustion; the iframe sandbox does not enforce resource quotas.
 
 These are follow-on tickets, not claims that the full master plan is complete.
 
@@ -217,3 +216,89 @@ size/encoding/version validation, decompression bounds, atomic imports, save/und
 restoration, cancellation, clipboard success/failure, and both viewport dimensions
 through chat collapse/restore/reset at 320, 390, 1024, and 1440px widths. Desktop,
 mobile, import-review, and light-theme share screenshots were reviewed.
+
+
+## Milestone 7 — Validated example library
+
+Implemented on 2026-09-11. The top-bar **Examples** picker offers five complete
+virtual projects: Hello World/counter, typed props and reusable components,
+state with input/keyboard/click events and keyed lists, nested component imports
+with independent state, and async loading/failure/recovery. Async requests are
+simulated locally, respecting the preview's network restrictions. Example source
+and descriptions live in the typed catalog, outside UI components.
+
+The dialog exposes descriptions and expandable source files before **Load example**
+replaces the project through the existing session reset contract. Cancellation
+and Escape preserve edits; loading clears stale editor history and preview state,
+saves immediately, and survives reload. The desktop heading identifies unchanged
+examples and displays “Your project” after edits. The picker stays available on
+mobile while the longer project heading is hidden.
+
+Compiler coverage validates every example and its complete import graph with the
+installed Beast and Octane compilers. Browser coverage exercises props updates,
+keyboard/click events, empty and deduplicated lists, independent nested state,
+async failure and recovery, source review, cancellation, undo invalidation, and
+mobile restoration. Advanced recipes remain a follow-on; the core example-library
+ticket is complete.
+
+Verification: 59 Bun unit/fixture tests, 34 Chromium browser tests against the
+production build, TSRX/TypeScript checks, and production build passed. The mobile
+source-review screenshot was inspected for layout and readable controls.
+
+
+## Milestone 8 — Preview zoom, fullscreen, and browser coverage
+
+Implemented on 2026-09-11. The preview toolbar supports 50%, 75%, 100%, 125%,
+and 150% zoom. A measured, clipped canvas scales the same iframe, preserving its
+CSS viewport width and running state. The rendered height fits the stage; wide
+views scroll from a reachable left edge. Desktop width tracks the pane through
+resize, collapse/restore, and fullscreen. Narrow toolbars use compact labels.
+
+Native fullscreen includes the preview toolbar, address/status, and error UI.
+The exit button and browser fullscreen changes synchronize the pressed state and
+return focus to the control. Unsupported browsers disable fullscreen; a rejected
+request leaves a visible notice and usable app. Resize and fullscreen listeners
+clean up with the preview. Zoom and fullscreen remain local view state and do not
+alter saved project or share schemas.
+
+Playwright now declares a full Chromium project plus Firefox and WebKit projects
+covering examples, HMR/theme, sharing, and preview controls against production
+output. New interaction tests verify zoom geometry and pointer interaction,
+viewport width and running-state preservation, scroll reachability, mobile
+containment, native fullscreen entry/exit and external exit, and denial recovery.
+The remaining editor/layout browser matrix and runtime resource bounds remain
+follow-on work.
+
+
+## Milestone 9 — Full browser matrix and resource hardening
+
+Implemented on 2026-09-11. All browser specs now run in Chromium, Firefox, and
+WebKit, extending coverage to editor/Vim, source navigation, file operations,
+persistence, chat, and responsive panel layouts.
+
+Compilation checks at the coordinator and compiler boundaries reject more than
+200 files or 2 million source/path UTF-16 characters before copying or parsing.
+Oversized edits cancel stale builds, preserve the last good preview, and recover
+when reduced. Tests also verify termination of a timed-out compiler, rejection of
+its late reply, and successful restart.
+
+Console capture limits forwarding to 100 messages per second across all levels,
+reports suppression once per window, and resumes automatically. Object summaries
+bound recursion and traversal and skip getters. Browser coverage verifies burst
+suppression, bounded transport, later logging, working events, and reload.
+These are defensive limits, not arbitrary-code CPU/memory isolation: an iframe
+can still block on infinite loops, proxy traps, or excessive allocation.
+
+Cross-browser verification exposed WebKit focus traversal reaching an opaque
+iframe document proxy. The preview now exposes `contentDocument` as null to host
+DOM traversal and continues to communicate through `contentWindow.postMessage`.
+Dialog launchers explicitly take focus before opening; example interaction tests
+assert no uncaught host errors. Compiler and runtime packages are unchanged.
+
+Verification: 62 Bun tests (556 assertions), TSRX/TypeScript checks, and production
+build passed. The final full browser run passed 113/114 cases; its remaining
+WebKit reset-size assertion measured layout before it settled. After changing
+that assertion to poll for the expected dimensions, the resize test passed three
+consecutive runs in each engine (9/9). All 114 cases therefore have passing
+coverage across the full run and focused reruns. The full suite was not repeated
+after that test-only adjustment.

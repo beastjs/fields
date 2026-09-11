@@ -1,0 +1,34 @@
+import { useEffect, useRef, useState } from 'octane'
+import { examples } from '../../playground/examples'
+import type { SessionProps } from '../types'
+
+props { session }: SessionProps
+setup
+  const dialog = useRef<HTMLDialogElement | null>(null);
+  const [selectedId, setSelectedId] = useState(examples[0].id);
+  const selected = examples.find(example => example.id === selectedId) ?? examples[0];
+  const close = () => dialog.current?.close();
+  const load = () => { session.resetProject(selected.project); close(); };
+  useEffect(() => () => dialog.current?.close(), []);
+
+button.examples-button(type='button' onClick={event => { event.currentTarget.focus(); dialog.current?.showModal(); }}) Examples
+dialog.project-transfer(ref={dialog} aria-labelledby='examples-title')
+  div.settings-heading
+    div
+      span.eyebrow-label LEARN BEAST
+      h2#examples-title Example library
+    button.icon-button(type='button' aria-label='Close examples' onClick={close}) ×
+  label.transfer-label(for='example-choice') Choose an example
+  select#example-choice.example-choice(value={selectedId} onChange={event => setSelectedId(event.currentTarget.value)})
+    each example in examples key example.id
+      option(value={example.id}) #{example.title}
+  p.transfer-description #{selected.description}
+  div.shared-files
+    each file in Object.entries(selected.project.files) key file[0]
+      details.shared-file
+        summary #{file[0]}
+        pre #{file[1]}
+  p.transfer-note Loading an example replaces your current files and the saved project in this browser. Use Share to keep a link to your work first.
+  div.settings-actions
+    button.secondary-button(type='button' onClick={close}) Keep current project
+    button.primary-button(type='button' onClick={load}) Load example

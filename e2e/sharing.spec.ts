@@ -15,7 +15,7 @@ async function ready(page: Page, url = '/') {
 }
 const saved = (page: Page) => page.evaluate(key => localStorage.getItem(key), PROJECT_STORAGE_KEY);
 
-test('share snapshot imports only after review and restores files, selection, viewport and saved state', async ({ page, context }) => {
+test('share snapshot imports only after review and restores files, selection, viewport and saved state', async ({ page, context, browserName }) => {
   await ready(page);
   await edit(page, 'h1 Shared 🌱 project\n');
   await expect(page.frameLocator('#preview-frame').getByRole('heading', { name: 'Shared 🌱 project' })).toBeVisible();
@@ -26,10 +26,12 @@ test('share snapshot imports only after review and restores files, selection, vi
   await expect(share).toBeVisible();
   await expect(page.getByLabel('Project link')).toHaveValue(/#project=v1\./);
   const link = await page.getByLabel('Project link').inputValue();
-  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  // Playwright's clipboard permission overrides are Chromium-only. Other engines
+  // exercise the native write from the Copy button's user gesture.
+  if (browserName === 'chromium') await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await share.getByRole('button', { name: 'Copy link', exact: true }).click();
   await expect(share.getByRole('status')).toHaveText('Link copied.');
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(link);
+  if (browserName === 'chromium') expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(link);
   await share.getByRole('button', { name: 'Close', exact: true }).click();
   await page.getByRole('button', { name: 'Open App.btsx', exact: true }).click();
   await edit(page, 'h1 My current project\n');

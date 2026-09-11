@@ -1,4 +1,13 @@
+import { useSyncExternalStore } from 'octane'
+import { examples } from '../../playground/examples'
+import type { SessionProps } from '../types'
+
+props { session }: SessionProps
+setup
+  const state = useSyncExternalStore(session.subscribe, session.getSnapshot);
+  const example = examples.find(item => item.project.entry === state.project.entry && Object.keys(item.project.files).length === Object.keys(state.project.files).length && Object.entries(item.project.files).every(([path, source]) => state.project.files[path] === source));
+
 div.project-title
   span.project-symbol ◈
-  span.project-name Hello world
+  span.project-name(title={example?.title ?? 'Your project'}) #{example?.title ?? 'Your project'}
   span.project-kind BTSX PROJECT

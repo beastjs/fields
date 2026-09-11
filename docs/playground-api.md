@@ -50,6 +50,10 @@ An obsolete busy worker is terminated because the synchronous compilers cannot
 process a cancel message mid-call. Idle workers are reused. Worker errors and
 15-second compilation timeouts tear down the worker; the next run recreates it.
 `dispose()` cancels timers, terminates the worker, and ignores late messages.
+`compilationLimitError` checks 200 files / 2 million source and path UTF-16 units
+before coordinator snapshotting and again before compiler parsing. A rejected
+project reports through `onError`, invalidates older work, and can recover on the
+next valid schedule. These bounds differ from serialized save/share limits.
 
 ## Preview
 
@@ -67,6 +71,12 @@ the theme on the same document channel. Frame → host: the same envelope with
 `runtime-error`. A rendered event identifies `update: 'reload' | 'hot'`.
 Both ends validate source window, envelope, and payload shape.
 The host checks bounded console strings and retains at most 200 entries.
+The bootstrap forwards up to 100 console calls per one-second window across all
+levels, then emits one suppression notice. Dropped calls skip serialization and
+devtools forwarding; the next window resumes capture. Object summaries cap depth
+at three, entries at 20 per object/array, traversal at 100 values per argument,
+and output at 4,000 characters. Accessors are represented without invoking them.
+This does not bound arbitrary user code, including proxy traps or memory use.
 Opaque iframe origins require `postMessage` target `*`; the specific window and
 per-document channel/build check prevent accepting unrelated messages.
 
