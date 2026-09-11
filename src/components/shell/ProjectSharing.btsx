@@ -1,0 +1,70 @@
+import { useEffect, useRef, useState } from 'octane'
+import { createProjectShareURL, decodeSharedProject, projectPayloadFromHash } from '../../playground/project-sharing'
+import type { SessionProps } from '../types'
+import type { ProjectTransfer } from './project-transfer'
+import ProjectTransferDialog from './ProjectTransferDialog.btsx'
+
+props { session }: SessionProps
+setup
+  const [transfer, setTransfer] = useState<ProjectTransfer | undefined>();
+  const revision = useRef(0);
+  const clearFragment = () => {
+    if (projectPayloadFromHash(location.hash) !== undefined) history.replaceState(history.state, '', location.pathname + location.search);
+  };
+  const close = () => {
+    revision.current++;
+    if (transfer?.kind === 'import') clearFragment();
+    setTransfer(undefined);
+  };
+  const share = async () => {
+    const current = ++revision.current;
+    const workspace = session.exportWorkspace();
+    setTransfer({ kind: 'share', workspace });
+    try {
+      const url = await createProjectShareURL(workspace, location.href);
+      if (current === revision.current) setTransfer({ kind: 'share', workspace, url });
+    } catch (error) {
+      if (current === revision.current) setTransfer({ kind: 'share', error: error instanceof Error ? error.message : 'Could not create a share link.' });
+    }
+  };
+  const copy = async () => {
+    if (!transfer?.url) return;
+    const current = revision.current;
+    try {
+      await navigator.clipboard.writeText(transfer.url);
+      if (current === revision.current) setTransfer({ ...transfer, notice: 'Link copied.' });
+    } catch {
+      if (current === revision.current) setTransfer({ ...transfer, notice: 'Select the link above and copy it manually.' });
+    }
+  };
+  const importProject = () => {
+    if (!transfer?.workspace || transfer.kind !== 'import') return;
+    session.importWorkspace(transfer.workspace);
+    close();
+  };
+  useEffect(() => {
+    const readLink = async () => {
+      const payload = projectPayloadFromHash(location.hash);
+      const current = ++revision.current;
+      if (payload === undefined) {
+        setTransfer(previous => previous?.kind === 'import' ? undefined : previous);
+        return;
+      }
+      setTransfer({ kind: 'import' });
+      try {
+        const workspace = await decodeSharedProject(payload);
+        if (current === revision.current) setTransfer({ kind: 'import', workspace });
+      } catch (error) {
+        if (current === revision.current) setTransfer({ kind: 'import', error: error instanceof Error ? error.message : 'Could not read this share link.' });
+      }
+    };
+    void readLink();
+    window.addEventListener('hashchange', readLink);
+    return () => { revision.current++; window.removeEventListener('hashchange', readLink); };
+  }, [session]);
+
+button.share-project(type='button' aria-label='Share project' title='Share project' onClick={share})
+  span(aria-hidden='true') ↗
+  span.share-label Share
+if transfer
+  ProjectTransferDialog(transfer={transfer} onClose={close} onCopy={copy} onImport={importProject})

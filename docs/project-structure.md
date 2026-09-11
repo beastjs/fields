@@ -45,7 +45,8 @@ and imports; pane geometry and responsive rules live in `styles/workspace.css`.
 | `playground/session.ts` | Compilation requests/results, diagnostics, console, source navigation, keymap/viewport, project reset generation |
 | `playground/app.ts` | Restore before session creation, inject Worker/storage, connect page lifecycle flushing |
 | `playground/project-storage.ts` | Versioned serializer, validation/migration, bounded local storage and conflict handling |
-| `playground/project-persistence.ts` | Debounced saves of authored state, flushing and immediate reset saves |
+| `playground/project-sharing.ts` | Bounded compressed URL transport around the project serializer |
+| `playground/project-persistence.ts` | Debounced saves of authored state, flushing and immediate reset/import saves |
 | `playground/hot-update.ts` | Compare builds and choose component/style updates or full reload |
 | `playground/theme.ts` | Apply and remember light/dark preferences |
 | `playground/workspace-layout.ts` | Panel/group handles, visibility, collapse/expand, default geometry |

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'octane'
+import { useEffect, useState, useSyncExternalStore } from 'octane'
 import { Group, Panel, Separator } from '@octanejs/resizable-panels'
 import type { WorkspaceProps, NavigateToSource } from '../types'
 import FilesPane from '../files/FilesPane.btsx'
@@ -10,16 +10,17 @@ import ChatPane from '../chat/ChatPane.btsx'
 props { session, layout }: WorkspaceProps
 setup
   const [narrow, setNarrow] = useState(layout.narrow);
+  const visible = useSyncExternalStore(layout.subscribe, layout.getSnapshot);
   const navigate: NavigateToSource = (file, position) => {
     layout.expand('editor');
     session.openFile(file, position, position !== undefined);
   };
   useEffect(() => {
     const media = matchMedia('(max-width: 760px)');
-    const change = () => setNarrow(media.matches);
+    const change = () => { layout.setNarrow(media.matches); setNarrow(media.matches); };
     media.addEventListener('change', change);
     return () => media.removeEventListener('change', change);
-  }, []);
+  }, [layout]);
 
 section.workspace(aria-label='Playground workspace')
   Group(id='workspace-group' orientation='vertical' groupRef={layout.groups.workspace} defaultLayout={layout.initialLayouts.workspace} onLayoutChange={layout.sync} onLayoutChanged={layout.commit})
@@ -27,17 +28,17 @@ section.workspace(aria-label='Playground workspace')
       Group(id='dock-group' orientation={narrow ? 'vertical' : 'horizontal'} groupRef={layout.groups.dock} defaultLayout={layout.initialLayouts.dock} onLayoutChange={layout.sync} onLayoutChanged={layout.commit})
         Panel(id='view-files' panelRef={layout.panels.files} minSize={narrow ? '20%' : '9%'} maxSize='30%' collapsible={true} collapsedSize='0%' className='panel-container')
           FilesPane(session={session} layout={layout} navigate={navigate})
-        Separator(className='pane-separator' aria-label='Resize files')
+        Separator(className='pane-separator' aria-label='Resize files' disabled={!visible.files})
         Panel(id='center' minSize='35%' className='panel-container')
           Group(id='main-group' orientation={narrow ? 'vertical' : 'horizontal'} groupRef={layout.groups.main} defaultLayout={layout.initialLayouts.main} onLayoutChange={layout.sync} onLayoutChanged={layout.commit})
             Panel(id='view-editor' panelRef={layout.panels.editor} minSize='20%' collapsible={true} collapsedSize='0%' className='panel-container')
               EditorPane(session={session} layout={layout})
-            Separator(className='pane-separator' aria-label='Resize editor and preview')
+            Separator(className='pane-separator' aria-label='Resize editor and preview' disabled={!visible.editor || !visible.preview})
             Panel(id='view-preview' panelRef={layout.panels.preview} minSize='20%' collapsible={true} collapsedSize='0%' className='panel-container')
               PreviewPane(session={session} layout={layout})
-        Separator(className='pane-separator' aria-label='Resize AI chat')
+        Separator(className='pane-separator' aria-label='Resize AI chat' disabled={!visible.chat})
         Panel(id='view-chat' panelRef={layout.panels.chat} minSize={narrow ? '45%' : '18%'} maxSize={narrow ? '60%' : '45%'} collapsible={true} collapsedSize='0%' className='panel-container')
           ChatPane(layout={layout} session={session})
-    Separator(className='pane-separator' aria-label='Resize output')
+    Separator(className='pane-separator' aria-label='Resize output' disabled={!visible.output})
     Panel(id='view-output' panelRef={layout.panels.output} minSize='12%' maxSize='70%' collapsible={true} collapsedSize='0%' className='panel-container')
       OutputPane(session={session} layout={layout} navigate={navigate})

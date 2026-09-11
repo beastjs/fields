@@ -14,7 +14,7 @@ export function connectProjectPersistence(session: PlaygroundSession, store: Wor
     const state = session.getSnapshot();
     session.setSaveStatus(store.save({ version: 1, project: state.project, activeFile: state.activeFile,
       preview: { width: state.previewWidth } }, replace));
-    // An explicit reset authorizes replacing a blocked record, including a retried write.
+    // An explicit reset/import authorizes replacing a blocked record, including a retried write.
     if (!session.getSnapshot().saveStatus.issue) replace = false;
   };
   const schedule = () => {

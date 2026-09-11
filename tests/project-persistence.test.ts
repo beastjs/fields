@@ -62,3 +62,21 @@ test('reset replaces a pending save immediately and invalidates old project stat
     await tick(); expect(harness.writes).toBe(1);
   } finally { harness.dispose(); }
 });
+
+test('import replaces a pending save atomically and retains the shared selection and preview settings', async () => {
+  const harness = setup(); const { session } = harness;
+  try {
+    session.updateSource('/src/App.btsx', 'h1 Unsaved previous project\n');
+    session.toggleKeymap(); session.toggleTheme();
+    const shared = { version: 1 as const, project: { entry: '/src/main.ts', files: {
+      '/src/main.ts': '', '/src/Imported.btsx': 'h1 Imported\n',
+    } }, activeFile: '/src/Imported.btsx', preview: { width: '375px' as const } };
+    session.importWorkspace(shared);
+    expect(harness.writes).toBe(1);
+    expect(decodeWorkspace(harness.raw!)).toEqual(shared);
+    expect(session.exportWorkspace()).toEqual(shared);
+    expect(session.getSnapshot()).toMatchObject({ projectGeneration: 1, keymap: 'vim', theme: 'light',
+      diagnostics: [], console: [], previewBuild: undefined });
+    await tick(); expect(harness.writes).toBe(1);
+  } finally { harness.dispose(); }
+});

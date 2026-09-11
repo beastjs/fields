@@ -23,14 +23,18 @@ export class WorkspaceLayout {
   private geometry: { dock: number[]; split: number[]; rows: number[] };
   private persist?: (query: PanelQuery) => void;
   private visible: Visibility;
+  private viewportNarrow: boolean;
   private listeners = new Set<() => void>();
   constructor(readonly narrow = false, query?: PanelQuery) {
+    this.viewportNarrow = narrow;
     this.geometry = this.resolve(query);
     this.initialLayouts = this.layouts(this.geometry);
     this.visible = { files: this.geometry.dock[0] > 0, editor: this.geometry.split[0] > 0,
       preview: this.geometry.split[1] > 0, output: this.geometry.rows[1] > 0, chat: this.geometry.dock[2] > 0 };
   }
-  dockDefaults = () => ({ 'view-files': this.narrow ? 0 : 14, center: this.narrow ? 100 : 86, 'view-chat': 0 });
+  dockDefaults = (narrow = this.narrow) => ({ 'view-files': narrow ? 0 : 14, center: narrow ? 100 : 86, 'view-chat': 0 });
+  // Query defaults stay stable for this page; Reset follows the current screen.
+  setNarrow = (narrow: boolean) => { this.viewportNarrow = narrow; };
   getSnapshot = () => this.visible;
   subscribe = (listener: () => void) => {
     this.listeners.add(listener);
@@ -87,7 +91,7 @@ export class WorkspaceLayout {
   toggle = (id: PaneId) => this.visible[id] ? this.collapse(id) : this.expand(id);
   reset = () => {
     this.groups.workspace.current?.setLayout(this.workspaceDefaults);
-    this.groups.dock.current?.setLayout(this.dockDefaults());
+    this.groups.dock.current?.setLayout(this.dockDefaults(this.viewportNarrow));
     this.groups.main.current?.setLayout(this.mainDefaults);
   };
 }

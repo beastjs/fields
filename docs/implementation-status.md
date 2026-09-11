@@ -46,16 +46,15 @@ checks, and a changelog entry, as required by the master plan.
 | 15 | Record stage timings and measure transfer overhead | Baseline complete; incremental compilation later |
 | 16 | Integrate real Octane HMR, preserve component state | Complete for component/style boundaries; reload fallback for unsupported changes |
 | 17 | Versioned local persistence and restore validation | Complete for current project/editor/preview settings |
-| 18 | Serializable projects and sharing transport | Pending |
+| 18 | Serializable projects and sharing transport | Complete for bounded snapshot links and reviewed imports |
 | 19 | Expand validated example library | Hello World/counter complete; remaining examples pending |
 | 20 | Broaden browser tests and production hardening | Initial Chromium suite complete; cross-browser/resource limits pending |
 
 ## Recommended next tickets
 
-1. Add a sharing transport around the validated project serializer, with explicit
-   import/replace behavior and size validation.
-2. Expand the example library with validated projects for props, state, events,
+1. Expand the example library with validated projects for props, state, events,
    nested components, and async behavior.
+2. Add preview zoom/fullscreen and continue cross-browser hardening.
 
 These are follow-on tickets, not claims that the full master plan is complete.
 
@@ -189,3 +188,32 @@ Verification: 53 Bun unit/fixture tests, 28 Chromium browser tests, TSRX/TypeScr
 checks, and the production build passed. Desktop, mobile, and settings-dialog
 screenshots were reviewed. No production compiler package or runtime source was
 modified.
+
+## Milestone 6 — Shareable projects and viewport containment
+
+Implemented on 2026-09-11. Phase 18 wraps the validated workspace serializer in
+a versioned gzip/base64url transport carried by the URL fragment. Share captures
+files, the active tab, and preview size. It omits chat, connection credentials,
+personal preferences, and generated code. The UI supports clipboard copying
+and a manual-copy fallback. No project server or upload endpoint is needed.
+
+Incoming links open a review dialog with expandable source files. Only an explicit
+**Replace project** imports and immediately saves the snapshot; cancel, Escape,
+bad links, and unsupported versions leave the current project unchanged. Import
+invalidates cached editor documents, undo history, pending builds, and the old
+preview realm. Transport limits cap both encoded input and streamed decompression.
+
+The shell now fits the current viewport instead of forcing 640px desktop or
+1,120–1,580px mobile minimum heights. Pane surfaces contain positioned descendants,
+fixing a collapsed chat label that extended the document 11px beyond the screen.
+Scrolling remains inside panes, compact chat controls adapt to short panels, and
+layout reset uses the current responsive breakpoint. The project heading shares
+the top bar, and collapsed panels hide their resize handles without interfering
+with the remaining dividers' hit testing.
+
+Verification: 58 Bun unit/fixture tests, 32 Chromium browser tests, TSRX/TypeScript
+checks, and the production build passed. Coverage includes Unicode link round trips,
+size/encoding/version validation, decompression bounds, atomic imports, save/undo
+restoration, cancellation, clipboard success/failure, and both viewport dimensions
+through chat collapse/restore/reset at 320, 390, 1024, and 1440px widths. Desktop,
+mobile, import-review, and light-theme share screenshots were reviewed.

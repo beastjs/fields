@@ -1,0 +1,48 @@
+import { useEffect, useRef } from 'octane'
+import type { ProjectTransfer } from './project-transfer'
+
+props { transfer, onClose, onCopy, onImport }: { transfer: ProjectTransfer; onClose: () => void; onCopy: () => void; onImport: () => void }
+setup
+  const dialog = useRef<HTMLDialogElement | null>(null);
+  const files = Object.entries(transfer.workspace?.project.files ?? {}).map(([path, source]) => ({ path, source }));
+  useEffect(() => { dialog.current?.showModal(); return () => dialog.current?.close(); }, []);
+
+dialog.project-transfer(ref={dialog} aria-labelledby='project-transfer-title' onCancel={onClose})
+  div.settings-heading
+    div
+      span.eyebrow-label PROJECT
+      h2#project-transfer-title #{transfer.kind === 'share' ? 'Share project' : 'Open shared project'}
+    button.icon-button(type='button' aria-label='Close project sharing' onClick={onClose}) ×
+  if transfer.error
+    p.transfer-error(role='alert') #{transfer.error}
+  elseif transfer.kind === 'share'
+    div
+      p.transfer-description This link contains a snapshot of your project files and preview size. Anyone with the link can read the files. Later edits need a new link.
+      if transfer.url
+        div
+          label.transfer-label(for='project-share-url') Project link
+          textarea#project-share-url.share-url(readOnly={true} rows='4' value={transfer.url} onFocus={event => event.currentTarget.select()})
+          p.transfer-note Chat, connection credentials, and personal preferences are excluded. Files stay in the link; they are not uploaded to a project server.
+      else
+        p.transfer-note(role='status') Creating link…
+  elseif transfer.workspace
+    div
+      p.transfer-description Review these #{files.length} files before importing. This replaces your current files and the saved project in this browser.
+      div.shared-files
+        each file in files key file.path
+          details.shared-file
+            summary #{file.path}
+            pre #{file.source.slice(0, 20000)}
+            if file.source.length > 20000
+              p.transfer-note Preview shortened. The complete file will be imported.
+      p.transfer-note Entry: #{transfer.workspace.project.entry}
+  else
+    p.transfer-note(role='status') Reading shared project…
+  if transfer.notice
+    p.transfer-note(role='status') #{transfer.notice}
+  div.settings-actions
+    button.secondary-button(type='button' onClick={onClose}) #{transfer.kind === 'import' ? 'Keep current project' : 'Close'}
+    if transfer.kind === 'share' && transfer.url
+      button.primary-button(type='button' onClick={onCopy}) Copy link
+    elseif transfer.kind === 'import' && transfer.workspace && !transfer.error
+      button.primary-button(type='button' onClick={onImport}) Replace project

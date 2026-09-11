@@ -4,7 +4,7 @@ import type { EditorKeymap } from './editor-preferences';
 import { PlaygroundProject } from './project';
 import type { ResolvedPreviewEvent } from './preview';
 import { canNavigateRuntimeLocation, type RuntimeStackFrame } from './runtime-diagnostics';
-import type { PreviewWidth, SaveStatus } from './project-storage';
+import type { PreviewWidth, SavedWorkspace, SaveStatus } from './project-storage';
 import type { Theme } from './theme';
 
 export type ToolPanel = 'problems' | 'console' | 'output';
@@ -108,10 +108,17 @@ export class PlaygroundSession {
   }
   setSaveStatus = (saveStatus: SaveStatus) => this.patch({ saveStatus });
   setPreviewWidth = (previewWidth: PreviewWidth) => this.patch({ previewWidth });
+  exportWorkspace = (): SavedWorkspace => ({ version: 1, project: this.state.project,
+    activeFile: this.state.activeFile, preview: { width: this.state.previewWidth } });
+  importWorkspace = (workspace: SavedWorkspace) => this.replaceProject(workspace.project, workspace.activeFile, workspace.preview.width);
   resetProject(project: CompilationProject) {
+    this.replaceProject(project);
+  }
+  private replaceProject(project: CompilationProject, activeFile?: string, previewWidth: PreviewWidth = '100%') {
     this.project = new PlaygroundProject(project);
+    if (activeFile) this.project.open(activeFile);
     this.patch({ project: this.project.snapshot(), activeFile: this.project.activeFile,
-      projectGeneration: this.state.projectGeneration + 1, previewWidth: '100%',
+      projectGeneration: this.state.projectGeneration + 1, previewWidth,
       diagnostics: [], console: [], toolPanel: 'problems', lastResult: undefined,
       buildStatus: 'Changes pending…', buildError: false, previewStatus: 'Starting',
       previewError: '', hasPreview: false, compileFailed: false, previewFailed: false,

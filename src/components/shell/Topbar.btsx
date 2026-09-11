@@ -1,26 +1,30 @@
 import type { SessionProps } from '../types'
 import { useSyncExternalStore } from 'octane'
 import { resetPlaygroundProject } from '../../playground/app'
+import ProjectHeading from './ProjectHeading.btsx'
+import ProjectSharing from './ProjectSharing.btsx'
 
 props { session }: SessionProps
 setup const state = useSyncExternalStore(session.subscribe, session.getSnapshot);
 
 div.topbar-container
   header.topbar
-    a.brand(href='/' aria-label='Beast Playground home')
-      img(src='/beast.svg' alt='' width='25' height='25')
-      strong beast
-      span.brand-divider /
-      span.brand-product playground
-      span.milestone WORKBENCH / 01
+    div.topbar-context
+      a.brand(href='/' aria-label='Beast Playground home')
+        img(src='/beast.svg' alt='' width='25' height='25')
+        strong beast
+        span.brand-divider /
+        span.brand-product playground
+      ProjectHeading
     div.topbar-actions
       span#save-status.local-label(role='status' title={state.saveStatus.issue ?? 'Project files and preview size are saved in this browser.'})
         span.status-dot
         | #{state.saveStatus.label}
       button.reset-project(type='button' onClick={() => resetPlaygroundProject(session)}) Reset project
+      ProjectSharing(session={session})
       button.theme-toggle(type='button' aria-label='Light mode' aria-pressed={state.theme === 'light'} title={state.theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'} onClick={session.toggleTheme}) #{state.theme === 'light' ? '☾' : '☀'}
-      button#run-build.run-button(type='button' onClick={session.run} title='Run project (⌘/Ctrl + Enter)')
+      button#run-build.run-button(type='button' aria-label='Run project' onClick={session.run} title='Run project (⌘/Ctrl + Enter)')
         span.play-icon ▷
-        | Run project
+        span.run-label Run project
         kbd ⌘ ↵
   p#save-notice.persistence-notice(role='status' hidden={!state.saveStatus.issue}) #{state.saveStatus.issue}

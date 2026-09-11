@@ -28,8 +28,8 @@
 [data-theme='light'] :is(.persistence-notice, .preview-error, .chat-error) { background: #f8eddb; color: #79521b; border-color: #debf8d; }
 [data-theme='light'] :is(.file-error, .field-error, .diagnostic-row, .console-row[data-level='error'] .console-message, .console-row[data-level='warn'] .console-message) { color: #8c5623; }
 [data-theme='light'] :is(.runtime-source-link, .chat-markdown a, .chat-markdown code, .output-stage.active, .cm-vim-panel, .editor-vim-toggle[aria-pressed='true'], .context-toggle code, .connection-prompt) { color: #a64b19; }
-[data-theme='light'] .chat-settings { box-shadow: 0 24px 80px #40362633, inset 0 1px #fff; }
-[data-theme='light'] .chat-settings::backdrop { background: #4d483b33; }
+[data-theme='light'] :is(.chat-settings, .project-transfer) { box-shadow: 0 24px 80px #40362633, inset 0 1px #fff; }
+[data-theme='light'] :is(.chat-settings, .project-transfer)::backdrop { background: #4d483b33; }
 [data-theme='light'] .primary-button { color: #fff9f1; }
 @media (max-width: 760px) {
   .topbar-actions { gap: 8px; }

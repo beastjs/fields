@@ -146,7 +146,7 @@ Records live at `beast-playground.project`. Failed writes retain the old record.
 Unreadable/unsupported records block automatic writes. A pre-write comparison
 against the last read/written string detects changes from another tab and blocks
 overwrite; this is a conflict guard, not cross-tab merging or a database lock.
-Only an explicit reset uses `replace: true` to replace a blocked record.
+Only an explicit reset or confirmed import uses `replace: true` to replace a blocked record.
 
 `connectProjectPersistence` observes changes to project snapshots, active file,
 viewport, and project generation. It debounces writes for 300 ms and exposes
@@ -165,6 +165,33 @@ All current project files are open tabs, so the tab list is derived from `files`
 Vim settings retain their separate existing record. URL layout, provider settings,
 chat credentials/conversations, compiler output, diagnostics, editor undo/selection,
 and application runtime state are not part of the project record.
+
+## Project sharing
+
+`project-sharing.ts` reuses `SavedWorkspace` and its existing validation without
+depending on components, storage, compiler output, or session internals:
+
+- `encodeSharedProject(workspace)` emits `v1.` plus base64url-encoded gzip JSON.
+- `decodeSharedProject(payload)` checks the transport version and encoding,
+  decompresses with a streaming byte limit, then validates/normalizes the workspace.
+- `createProjectShareURL(workspace, base)` preserves origin/path, strips query
+  parameters and URL credentials, and puts the payload in `#project=...`.
+- `projectPayloadFromHash(hash)` recognizes shared-project navigation.
+
+The transport accepts at most 64,000 payload characters and 2,000,000 decoded
+UTF-8 bytes, in addition to the serializer's 200-file/2-million-character limits.
+Both encoding and decoding enforce limits; decompression cancels as soon as its
+byte limit is exceeded. Invalid or future-version links report a visible error.
+URL fragments are not sent in HTTP requests. No project upload API is introduced.
+
+`PlaygroundSession.exportWorkspace()` captures authored state. After explicit
+review/confirmation, `importWorkspace()` replaces it in one generation change,
+restores the shared active file/viewport, discards old editor/runtime state, and
+saves immediately. Theme, keymap, chat, and pane layout are independent. Until
+confirmation, incoming files are only displayed as text, and the existing project
+continues to be the active/local project. Cancel/Escape leaves it unchanged.
+Closing an import removes its fragment; late decoding results are ignored after
+close or navigation. Copy failures leave a selectable link for manual copying.
 
 ## Theme
 

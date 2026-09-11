@@ -4,7 +4,6 @@ import { panelQueryParsers } from '../../playground/panel-query'
 import { createPlaygroundSession } from '../../playground/app'
 import { WorkspaceLayout } from '../../playground/workspace-layout'
 import Topbar from './Topbar.btsx'
-import ProjectHeading from './ProjectHeading.btsx'
 import Statusbar from './Statusbar.btsx'
 import ViewToolbar from '../layout/ViewToolbar.btsx'
 import Workspace from '../layout/Workspace.btsx'
@@ -19,7 +18,6 @@ setup
 
 main.playground
   Topbar(session={session})
-  ProjectHeading
   ViewToolbar(layout={layout})
   Workspace(session={session} layout={layout})
   Statusbar(session={session})

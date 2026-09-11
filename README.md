@@ -31,7 +31,17 @@ Use a pane's **−** button to collapse it and its toolbar button to reopen it.
 Focus a divider for arrow-key resizing; **Reset layout** restores the default
 sizes. Collapsing preserves editor history and the running preview. Pane sizes
 and collapsed views are recorded in the URL. Narrow screens stack Editor and
-Preview and initially collapse Files.
+Preview and initially collapse Files. The shell fits the viewport at every size;
+editor, preview, output, and chat scroll inside their own panes. Hidden panes
+also hide their resize handles.
+
+Use **Share** to create and copy a snapshot link. It includes project files, the
+active tab, and preview size; chat, connection credentials, and personal settings
+are excluded. The project travels in a compressed URL fragment without a project
+server. Anyone with the link can read its files. A recipient can inspect the files
+and choose **Replace project**, or keep their existing work. Opening a link alone
+does not replace the saved project or execute its code. Later edits require a new
+share link.
 
 Project files, the active tab, and the preview size save automatically in this
 browser after 300 ms. Reload restores the project before compiling it, including
@@ -107,7 +117,7 @@ version until its browser export contract is available upstream.
 Projects are saved in localStorage on the current browser origin, with a limit
 of 200 files and 2 million serialized UTF-16 characters. Clearing site data removes
 the saved project. Failed writes retain the previous save; corrupt or unsupported
-records are preserved until explicitly reset. A detected save from another tab
+records are preserved until explicitly reset or replaced by an imported project. A detected save from another tab
 pauses this tab's writes rather than overwriting it. Copy any unsaved edits before
 reloading to restore that tab's saved version. Undo history and preview application
 state do not survive a page reload; preview size and Vim preference do.
@@ -121,7 +131,10 @@ fresh document on the next successful build. **Reload preview** always restarts
 the app; after 40 component-update batches the next build also reloads to bound
 the browser's retained module cache. Compilation still processes the full graph.
 
-Sharing, arbitrary npm dependencies, full TypeScript semantic
+Share payloads are limited to 64,000 URL characters and 2,000,000 decoded UTF-8
+bytes, alongside the existing project limits. Large projects may not fit a link;
+some messaging services also truncate long links. Server-hosted short links,
+arbitrary npm dependencies, full TypeScript semantic
 checking, and formatting remain future work.
 Source maps are available to browser tooling and console navigation. Frames with
 missing maps or unsupported stack formats remain raw. Import attributes/phases

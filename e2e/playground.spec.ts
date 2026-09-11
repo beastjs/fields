@@ -20,6 +20,7 @@ test('compiles and renders real Beast components, events and styles', async ({ p
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   await ready(page);
+  await expect(page.locator('.topbar .project-title')).toContainText('Hello world');
   const frame = page.frameLocator('#preview-frame');
   await frame.getByRole('button', { name: 'Increase count' }).click();
   await expect(frame.locator('.value')).toHaveText('1');
@@ -184,15 +185,20 @@ test('pane collapse keeps documents, undo history, output selection and the prev
   await page.getByRole('tab', { name: 'Generated code' }).click();
   await page.getByRole('button', { name: 'Web / JavaScript', exact: true }).click();
   for (const pane of ['files', 'editor', 'output', 'preview']) {
+    const handleName = pane === 'editor' || pane === 'preview' ? 'Resize editor and preview' : `Resize ${pane}`;
+    const handle = page.getByRole('separator', { name: handleName, exact: true, includeHidden: true });
     // Restoring each one keeps at least one of Editor/Preview visible.
     await page.getByRole('button', { name: `Collapse ${pane}`, exact: true }).click();
     await expect(page.locator(`#pane-${pane}`)).toHaveAttribute('inert', '');
     await expect(page.locator(`#pane-${pane}`)).toBeHidden();
+    await expect(handle).toBeHidden();
+    await expect(handle).toHaveAttribute('aria-disabled', 'true');
     const restore = page.locator(`[data-view="${pane}"]`);
     await expect(restore).toBeFocused();
     await expect(restore).toHaveAttribute('aria-pressed', 'false');
     await restore.click();
     await expect(page.locator(`#pane-${pane}`)).toBeVisible();
+    await expect(handle).toBeVisible();
     await expect(restore).toHaveAttribute('aria-pressed', 'true');
   }
   await expect(page.locator('#preview-frame')).toHaveAttribute('srcdoc', previewDocument!);
@@ -207,9 +213,11 @@ test('pane collapse keeps documents, undo history, output selection and the prev
   await page.locator('[data-view="preview"]').click();
   await expect(page.frameLocator('#preview-frame').locator('.value')).toHaveText('1');
   await page.locator('[data-view="chat"]').click();
+  await expect(page.getByRole('separator', { name: 'Resize AI chat', exact: true })).toBeVisible();
   await expect(page.locator('#pane-chat')).toContainText('Make something work.');
   await page.getByRole('button', { name: 'Collapse ai chat', exact: true }).click();
   await expect(page.locator('#pane-chat')).toBeHidden();
+  await expect(page.getByRole('separator', { name: 'Resize AI chat', exact: true, includeHidden: true })).toBeHidden();
 });
 
 test('panes resize by pointer and keyboard, remember expansion size, and reset without reload', async ({ page }) => {
@@ -245,7 +253,8 @@ test('panes resize by pointer and keyboard, remember expansion size, and reset w
   expect((await dimensions()).output).toBeGreaterThan(outputBefore);
   await page.getByRole('separator', { name: 'Resize files', exact: true }).press('Enter');
   await expect(page.locator('[data-view="files"]')).toHaveAttribute('aria-pressed', 'false');
-  await page.getByRole('separator', { name: 'Resize files', exact: true }).press('Enter');
+  await expect(page.getByRole('separator', { name: 'Resize files', exact: true, includeHidden: true })).toBeHidden();
+  await page.locator('[data-view="files"]').click();
   await expect(page.locator('#pane-files')).toBeVisible();
   await page.locator('[data-view="chat"]').click();
   const chatBefore = (await page.locator('#pane-chat').boundingBox())!.width;
