@@ -106,6 +106,8 @@ test('provider and model settings persist while API keys stay out of storage and
   expect(page.url()).not.toContain('test-key');
   await page.reload(); await openChat(page);
   await page.getByRole('button', { name: 'AI settings', exact: true }).click();
+  // Values exist before the mount effect opens the native dialog; wait before Escape.
+  await expect(page.getByRole('dialog', { name: 'AI settings' })).toBeVisible();
   await expect(page.getByLabel('Model ID', { exact: true })).toHaveValue('my-coding-model');
   await expect(page.getByLabel('API key', { exact: true })).toHaveValue('');
   await page.keyboard.press('Escape');

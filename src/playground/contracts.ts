@@ -18,6 +18,8 @@ export interface CompiledModule {
   code: string;
   source?: string;
   sourceMap?: string;
+  /** Compiler-owned boundary facts; used to decide whether a live update is safe. */
+  hot?: { imports: string[]; exports: string[]; kind: 'component' | 'style' };
 }
 export interface CompiledAsset { id: string; content: string; type: string }
 export interface CompilationResult {

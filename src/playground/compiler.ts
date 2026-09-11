@@ -20,7 +20,7 @@ export function compileBeastModule(source: string, filename: string) {
 }
 
 export function compileOctaneModule(source: string, filename: string, sourceMap?: string) {
-  const result = compileOctane(source, filename, { mode: 'client', hmr: false, dev: false });
+  const result = compileOctane(source, filename, { mode: 'client', hmr: 'vite', dev: false });
   return { code: result.code, sourceMap: composeMaps(JSON.stringify(result.map), sourceMap),
     diagnostics: result.diagnostics.map(d => ({
       file: filename, source: 'octane' as const, code: d.code, severity: d.severity, message: d.message,
@@ -104,7 +104,7 @@ export async function compileProject(project: CompilationProject): Promise<Compi
         } finally { result.metadata.timings.octane += performance.now() - start; }
       } else if (file.endsWith('.css')) {
         result.assets.push({ id: file, content: code, type: 'text/css' });
-        code = `const style = document.createElement('style'); style.textContent = ${JSON.stringify(code)}; document.head.append(style);`;
+        code = `const style = document.createElement('style'); style.dataset.playgroundStyle = ${JSON.stringify(file)}; style.textContent = ${JSON.stringify(code)}; document.head.append(style);`;
       } else if (file.endsWith('.json')) {
         code = `export default ${JSON.stringify(JSON.parse(code))};`;
       } else throw new Error(`Unsupported file type: ${file}`);
@@ -112,12 +112,24 @@ export async function compileProject(project: CompilationProject): Promise<Compi
       const dependencies: string[] = [];
       const start = performance.now();
       try {
+        if (/\.(btsx|tsrx)$/.test(file)) {
+          const edited = new MagicString(code);
+          edited.prepend(`import.meta.hot = globalThis.__playgroundHot(${JSON.stringify(moduleId(file))});\n`);
+          sourceMap = composeMaps(edited.generateMap({ source: file, includeContent: true, hires: true }).toString(), sourceMap);
+          code = edited.toString();
+        }
         const linked = linkModule({ id: moduleId(file), code, source: file, sourceMap }, request => {
           if (Object.hasOwn(runtimeImports, request)) return moduleId(runtimeImports[request]);
           const path = fs.resolve(request, file);
           dependencies.push(path);
           return moduleId(path);
         });
+        if (/\.(btsx|tsrx|css)$/.test(file)) {
+          const [imports, exports] = parse(linked.code);
+          linked.hot = { kind: file.endsWith('.css') ? 'style' : 'component',
+            imports: [...new Set(imports.flatMap(item => item.specifier ? [item.specifier] : []))].sort(),
+            exports: exports.map(item => item.type === 'direct' ? item.name : '*').sort() };
+        }
         result.modules.push(linked);
       } finally { result.metadata.timings.web += performance.now() - start; }
       for (const dependency of dependencies) visit(dependency);

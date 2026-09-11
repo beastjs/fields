@@ -1,0 +1,37 @@
+:root {
+  color-scheme: dark;
+  --canvas: #202020; --panel: #303030; --panel-deep: #282828;
+  --inset: #222222; --seam: #181818; --surface-toolbar: #252525;
+  --editor-background: #292929; --surface-recessed: #2b2b2b;
+  --surface-hover: #343434; --control: #393939; --edge: #464646; --edge-strong: #555555;
+  --text: #dedede; --text-secondary: #bdbdbd; --muted: #9a9a9a; --faint: #828282;
+  --accent: #ff641b; --accent-hover: #ff7a39; --warning: #e9b747; --selection: #75503b;
+  --syntax-keyword: #baa6c4; --syntax-string: #b3bb9e; --syntax-type: #d0b18c;
+  --syntax-tag: #a5b6bd; --syntax-comment: #8c8c86; --syntax-number: #ee9b68;
+}
+:root[data-theme='light'] {
+  color-scheme: light;
+  --canvas: #efeee8; --panel: #faf9f5; --panel-deep: #f2f0ea;
+  --inset: #e9e7df; --seam: #d4d1c8; --surface-toolbar: #eeece5;
+  --editor-background: #fdfcf8; --surface-recessed: #f4f2ec;
+  --surface-hover: #eeebe2; --control: #e6e2d8; --edge: #d6d2c7; --edge-strong: #c0baad;
+  --text: #2c3029; --text-secondary: #4e5349; --muted: #64695e; --faint: #73786c;
+  --accent: #c64d18; --accent-hover: #d85920; --warning: #895b10; --selection: #ecd5b9;
+  --syntax-keyword: #805183; --syntax-string: #526c32; --syntax-type: #8e581e;
+  --syntax-tag: #3e6878; --syntax-comment: #79816e; --syntax-number: #a85124;
+}
+.theme-toggle { flex-shrink: 0; width: 28px; height: 28px; display: grid; place-items: center; background: var(--surface-recessed); border: 1px solid var(--edge-strong); border-radius: 50%; color: var(--text-secondary); font-size: 16px; }
+.theme-toggle:hover { color: var(--accent); background: var(--surface-hover); }
+.theme-toggle[aria-pressed='true'] { color: var(--accent); }
+[data-theme='light'] .brand img { filter: none; }
+[data-theme='light'] :is(.run-button, .play-icon, .file-row.active, .viewport-button, .pane-surface, .measurement-card, .file-search, .chat-composer) { box-shadow: inset 0 1px #fff9, 0 1px 2px #4e473b0d; }
+[data-theme='light'] :is(.persistence-notice, .preview-error, .chat-error) { background: #f8eddb; color: #79521b; border-color: #debf8d; }
+[data-theme='light'] :is(.file-error, .field-error, .diagnostic-row, .console-row[data-level='error'] .console-message, .console-row[data-level='warn'] .console-message) { color: #8c5623; }
+[data-theme='light'] :is(.runtime-source-link, .chat-markdown a, .chat-markdown code, .output-stage.active, .cm-vim-panel, .editor-vim-toggle[aria-pressed='true'], .context-toggle code, .connection-prompt) { color: #a64b19; }
+[data-theme='light'] .chat-settings { box-shadow: 0 24px 80px #40362633, inset 0 1px #fff; }
+[data-theme='light'] .chat-settings::backdrop { background: #4d483b33; }
+[data-theme='light'] .primary-button { color: #fff9f1; }
+@media (max-width: 760px) {
+  .topbar-actions { gap: 8px; }
+  .brand-divider { display: none; }
+}

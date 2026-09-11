@@ -10,6 +10,7 @@ import { tags } from '@lezer/highlight';
 import { getCM, vim } from '@replit/codemirror-vim';
 import type { Diagnostic, Position } from './contracts';
 import type { EditorKeymap } from './editor-preferences';
+import type { Theme } from './theme';
 
 // A lexical highlighting mode only. Compilation and validation belong to Beast.
 const beast = StreamLanguage.define({
@@ -30,25 +31,25 @@ const beast = StreamLanguage.define({
   },
 });
 const highlight = HighlightStyle.define([
-  { tag: tags.keyword, color: '#baa6c4' },
-  { tag: tags.string, color: '#b3bb9e' },
-  { tag: [tags.typeName, tags.className], color: '#d0b18c' },
-  { tag: [tags.tagName, tags.attributeName], color: '#a5b6bd' },
-  { tag: tags.comment, color: '#777774' },
-  { tag: tags.number, color: '#ee9b68' },
+  { tag: tags.keyword, color: 'var(--syntax-keyword)' },
+  { tag: tags.string, color: 'var(--syntax-string)' },
+  { tag: [tags.typeName, tags.className], color: 'var(--syntax-type)' },
+  { tag: [tags.tagName, tags.attributeName], color: 'var(--syntax-tag)' },
+  { tag: tags.comment, color: 'var(--syntax-comment)' },
+  { tag: tags.number, color: 'var(--syntax-number)' },
 ]);
 const theme = EditorView.theme({
-  '&': { height: '100%', backgroundColor: '#292929', color: '#d5d5cf', fontSize: '12px' },
+  '&': { height: '100%', backgroundColor: 'var(--editor-background)', color: 'var(--text)', fontSize: '12px' },
   '.cm-scroller': { fontFamily: '"SFMono-Regular", Consolas, "Liberation Mono", monospace', lineHeight: '1.85' },
-  '.cm-content': { padding: '20px 0', caretColor: '#ff7438' },
+  '.cm-content': { padding: '20px 0', caretColor: 'var(--accent)' },
   '.cm-line': { padding: '0 22px 0 10px' },
-  '.cm-gutters': { backgroundColor: '#292929', color: '#747472', border: 'none', padding: '0 10px 0 12px' },
-  '.cm-activeLineGutter, .cm-activeLine': { backgroundColor: '#323232' },
-  '.cm-cursor': { borderLeftColor: '#ff7438' },
-  '&.cm-focused .cm-selectionBackground, .cm-selectionBackground': { background: '#48413b' },
-  '.cm-tooltip': { background: '#303030', border: '1px solid #4b4b48' },
-  '.cm-panels': { background: '#252525', color: '#e3e3db' },
-}, { dark: true });
+  '.cm-gutters': { backgroundColor: 'var(--editor-background)', color: 'var(--faint)', border: 'none', padding: '0 10px 0 12px' },
+  '.cm-activeLineGutter, .cm-activeLine': { backgroundColor: 'var(--surface-hover)' },
+  '.cm-cursor': { borderLeftColor: 'var(--accent)' },
+  '&.cm-focused .cm-selectionBackground, .cm-selectionBackground': { background: 'var(--selection)' },
+  '.cm-tooltip': { background: 'var(--panel)', border: '1px solid var(--edge)' },
+  '.cm-panels': { background: 'var(--surface-toolbar)', color: 'var(--text)' },
+});
 
 export class ProjectEditor {
   readonly view: EditorView;
@@ -56,17 +57,25 @@ export class ProjectEditor {
   private active = '';
   private diagnostics: Diagnostic[] = [];
   private keymapCompartment = new Compartment();
+  private themeCompartment = new Compartment();
   private vimExtension = vim({ status: true });
-  constructor(parent: HTMLElement, private onChange: (path: string, source: string) => void, run: () => void, private keymap: EditorKeymap = 'default') {
+  constructor(parent: HTMLElement, private onChange: (path: string, source: string) => void, run: () => void, private keymap: EditorKeymap = 'default', private themeMode: Theme = 'dark') {
     this.view = new EditorView({ parent });
     this.run = run;
   }
   private run: () => void;
+  reset(path: string, source: string) {
+    this.active = '';
+    this.states.clear();
+    this.diagnostics = [];
+    this.open(path, source);
+  }
   open(path: string, source: string) {
     if (this.active) this.states.set(this.active, this.view.state);
     this.active = path;
     const state = this.states.get(path) ?? EditorState.create({ doc: source, extensions: [
       this.keymapCompartment.of(this.keymap === 'vim' ? this.vimExtension : []),
+      this.themeCompartment.of(EditorView.darkTheme.of(this.themeMode === 'dark')),
       basicSetup, theme, syntaxHighlighting(highlight), lintGutter(),
       path.endsWith('.css') ? css() : path.endsWith('.btsx') ? beast : javascript({ typescript: true, jsx: path.endsWith('.tsrx') }),
       keymap.of([indentWithTab]),
@@ -88,6 +97,15 @@ export class ProjectEditor {
     }
     this.view.dispatch({ effects });
     this.bindVimWrite();
+  }
+  setTheme(theme: Theme) {
+    if (this.themeMode === theme) return;
+    this.themeMode = theme;
+    const effects = this.themeCompartment.reconfigure(EditorView.darkTheme.of(theme === 'dark'));
+    for (const [path, state] of this.states) {
+      if (path !== this.active) this.states.set(path, state.update({ effects }).state);
+    }
+    this.view.dispatch({ effects });
   }
   private bindVimWrite() {
     const cm = this.keymap === 'vim' ? getCM(this.view) : null;

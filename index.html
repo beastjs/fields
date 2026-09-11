@@ -3,6 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      try { document.documentElement.dataset.theme = localStorage.getItem('beast-playground.theme.v1') === 'light' ? 'light' : 'dark'; }
+      catch { document.documentElement.dataset.theme = 'dark'; }
+    </script>
     <link rel="icon" href="/favicon.ico?v=2" />
     <meta name="description" content="Write Beast components, inspect Octane output, and run your application in an isolated browser preview." />
     <title>Beast Playground</title>

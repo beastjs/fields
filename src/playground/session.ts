@@ -4,6 +4,8 @@ import type { EditorKeymap } from './editor-preferences';
 import { PlaygroundProject } from './project';
 import type { ResolvedPreviewEvent } from './preview';
 import { canNavigateRuntimeLocation, type RuntimeStackFrame } from './runtime-diagnostics';
+import type { PreviewWidth, SaveStatus } from './project-storage';
+import type { Theme } from './theme';
 
 export type ToolPanel = 'problems' | 'console' | 'output';
 export interface ConsoleEntry {
@@ -16,9 +18,13 @@ export interface ConsoleEntry {
 export interface SessionSnapshot {
   project: CompilationProject;
   activeFile: string;
+  projectGeneration: number;
+  previewWidth: PreviewWidth;
+  saveStatus: SaveStatus;
   diagnostics: Diagnostic[];
   console: ConsoleEntry[];
   keymap: EditorKeymap;
+  theme: Theme;
   toolPanel: ToolPanel;
   buildStatus: string;
   buildError: boolean;
@@ -28,7 +34,7 @@ export interface SessionSnapshot {
   hasPreview: boolean;
   compileFailed: boolean;
   previewFailed: boolean;
-  previewBuild?: { revision: number; result: CompilationResult };
+  previewBuild?: { revision: number; result: CompilationResult; forceReload?: boolean };
   editorFocus?: { revision: number; position?: Position };
 }
 
@@ -41,18 +47,29 @@ export class PlaygroundSession {
   private sequence = 0;
   private disposed = false;
   private started = false;
+  private disconnectPersistence?: () => void;
 
   constructor(private options: {
     project: CompilationProject;
+    activeFile?: string;
+    previewWidth?: PreviewWidth;
+    saveStatus?: SaveStatus;
+    connectPersistence?: (session: PlaygroundSession) => () => void;
     createWorker: () => CompilerWorker;
     keymap?: EditorKeymap;
+    theme?: Theme;
+    persistTheme?: (theme: Theme) => void;
     persistKeymap?: (keymap: EditorKeymap) => void;
     debounce?: number;
   }) {
     this.project = new PlaygroundProject(options.project);
+    if (options.activeFile) this.project.open(options.activeFile);
     this.state = {
       project: this.project.snapshot(), activeFile: this.project.activeFile,
+      projectGeneration: 0, previewWidth: options.previewWidth ?? '100%',
+      saveStatus: options.saveStatus ?? { label: 'Not saved yet' },
       diagnostics: [], console: [], keymap: options.keymap ?? 'default', toolPanel: 'problems',
+      theme: options.theme ?? 'dark',
       buildStatus: 'Initializing compiler', buildError: false, previewStatus: 'Starting',
       previewError: '', hasPreview: false, compileFailed: false, previewFailed: false,
     };
@@ -83,7 +100,24 @@ export class PlaygroundSession {
     this.state = { ...this.state, ...patch };
     for (const listener of this.listeners) listener();
   }
-  start() { if (!this.started) { this.started = true; this.run(); } }
+  start() {
+    if (this.started || this.disposed) return;
+    this.started = true;
+    this.disconnectPersistence = this.options.connectPersistence?.(this);
+    this.run();
+  }
+  setSaveStatus = (saveStatus: SaveStatus) => this.patch({ saveStatus });
+  setPreviewWidth = (previewWidth: PreviewWidth) => this.patch({ previewWidth });
+  resetProject(project: CompilationProject) {
+    this.project = new PlaygroundProject(project);
+    this.patch({ project: this.project.snapshot(), activeFile: this.project.activeFile,
+      projectGeneration: this.state.projectGeneration + 1, previewWidth: '100%',
+      diagnostics: [], console: [], toolPanel: 'problems', lastResult: undefined,
+      buildStatus: 'Changes pending…', buildError: false, previewStatus: 'Starting',
+      previewError: '', hasPreview: false, compileFailed: false, previewFailed: false,
+      previewBuild: undefined, editorFocus: { revision: ++this.sequence } });
+    this.run();
+  }
   run = () => this.coordinator.schedule(this.project.snapshot(), true);
   read = (path: string) => this.project.fs.read(path);
   openFile(path: string, position?: Position, focus = false) {
@@ -118,12 +152,17 @@ export class PlaygroundSession {
     this.options.persistKeymap?.(keymap);
     this.patch({ keymap, editorFocus: { revision: ++this.sequence } });
   };
+  toggleTheme = () => {
+    const theme = this.state.theme === 'dark' ? 'light' : 'dark';
+    this.options.persistTheme?.(theme);
+    this.patch({ theme });
+  };
   selectTool = (toolPanel: ToolPanel) => this.patch({ toolPanel });
   clearConsole = () => this.patch({ console: [] });
   reloadPreview = () => {
     if (!this.state.previewBuild) return;
     this.patch({ previewFailed: false, previewError: '', previewStatus: 'Loading',
-      previewBuild: { ...this.state.previewBuild, revision: ++this.sequence } });
+      previewBuild: { ...this.state.previewBuild, revision: ++this.sequence, forceReload: true } });
   };
   private compileError(diagnostics: Diagnostic[], result = this.state.lastResult) {
     this.patch({ diagnostics, lastResult: result, compileFailed: true, buildError: true,
@@ -137,7 +176,7 @@ export class PlaygroundSession {
   }
   handlePreviewEvent = (event: ResolvedPreviewEvent) => {
     if (event.type === 'rendered' && !this.state.previewFailed) {
-      this.patch({ hasPreview: true, previewStatus: this.state.compileFailed ? 'Last successful build' : 'Live' });
+      this.patch({ hasPreview: true, previewStatus: this.state.compileFailed ? 'Last successful build' : event.update === 'hot' ? 'Live · HMR' : 'Live' });
     } else if (event.type === 'runtime-error') {
       const location = event.frames?.find(frame => frame.location && canNavigateRuntimeLocation(frame.location, this.read(frame.location.file)))?.location;
       this.patch({ previewFailed: true, previewError: event.message!, previewStatus: 'Runtime error',
@@ -150,5 +189,11 @@ export class PlaygroundSession {
       this.patch({ console: this.appendConsole(event.level!, event.args!.join(' '), event.timestamp) });
     }
   };
-  dispose() { this.disposed = true; this.coordinator.dispose(); this.listeners.clear(); }
+  dispose() {
+    this.disconnectPersistence?.();
+    this.disconnectPersistence = undefined;
+    this.disposed = true;
+    this.coordinator.dispose();
+    this.listeners.clear();
+  }
 }

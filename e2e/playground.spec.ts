@@ -153,10 +153,10 @@ test('Vim supports modal edits, undo, file switching, :w, and a remembered toggl
   await expect(page.frameLocator('#preview-frame').getByRole('heading', { name: 'Vim sample', exact: true })).toBeVisible();
   await page.keyboard.press('Control+r');
   await expect(page.frameLocator('#preview-frame').getByRole('heading', { name: 'Vim sample from Vim' })).toBeVisible();
-  const previousBuild = await page.locator('#preview-frame').getAttribute('srcdoc');
+  const previousBuild = await page.locator('#preview-frame').getAttribute('data-build-revision');
   await page.keyboard.type(':w');
   await page.keyboard.press('Enter');
-  await expect(page.locator('#preview-frame')).not.toHaveAttribute('srcdoc', previousBuild!);
+  await expect(page.locator('#preview-frame')).not.toHaveAttribute('data-build-revision', previousBuild!);
   await openFile(page, 'Counter.btsx');
   await expect(page.locator('.cm-vim-panel')).toContainText('NORMAL');
   await toggle.click();

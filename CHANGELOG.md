@@ -6,6 +6,22 @@ All notable changes to `play` will be recorded here.
 
 ### Added
 
+- Native Octane HMR for compatible component and CSS edits, including consecutive
+  hook-state retention, effect/module disposal, mapped errors across evaluations,
+  and full reload fallback for unsupported changes or runtime recovery.
+- Remembered light/dark toolbar toggle, shared palette and syntax tokens, live
+  preview theme defaults, and a starter example that follows the color scheme.
+- HMR boundary/source-map tests and browser coverage for retained state, cleanup,
+  error recovery, theme persistence, editor undo, and mobile light-mode layout.
+
+- Versioned local project autosave/restore for source files, active tab, and preview
+  size, with validation, legacy snapshot migration, bounded storage, and save status.
+- Confirmed project reset that immediately replaces the saved project and clears
+  cached editor/preview state; recovery notices preserve unreadable records,
+  previous saves after quota failures, and detected competing-tab edits.
+- Unit and browser coverage for persistence, immediate reload, corrupt/unsupported
+  data, storage failures, restoration, and reset cancellation/cache invalidation.
+
 - `@octanejs/resizable-panels` workspace with pointer/keyboard resizing,
   collapse/expand controls, layout reset, responsive orientation, and a reserved
   collapsed AI chat pane. Layout changes retain editor and preview state.

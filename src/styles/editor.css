@@ -1,14 +1,14 @@
-.editor-pane { display: flex; flex-direction: column; overflow: hidden; background: #292929; }
-.editor-toolbar { display: flex; align-items: center; background: #2b2b2b; padding-right: 7px; gap: 4px; min-width: 0; border-bottom: 1px solid #424242; }
+.editor-pane { display: flex; flex-direction: column; overflow: hidden; background: var(--editor-background); }
+.editor-toolbar { display: flex; align-items: center; background: var(--surface-recessed); padding-right: 7px; gap: 4px; min-width: 0; border-bottom: 1px solid var(--edge); }
 .editor-tabs { display: flex; flex: 1; min-width: 0; height: 42px; min-height: 42px; overflow: auto; scrollbar-width: none; }
-.editor-tab { flex-shrink: 0; border: 0; border-right: 1px solid #393939; border-top: 2px solid transparent; background: transparent; padding: 0 16px; font-size: 11px; color: #919191; display: flex; align-items: center; gap: 9px; }
-.editor-tab.active { border-top-color: var(--accent); background: #343434; color: #e3e3e3; }
-.editor-breadcrumb { display: flex; align-items: center; gap: 10px; padding: 0 17px; height: 33px; min-height: 33px; font-size: 10px; color: #777777; border-bottom: 1px solid #363636; }
-#active-filename { color: #b4b4b4; }
-.language-label { margin-left: auto; font: 8px var(--mono); color: #878787; text-transform: uppercase; }
+.editor-tab { flex-shrink: 0; border: 0; border-right: 1px solid var(--control); border-top: 2px solid transparent; background: transparent; padding: 0 16px; font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 9px; }
+.editor-tab.active { border-top-color: var(--accent); background: var(--surface-hover); color: var(--text); }
+.editor-breadcrumb { display: flex; align-items: center; gap: 10px; padding: 0 17px; height: 33px; min-height: 33px; font-size: 10px; color: var(--faint); border-bottom: 1px solid var(--surface-hover); }
+#active-filename { color: var(--text-secondary); }
+.language-label { margin-left: auto; font: 8px var(--mono); color: var(--faint); text-transform: uppercase; }
 .editor-mount { min-height: 0; flex: 1; overflow: hidden; }
-.editor-footer { display: flex; gap: 13px; height: 27px; min-height: 27px; align-items: center; padding: 0 15px; font: 8px var(--mono); color: #818181; border-top: 1px solid #414141; }
-.editor-hint { margin-left: auto; color: #7c7c7c; font-size: 8px; }
-.editor-vim-toggle { font: inherit; font-size: 8px; padding: 2px 5px; line-height: 1.25; background: #242424; border: 1px solid #515151; border-radius: 3px; color: #afafaf; }
-.editor-vim-toggle[aria-pressed='true'] { background: #3a3a3a; color: #ff945b; border-color: #875638; }
+.editor-footer { display: flex; gap: 13px; height: 27px; min-height: 27px; align-items: center; padding: 0 15px; font: 8px var(--mono); color: var(--faint); border-top: 1px solid var(--edge); }
+.editor-hint { margin-left: auto; color: var(--faint); font-size: 8px; }
+.editor-vim-toggle { font: inherit; font-size: 8px; padding: 2px 5px; line-height: 1.25; background: var(--surface-toolbar); border: 1px solid var(--edge-strong); border-radius: 3px; color: var(--text-secondary); }
+.editor-vim-toggle[aria-pressed='true'] { background: var(--control); color: #ff945b; border-color: #875638; }
 .cm-vim-panel { font: 10px/1.8 var(--mono); color: #e8a471; padding: 2px 12px !important; }

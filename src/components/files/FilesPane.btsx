@@ -51,5 +51,5 @@ PaneSurface(layout={layout} pane='files' label='File explorer' className='explor
       p.no-files No matching files.
   div.explorer-note
     span.status-dot
-    span In-memory project
-    p Your files stay in this tab.
+    span Local project
+    p #{state.saveStatus.issue ? 'Changes stay in this tab.' : 'Files save in this browser.'}

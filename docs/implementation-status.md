@@ -44,20 +44,18 @@ checks, and a changelog entry, as required by the master plan.
 | 13 | Bounded console capture and runtime failures | Complete for milestone |
 | 14 | Compose multi-stage maps; map runtime stacks to editor | Complete for authored modules; raw fallback for unmappable frames |
 | 15 | Record stage timings and measure transfer overhead | Baseline complete; incremental compilation later |
-| 16 | Integrate real Octane HMR, preserve component state | Pending; depends on stable reload baseline |
-| 17 | Versioned local persistence and restore validation | Pending |
+| 16 | Integrate real Octane HMR, preserve component state | Complete for component/style boundaries; reload fallback for unsupported changes |
+| 17 | Versioned local persistence and restore validation | Complete for current project/editor/preview settings |
 | 18 | Serializable projects and sharing transport | Pending |
 | 19 | Expand validated example library | Hello World/counter complete; remaining examples pending |
 | 20 | Broaden browser tests and production hardening | Initial Chromium suite complete; cross-browser/resource limits pending |
 
 ## Recommended next tickets
 
-1. Versioned local persistence: add a separate serializer/store for files,
-   active tab, and preview settings. Test corrupt records, schema migration,
-   reload restoration, and explicit reset.
-2. Investigate production Octane HMR contracts without modifying the compiler.
-   Prove style-only and component updates, state retention, error recovery, and
-   disposal before replacing the fresh-document baseline.
+1. Add a sharing transport around the validated project serializer, with explicit
+   import/replace behavior and size validation.
+2. Expand the example library with validated projects for props, state, events,
+   nested components, and async behavior.
 
 These are follow-on tickets, not claims that the full master plan is complete.
 
@@ -127,3 +125,67 @@ file form validation, and all earlier compiler/runtime/Vim behavior.
 
 This is a workspace-organization milestone. Durable project/layout persistence,
 HMR, and AI service integration remain follow-on work.
+
+## Workspace follow-up — Styling, panel URLs, and AI chat
+
+The subsequent workspace implementation added charcoal/orange styling, URL-backed
+panel sizes/collapse state through Nuqs, file search, and streaming chat with
+Cohere, OpenRouter, and custom compatible providers. Chat supports optional active
+file context, stop/retry, and independent provider/model preferences; credentials
+and conversation history are not persisted. These existing features are included
+in the current regression suite.
+
+## Milestone 4 — Versioned local project persistence
+
+Implemented on 2026-09-11. Phase 17 saves project files, active file, and preview
+size independently of compiler/UI internals. All current files appear as tabs;
+Vim uses its existing separate preference store. Saves debounce at 300 ms and
+flush on page hide, hidden visibility, and disposal. Restore precedes the first
+compilation, including projects with invalid source that still need editing.
+
+Version 1 records validate source types, paths, normalized duplicates, entry
+existence, and bounds (200 files / 2 million serialized UTF-16 characters).
+Unversioned raw project snapshots migrate into the versioned format. Stale
+selection and preview settings fall back without losing source. Corrupt or
+unsupported records remain unchanged until reset; storage failures and detected
+competing-tab saves produce visible notices instead of discarding saved work.
+
+Reset asks before replacing the project with Hello World, saves immediately,
+invalidates pending builds, clears runtime/diagnostic state, and discards all
+cached editor documents and undo history. Keymap/provider preferences and panel
+URLs stay independent. Runtime state and undo history remain session-only.
+
+Verification: 50 Bun unit/fixture tests, 23 Chromium browser tests against the
+production build, TSRX/TypeScript checks, and Rsbuild production build passed.
+New coverage proves source/addition/deletion restoration, active tab and viewport
+restoration, immediate reload flushing, invalid-source recovery, reset cancellation,
+editor cache invalidation, corrupt/unsupported records, quota failures, migration,
+and competing-tab conflict detection. Desktop/mobile screenshots were reviewed.
+The chat regression test now waits for the native settings dialog to open before
+sending Escape, removing a reload timing race.
+
+## Milestone 5 — Octane HMR and light theme
+
+Implemented on 2026-09-11. The existing production compiler emits its Vite HMR
+contract; the preview provides persistent hot data and module loading while
+Octane handles component wrapper identity, hook retention, and effect cleanup.
+Consecutive compatible component updates and CSS-only changes retain the running
+document. Compiler errors retain the previous app. Entry/helper/import/export
+changes, unaccepted boundaries, invalidations, and runtime failures use the
+document-reload baseline. Explicit reload always restarts the app.
+
+The runtime retains the changed component's own compatible hook state; parent
+updates may remount descendants. Source maps track each old/new evaluation URL.
+The next build after 40 component-update batches reloads to bound module retention.
+Full-graph compilation remains in place. See [HMR integration](playground-hmr.md).
+
+The sun/moon toolbar control switches between charcoal and a warm light palette,
+with editor syntax, forms, chat, output, and preview defaults following the theme.
+The preference applies before paint and survives reload and project reset.
+Theme changes preserve documents, undo/Vim, and the preview realm. Authored CSS
+remains authoritative; the starter project's colors follow the inherited scheme.
+
+Verification: 53 Bun unit/fixture tests, 28 Chromium browser tests, TSRX/TypeScript
+checks, and the production build passed. Desktop, mobile, and settings-dialog
+screenshots were reviewed. No production compiler package or runtime source was
+modified.

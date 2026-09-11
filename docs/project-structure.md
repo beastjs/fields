@@ -10,7 +10,7 @@ it remains a small example that composes `Button`.
 ```text
 src/App.btsx
   components/shell/
-    Topbar.btsx              Run action and branding
+    Topbar.btsx              Run/reset actions, save status, recovery notices, branding
     ProjectHeading.btsx      Project title and compiler pipeline
     Statusbar.btsx           Build status and stage timings
   components/layout/
@@ -31,7 +31,7 @@ src/App.btsx
     ConsoleList.btsx         Console history and mapped source navigation
     GeneratedCode.btsx       Per-file TSRX and JavaScript output
   components/chat/
-    ChatPane.btsx            Reserved future AI chat view
+    ChatPane.btsx            Streaming chat, composer, and provider settings
 ```
 
 `src/styles/` mirrors these concerns. `src/style.css` contains the shared reset
@@ -42,14 +42,18 @@ and imports; pane geometry and responsive rules live in `styles/workspace.css`.
 | Owner | Responsibility |
 | --- | --- |
 | `playground/project.ts` | Virtual files, path validation, active file, creation/deletion, protected entry |
-| `playground/session.ts` | Compilation requests/results, diagnostics, console, source navigation requests, keymap preference |
-| `playground/app.ts` | Inject browser Worker and preference storage into the session |
+| `playground/session.ts` | Compilation requests/results, diagnostics, console, source navigation, keymap/viewport, project reset generation |
+| `playground/app.ts` | Restore before session creation, inject Worker/storage, connect page lifecycle flushing |
+| `playground/project-storage.ts` | Versioned serializer, validation/migration, bounded local storage and conflict handling |
+| `playground/project-persistence.ts` | Debounced saves of authored state, flushing and immediate reset saves |
+| `playground/hot-update.ts` | Compare builds and choose component/style updates or full reload |
+| `playground/theme.ts` | Apply and remember light/dark preferences |
 | `playground/workspace-layout.ts` | Panel/group handles, visibility, collapse/expand, default geometry |
 | `playground/editor.ts` | CodeMirror document states, selection, per-file undo, Vim, diagnostic markers |
 | `playground/editor-connection.ts` | Subscribe the editor to relevant session changes, with deferred dispatch to avoid reentrant CodeMirror updates |
 | `playground/preview.ts` | Sandboxed iframe protocol, module loading, current build identity, runtime source mapping |
-| `playground/preview-connection.ts` | Load only a new successful build or an explicit reload request |
-| Pane components | Local presentation state such as viewport preset, generated-code stage, and form visibility |
+| `playground/preview-connection.ts` | Deliver builds, force explicit reloads, and synchronize preview theme |
+| Pane components | Local presentation state such as generated-code stage and form visibility |
 
 The session is independent of DOM and panel APIs. Components consume its stable
 external-store snapshots. The layout does not compile projects, change files, or
@@ -57,8 +61,9 @@ recreate the preview. Source navigation in the workspace restores the editor
 before selecting a file or focusing a diagnostic location.
 
 The compiler, worker coordinator, VFS resolver, source maps, and sandbox retain
-their existing contracts. Add future persistence as a separate adapter around
-project/session snapshots. Add future AI services outside the view component.
+their existing contracts. Persistence is a separate adapter around project/session
+snapshots. `chat/` owns conversation/settings/transport state; `server/` owns the
+provider proxy. Neither belongs to the persisted project snapshot.
 
 ## Resizable workspace
 
@@ -88,12 +93,15 @@ Collapsing sets a pane to zero size while retaining its component, DOM, and
 connections. Its content becomes inert and hidden from assistive technology;
 the collapse button returns focus to its toolbar toggle. Editor undo history,
 preview application state, console history, and selected output survive layout
-changes. A successful compilation or explicit preview reload still creates a
-fresh preview document, as before.
+changes. Successful compatible component/style compilations use native Octane
+HMR; unsupported changes and explicit reload create a fresh preview document.
+See [HMR integration](playground-hmr.md) for state-retention limits and disposal.
 
-AI chat is a placeholder, initially closed. There is no chat service, composer,
-or model connection yet. Layout is retained for this page lifetime; durable
-layout/project persistence remains a separate milestone.
+AI chat starts closed and supports streaming responses with optional active-file
+context. Layout proportions and collapsed views use the URL through `panel-query.ts`
+and the Nuqs binding. Project files, active tab, and preview size use localStorage;
+Vim/provider preferences have independent keys. A project reset preserves layout
+and these independent preferences.
 
 The type-checker selects `octane/compiler/volar` explicitly so source-distributed
 TSRX bindings use the language compiler rather than Octane's runtime entry.

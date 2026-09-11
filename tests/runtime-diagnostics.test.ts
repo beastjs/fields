@@ -73,3 +73,18 @@ test('navigation requires an unchanged authored snapshot, including for deleted 
   expect(canNavigateRuntimeLocation(location, '// new line\n' + source)).toBe(false);
   expect(canNavigateRuntimeLocation(location, undefined)).toBe(false);
 });
+
+test('HMR manifests preserve old evaluation maps for delayed callbacks', async () => {
+  const { mapper, manifest, url, position, file, source } = await compiledFailure();
+  const edited = '// Added authored line\n' + source;
+  const result = await compileProject({ entry: file, files: { [file]: edited } });
+  const module = result.modules.find(module => module.source === file)!;
+  const nextPosition = offsetPosition(module.code, module.code.indexOf('new Error'));
+  mapper.advance(result.modules);
+  expect(mapper.registerManifest(manifest.map(entry => entry.id === module.id ? { ...entry, url: 'blob:null/hot' } : entry))).toBe(true);
+  const old = mapper.mapStack(`fail@${url}:${position.line}:${position.column}`)[0].location!;
+  expect(old.sourceContent).toBe(source);
+  expect(canNavigateRuntimeLocation(old, edited)).toBe(false);
+  expect(mapper.mapStack(`fail@blob:null/hot:${nextPosition.line}:${nextPosition.column}`)[0].location)
+    .toMatchObject({ sourceContent: edited, position: { line: 4 } });
+});

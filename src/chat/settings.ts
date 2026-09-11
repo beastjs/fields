@@ -9,6 +9,6 @@ export function readChatSettings(): ChatSettings {
   } catch { return { ...defaultSettings }; }
 }
 export function saveChatSettings({ provider, model, baseURL }: ChatSettings) {
-  // Credentials and conversation/source content never enter browser storage.
+  // Credentials and conversation content never enter this settings record.
   try { localStorage.setItem(key, JSON.stringify({ provider, model, baseURL })); } catch { /* Session-only settings still work. */ }
 }

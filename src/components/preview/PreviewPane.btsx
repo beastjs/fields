@@ -1,17 +1,16 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from 'octane'
+import { useEffect, useRef, useSyncExternalStore } from 'octane'
 import { connectPreview } from '../../playground/preview-connection'
 import PaneSurface from '../layout/PaneSurface.btsx'
 import CollapseButton from '../layout/CollapseButton.btsx'
 import type { WorkspaceProps } from '../types'
 
 module
-  const viewports = [{ width: '100%', label: 'Desktop', symbol: '▰' }, { width: '768px', label: 'Tablet', symbol: '▯' }, { width: '375px', label: 'Mobile', symbol: '▯' }];
+  const viewports = [{ width: '100%', label: 'Desktop', symbol: '▰' }, { width: '768px', label: 'Tablet', symbol: '▯' }, { width: '375px', label: 'Mobile', symbol: '▯' }] as const;
 
 props { session, layout }: WorkspaceProps
 setup
   const state = useSyncExternalStore(session.subscribe, session.getSnapshot);
   const iframe = useRef<HTMLIFrameElement | null>(null);
-  const [width, setWidth] = useState('100%');
   useEffect(() => connectPreview(iframe.current!, session), [session]);
 
 PaneSurface(layout={layout} pane='preview' label='Application preview' className='preview-pane')
@@ -21,7 +20,7 @@ PaneSurface(layout={layout} pane='preview' label='Application preview' className
       strong Preview
     div.viewport-controls(role='group' aria-label='Preview size')
       each viewport in viewports key viewport.width
-        button(type='button' className={'viewport-button' + (width === viewport.width ? ' active' : '')} data-width={viewport.width} aria-label={viewport.label + ' preview'} aria-pressed={width === viewport.width} title={viewport.label} onClick={() => setWidth(viewport.width)}) #{viewport.symbol}
+        button(type='button' className={'viewport-button' + (state.previewWidth === viewport.width ? ' active' : '')} data-width={viewport.width} aria-label={viewport.label + ' preview'} aria-pressed={state.previewWidth === viewport.width} title={viewport.label} onClick={() => session.setPreviewWidth(viewport.width)}) #{viewport.symbol}
     button#reload-preview.icon-button(type='button' aria-label='Reload preview' title='Reload preview' onClick={session.reloadPreview}) ↻
     CollapseButton(layout={layout} pane='preview')
   div.preview-address
@@ -29,7 +28,7 @@ PaneSurface(layout={layout} pane='preview' label='Application preview' className
     span playground.local
     span#preview-status.preview-status #{state.previewStatus}
   div.preview-stage
-    iframe#preview-frame(ref={iframe} title='Application preview' sandbox='allow-scripts' style={{ width }})
+    iframe#preview-frame(ref={iframe} title='Application preview' sandbox='allow-scripts' style={{ width: state.previewWidth }} data-build-revision={state.previewBuild?.revision})
     div#preview-overlay.preview-overlay(role='status' hidden={state.hasPreview || state.previewFailed})
       span.overlay-symbol ◈
       strong #{state.compileFailed ? 'Your code needs a small fix' : 'Preparing your preview'}
