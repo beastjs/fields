@@ -2,7 +2,7 @@ import type { FetchLike } from './contracts';
 import type { AIStatus, ChatRequest, ChatSettings, ChatTurn, FileContext } from './contracts';
 import { streamChat } from './transport';
 
-export interface ChatMessage extends ChatTurn { id: number; model?: string; state?: 'complete' | 'streaming' | 'stopped' | 'error' }
+export interface ChatMessage extends ChatTurn { context?: FileContext; projectGeneration?: number; id: number; model?: string; state?: 'complete' | 'streaming' | 'stopped' | 'error' }
 export interface ChatSnapshot {
   settings: ChatSettings;
   messages: ChatMessage[];
@@ -18,6 +18,7 @@ export class ChatController {
   private abort?: AbortController;
   private statusAbort = new AbortController();
   private lastRequest?: ChatRequest;
+  private lastGeneration?: number;
   private disposed = false;
   constructor(settings: ChatSettings, private persist: (settings: ChatSettings) => void, private send: FetchLike = fetch) {
     this.state = { settings, messages: [], busy: false, error: '', connectionError: '' };
@@ -43,7 +44,7 @@ export class ChatController {
     this.persist(settings);
     this.patch({ settings: { ...settings }, error: '' });
   };
-  async submit(prompt: string, context?: FileContext) {
+  async submit(prompt: string, context?: FileContext, projectGeneration?: number) {
     if (this.state.busy || !prompt.trim()) return;
     if (prompt.length > 32000) { this.patch({ error: 'Keep your message under 32,000 characters.' }); return; }
     if (context && context.source.length > 60000) { this.patch({ error: 'This file is too large to attach. Turn off active-file context or select a smaller file.' }); return; }
@@ -53,12 +54,13 @@ export class ChatController {
     const settings = this.state.settings;
     const request: ChatRequest = { ...settings, messages: messages.filter(message => message.state !== 'error' && message.state !== 'stopped').slice(-30).map(({ role, content }) => ({ role, content })), context };
     this.lastRequest = request;
+    this.lastGeneration = projectGeneration;
     await this.run(request);
   }
   private async run(request: ChatRequest) {
     const abort = new AbortController(); this.abort = abort;
     const id = ++this.sequence;
-    this.patch({ busy: true, error: '', messages: [...this.state.messages, { id, role: 'assistant', content: '', model: request.model, state: 'streaming' }] });
+    this.patch({ busy: true, error: '', messages: [...this.state.messages, { id, role: 'assistant', content: '', model: request.model, state: 'streaming', context: request.context ? { ...request.context } : undefined, projectGeneration: this.lastGeneration }] });
     const update = (patch: Partial<ChatMessage>) => this.patch({ messages: this.state.messages.map(message => message.id === id ? { ...message, ...patch } : message) });
     try {
       await streamChat(request, content => { if (this.abort === abort) update({ content }); }, abort.signal, this.send);

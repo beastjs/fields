@@ -1,7 +1,7 @@
 import { basicSetup } from 'codemirror';
 import { Compartment, EditorState, Prec } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
-import { indentWithTab } from '@codemirror/commands';
+import { isolateHistory, indentWithTab } from '@codemirror/commands';
 import { StreamLanguage, syntaxHighlighting, HighlightStyle } from '@codemirror/language';
 import { javascript } from '@codemirror/lang-javascript';
 import { css } from '@codemirror/lang-css';
@@ -86,6 +86,13 @@ export class ProjectEditor {
     this.view.setState(state);
     this.bindVimWrite();
     this.setDiagnostics(this.diagnostics);
+  }
+  syncSource(path: string, source: string) {
+    const state = path === this.active ? this.view.state : this.states.get(path);
+    if (!state || state.doc.toString() === source) return;
+    const transaction = { changes: { from: 0, to: state.doc.length, insert: source }, annotations: isolateHistory.of('full') };
+    if (path === this.active) this.view.dispatch(transaction);
+    else this.states.set(path, state.update(transaction).state);
   }
   setKeymap(keymap: EditorKeymap) {
     if (this.keymap === keymap) return;

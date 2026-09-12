@@ -78,3 +78,94 @@ test('file changes publish independent snapshots, clear obsolete diagnostics, an
   expect(session.getSnapshot().console).toEqual([]);
   session.dispose();
 });
+
+test('explicit preview recovery clears runtime failure state without compiling or losing source', async () => {
+  const worker = new FakeWorker();
+  const session = new PlaygroundSession({ project, createWorker: () => worker });
+  session.start(); await tick(); worker.reply(result);
+  const request = worker.request;
+  session.handlePreviewEvent({ version: 1, type: 'runtime-error', channel: 'test', build: 1, message: 'Hosted preview did not start.' });
+  expect(session.getSnapshot().buildError).toBe(true);
+  session.reloadPreview();
+  expect(session.getSnapshot()).toMatchObject({ buildError: false, previewFailed: false, previewError: '', hasPreview: false });
+  expect(session.getSnapshot().project).toEqual(project);
+  expect(worker.request).toBe(request);
+  session.handlePreviewEvent({ version: 1, type: 'rendered', channel: 'new', build: 1 });
+  expect(session.getSnapshot().previewStatus).toBe('Live');
+  session.dispose();
+});
+
+test('mode changes restart in one notification and stay outside saved project state', async () => {
+  const worker = new FakeWorker();
+  const session = new PlaygroundSession({ project, createWorker: () => worker });
+  session.start(); await tick(); worker.reply(result);
+  const request = worker.request;
+  const before = session.exportWorkspace();
+  const states: ReturnType<typeof session.getSnapshot>[] = [];
+  const unsubscribe = session.subscribe(() => states.push(session.getSnapshot()));
+  session.setPreviewMode('hosted');
+  expect(states).toHaveLength(1);
+  expect(states[0]).toMatchObject({ previewMode: 'hosted', previewStatus: 'Loading', previewBuild: { result, forceReload: true } });
+  expect(worker.request).toBe(request);
+  expect(session.exportWorkspace()).toEqual(before);
+  session.setPreviewMode('hosted');
+  expect(states).toHaveLength(1);
+  unsubscribe();
+  session.resetProject(project);
+  expect(session.getSnapshot().previewMode).toBe('hosted');
+  session.dispose();
+});
+
+test('recommendations compile before mutation and reject intervening edits', async () => {
+  const workers: FakeWorker[] = [];
+  const session = new PlaygroundSession({ project, createWorker: () => { const worker = new FakeWorker(); workers.push(worker); return worker; } });
+  const source = project.files['/src/App.btsx'];
+  const pending = session.applyRecommendation('/src/App.btsx', source, 'h1 Recommended\n', 0, new AbortController().signal);
+  await tick();
+  expect(session.read('/src/App.btsx')).toBe(source);
+  expect(workers[0].request!.project.files['/src/App.btsx']).toBe('h1 Recommended\n');
+  const checked = { ...result, modules: [{ id: 'app', source: '/src/App.btsx', code: '' }] };
+  workers[0].reply(checked); await pending;
+  expect(session.read('/src/App.btsx')).toBe('h1 Recommended\n');
+  expect(workers[0].terminated).toBe(true);
+  await expect(session.applyRecommendation('/src/App.btsx', source, 'h1 Stale\n', 0, new AbortController().signal)).rejects.toThrow('changed');
+  const next = session.applyRecommendation('/src/App.btsx', 'h1 Recommended\n', 'h1 Later\n', 0, new AbortController().signal);
+  // Attach the rejection handler before delivering the worker response.
+  const rejected = next.catch(error => error as Error);
+  await tick();
+  session.updateSource('/src/main.ts', '// changed elsewhere');
+  workers.at(-1)!.reply(checked);
+  expect((await rejected)?.message).toContain('changed during verification');
+  expect(session.read('/src/App.btsx')).toBe('h1 Recommended\n');
+  session.dispose();
+});
+
+test('failed and cancelled recommendation checks leave files intact', async () => {
+  const worker = new FakeWorker();
+  const session = new PlaygroundSession({ project, createWorker: () => worker });
+  const source = project.files['/src/App.btsx'];
+  const pending = session.applyRecommendation('/src/App.btsx', source, 'broken', 0, new AbortController().signal);
+  const failed = pending.catch(error => error as Error);
+  await tick();
+  worker.reply({ ...result, entry: undefined, diagnostics: [{ file: '/src/App.btsx', start: { line: 1, column: 1 }, severity: 'error', source: 'beast', message: 'Broken syntax' }] });
+  expect((await failed)?.message).toContain('Broken syntax');
+  expect(session.read('/src/App.btsx')).toBe(source);
+  const abort = new AbortController();
+  const cancelled = session.applyRecommendation('/src/App.btsx', source, 'h1 Fine', 0, abort.signal).catch(error => error as Error);
+  abort.abort(); expect((await cancelled)?.message).toContain('cancelled');
+  expect(session.read('/src/App.btsx')).toBe(source);
+  session.dispose();
+});
+
+test('verification also compiles an unimported recommended file and aborts on session disposal', async () => {
+  const worker = new FakeWorker();
+  const session = new PlaygroundSession({ project, createWorker: () => worker });
+  const source = project.files['/src/App.btsx'];
+  const pending = session.applyRecommendation('/src/App.btsx', source, 'h1 Unimported\n', 0, new AbortController().signal).catch(error => error as Error);
+  await tick(); worker.reply(result); await tick();
+  expect(worker.request!.project.entry).toBe('/src/App.btsx');
+  expect(session.read('/src/App.btsx')).toBe(source);
+  session.dispose();
+  expect((await pending)?.message).toContain('cancelled');
+  expect(worker.terminated).toBe(true);
+});

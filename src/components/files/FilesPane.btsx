@@ -32,7 +32,8 @@ PaneSurface(layout={layout} pane='files' label='File explorer' className='explor
   div.panel-heading
     span PROJECT FILES
     div.panel-actions
-      button#add-file.icon-button(ref={addButton} type='button' onClick={() => setAdding(true)} aria-label='Add file' title='Add file') +
+      button#add-file.icon-button(ref={addButton} type='button' onClick={() => setAdding(true)} aria-label='Add file' title='Add file')
+        Icon(name='plus' className='size-3')
       CollapseButton(layout={layout} pane='files')
   if adding
     NewFileForm(session={session} onCreate={create} onCancel={cancel})

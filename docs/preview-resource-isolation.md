@@ -149,7 +149,7 @@ isolation, egress restrictions, or session cleanup. This is an architectural
 proposal, not a deployed or validated service.
 [Linux cgroup v2 controls](https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v2.html)
 
-## Next implementation ticket: optional hosted preview
+## Implementation contract: optional hosted preview
 
 1. Extract the trusted bootstrap into a static preview entry served on a
    configurable, dedicated **separate site**. Keep the real compilers in the
@@ -172,7 +172,11 @@ proposal, not a deployed or validated service.
    profiles while documenting the known blocking profiles. Do not turn those
    results into a claim of hard quotas.
 
-A separate-site bootstrap endpoint has not been selected or deployed in this
-repository. A local transport prototype and tests can be implemented first.
+Milestone 12 implements the local transport prototype and browser tests; see
+[hosted preview](hosted-preview.md). A production separate-site bootstrap endpoint
+has not been selected or deployed in this repository. The probe now serves the
+generated static bootstrap for URL modes, using its versioned handshake, and
+requires responsiveness in the explicit isolation profiles. The measurements
+above remain the original Milestone 11 baseline.
 If hard limits become a requirement, scope the supervised runner as its own
 service ticket, including privacy, capacity, cleanup, and deployment decisions.

@@ -213,3 +213,36 @@ file states), and a preview protocol message. No compilation is scheduled.
 The project record, undo history, and preview realm are unchanged. Palette and
 syntax tokens live in `styles/theme.css`; authored preview CSS can override the
 bootstrap's inherited colors and color scheme.
+
+## Hosted preview
+
+`Preview(iframe, onEvent, theme?, hostedURL?)` uses the configured static URL when
+provided, otherwise the local document. `connectPreview` selects that transport
+from `SessionSnapshot.previewMode`; `session.setPreviewMode('local' | 'hosted')`
+restarts the last executable build in one state transition. It does not compile,
+change project files, or persist the mode. The UI exposes hosted mode only when
+the build has an endpoint. `hostedPreviewDocument()` emits the shared bootstrap
+behind a one-shot versioned parent handshake. See [hosted preview](hosted-preview.md).
+
+
+## Applying chat recommendations
+
+Completed assistant replies retain their attached `FileContext` and local project
+generation. The server asks for one complete replacement fence such as
+`btsx file=/src/App.btsx`; `fileRecommendation()` accepts only one closed, named
+block matching that attachment. Plain snippets, incomplete replies, different
+paths, and multiple named replacements do not expose an apply action.
+
+`session.applyRecommendation(file, original, source, generation, signal)` verifies
+the proposed full project with an independent `CompilationCoordinator`, including
+its size limit, timeout, and worker cleanup. If the target is unimported, it is
+also compiled as an entry. Compiler diagnostics reject the operation before any
+write. Source/generation checks reject stale proposals; an intervening project
+edit also invalidates the checked result. Closing the response or disposing the
+session cancels pending checks.
+
+On success the session updates and opens the original target file, schedules the
+normal preview build, and uses existing autosave. `ProjectEditor.syncSource()`
+records external changes as isolated undo events, including cached file states.
+The chat status records the completed compilation check; it does not certify
+runtime behavior, TypeScript semantics beyond the current compiler, or future edits.

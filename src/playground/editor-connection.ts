@@ -22,6 +22,9 @@ export function connectEditor(parent: HTMLElement, session: PlaygroundSession) {
       for (const path of Object.keys(previous.project.files)) {
         if (!(path in next.project.files)) editor.forget(path);
       }
+      for (const [path, source] of Object.entries(next.project.files)) {
+        if (source !== previous.project.files[path]) editor.syncSource(path, source);
+      }
       if (next.keymap !== previous.keymap) editor.setKeymap(next.keymap);
       if (next.theme !== previous.theme) editor.setTheme(next.theme);
       if (next.diagnostics !== previous.diagnostics) editor.setDiagnostics(next.diagnostics);

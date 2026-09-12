@@ -15,7 +15,7 @@ div.view-toolbar(role='group' aria-label='Workspace views')
     ButtonGroup
       each pane in paneDefinitions
         FluidTooltipRoot(id={pane.id})
-          FluidTooltipTrigger(className='min-h-8 h-full w-9 whitespace-nowrap')
+          FluidTooltipTrigger(className='min-h-8 h-full w-9 whitespace-nowrap' asChild)
             button(type='button' data-view={pane.id} aria-controls={'pane-' + pane.id} aria-pressed={visible[pane.id]} onClick={() => layout.toggle(pane.id)} title={(visible[pane.id] ? 'Collapse ' : 'Expand ') + pane.label} disabled={visible[pane.id] && (pane.id === 'editor' ? !visible.preview : pane.id === 'preview' ? !visible.editor : false)})
               Icon(name={pane.icon} className={cn('size-3 opacity-50',{'opacity-100': visible[pane.id]} )})
           FluidTooltipContent(className='font-mono capitalize')
@@ -24,4 +24,4 @@ div.view-toolbar(role='group' aria-label='Workspace views')
     //   button.view-toggle(type='button' data-view={pane.id} aria-controls={'pane-' + pane.id} aria-pressed={visible[pane.id]} onClick={() => layout.toggle(pane.id)} title={(visible[pane.id] ? 'Collapse ' : 'Expand ') + pane.label} disabled={visible[pane.id] && (pane.id === 'editor' ? !visible.preview : pane.id === 'preview' ? !visible.editor : false)})
     //     span.view-indicator(aria-hidden={true})
     //     | #{pane.label}
-  button.reset-layout(type='button' onClick={layout.reset} title='Restore the default pane sizes and views') Reset
+  button.reset-layout(type='button' aria-label='Reset layout' onClick={layout.reset} title='Restore the default pane sizes and views') Reset

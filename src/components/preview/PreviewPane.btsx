@@ -6,6 +6,7 @@ import type { WorkspaceProps } from '../types'
 import {Icon} from '@/lib/icons'
 
 module
+  const hostedURL = __HOSTED_PREVIEW_URL__;
   const viewports = [{ width: '100%', label: 'Desktop', symbol: 'desktop' }, { width: '768px', label: 'Tablet', symbol: 'tablet' }, { width: '375px', label: 'Mobile', symbol: 'smartphone' }] as const;
 
 props { session, layout }: WorkspaceProps
@@ -57,15 +58,20 @@ setup
       if (document.fullscreenElement === element) void document.exitFullscreen().catch(() => {});
     };
   }, []);
-  useEffect(() => connectPreview(iframe.current!, session), [session]);
+  useEffect(() => connectPreview(iframe.current!, session, hostedURL), [session]);
 
 PaneSurface(layout={layout} pane='preview' label='Application preview' className='preview-pane')
   div.preview-surface(ref={surface})
     div.preview-toolbar
       div.preview-label
         Icon(name='browser' className='size-3.5')
-        span(className='opacity-80') playground.local
-        span(className='uppercase') #{state.previewStatus}
+        if hostedURL
+          select.preview-zoom(aria-label='Preview mode' value={state.previewMode} onChange={event => session.setPreviewMode(event.currentTarget.value === 'hosted' ? 'hosted' : 'local')})
+            option(value='local') Local preview
+            option(value='hosted') Hosted preview
+        else
+          span(className='opacity-80') Local preview
+        span#preview-status(className='uppercase') #{state.previewStatus}
       div.viewport-controls(role='group' aria-label='Preview size')
         each viewport in viewports key viewport.width
           button(type='button' className={'viewport-button flex items-center justify-center' + (state.previewWidth === viewport.width ? ' active' : '')} data-width={viewport.width} aria-label={viewport.label + ' preview'} aria-pressed={state.previewWidth === viewport.width} title={viewport.label} onClick={() => session.setPreviewWidth(viewport.width)})
@@ -82,6 +88,8 @@ PaneSurface(layout={layout} pane='preview' label='Application preview' className
       if !fullscreen
         CollapseButton(layout={layout} pane='preview')
     p.fullscreen-notice(role='status' hidden={!fullscreenError}) #{fullscreenError}
+    if state.previewMode === 'hosted'
+      p.hosted-preview-notice Hosted preview · Failure containment depends on your browser. No CPU or memory quotas.
 
     div.preview-stage(ref={stage})
       div.preview-canvas(style={{ width: `${width * zoom}px`, height: `${size.height}px` }})

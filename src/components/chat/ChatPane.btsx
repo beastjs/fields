@@ -6,6 +6,7 @@ import CollapseButton from '../layout/CollapseButton.btsx'
 import ChatSettings from './ChatSettings.btsx'
 import ChatComposer from './ChatComposer.btsx'
 import ChatMessage from './ChatMessage.btsx'
+import {Icon} from '@/lib/icons'
 import type { WorkspaceProps } from '../types'
 
 props { layout, session }: WorkspaceProps
@@ -19,13 +20,20 @@ setup
   useEffect(() => { void chat.checkConnection(); return () => chat.dispose(); }, [chat]);
   useEffect(() => { if (state.messages.length && follow.current && scroller.current) scroller.current.scrollTop = scroller.current.scrollHeight; }, [state.messages]);
   const scroll = () => { const node = scroller.current!; follow.current = node.scrollHeight - node.scrollTop - node.clientHeight < 80; };
+  const [isAutoApply, setIsAutoApply] = useState(true)
+  const toggleAuto = () => setIsAutoApply(v => !v)
+
 
 PaneSurface(layout={layout} pane='chat' label='AI chat' className='chat-pane')
-  div.panel-heading
-    span ASSISTANT
+  div(className='h-9 flex items-center justify-between border-b border-[var(--edge)] px-1 text-xs ')
+    div(className='flex items-center gap-1')
+      Icon(name='sparkle' className='size-3')
+      span Assistant
     div.panel-actions
-      button.icon-button(type='button' title='New chat' aria-label='New chat' onClick={chat.clear}) +
-      button.icon-button(type='button' title='AI settings' aria-label='AI settings' onClick={() => setSettingsOpen(true)}) ⚙
+      button.icon-button(type='button' title='New chat' aria-label='New chat' onClick={chat.clear})
+        Icon(name='plus' className='size-3.5')
+      button.icon-button(type='button' title='AI settings' aria-label='AI settings' onClick={() => setSettingsOpen(true)})
+        Icon(name='settings' className='size-3.5')
       CollapseButton(layout={layout} pane='chat')
   button.chat-connection(type='button' onClick={() => setSettingsOpen(true)} aria-label='Configure AI provider and model')
     span.connection-led(data-connected={connected})
@@ -36,11 +44,11 @@ PaneSurface(layout={layout} pane='chat' label='AI chat' className='chat-pane')
       div.chat-welcome
         div.assistant-dial(aria-hidden={true}) ✳
         span.eyebrow-label YOUR CODING COMPANION
-        h2 Make something work.
-        p Explore an idea, untangle an error, or find the next step. Start with the file in front of you.
+        h2 Build something fast.
+        p Explore an idea, untangle an error, or find the next step.
         button.connection-prompt(type='button' hidden={connected} onClick={() => setSettingsOpen(true)}) Set up your connection ↗
     each message in state.messages key message.id
-      ChatMessage(message={message})
+      ChatMessage(message={message} session={session} auto={isAutoApply})
     if state.error || state.connectionError
       div.chat-error(role='alert')
         p #{state.error || state.connectionError}
@@ -48,6 +56,6 @@ PaneSurface(layout={layout} pane='chat' label='AI chat' className='chat-pane')
           button.secondary-button(type='button' hidden={!state.connectionError} onClick={() => { void chat.checkConnection(); }}) Reconnect
           button.secondary-button(type='button' hidden={!state.error || state.busy} onClick={chat.retry}) Retry response
           button.secondary-button(type='button' onClick={() => setSettingsOpen(true)}) Settings
-  ChatComposer(chat={chat} session={session})
+  ChatComposer(chat={chat} session={session} auto={isAutoApply} toggleAuto={toggleAuto})
   if settingsOpen
     ChatSettings(chat={chat} onClose={() => setSettingsOpen(false)})

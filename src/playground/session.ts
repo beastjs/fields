@@ -1,3 +1,4 @@
+import { verifyProject } from './verify-project';
 import type { CompilationProject, CompilationResult, Diagnostic, Position } from './contracts';
 import { CompilationCoordinator, type CompilerWorker } from './coordinator';
 import type { EditorKeymap } from './editor-preferences';
@@ -29,6 +30,7 @@ export interface SessionSnapshot {
   buildStatus: string;
   buildError: boolean;
   lastResult?: CompilationResult;
+  previewMode: 'local' | 'hosted';
   previewStatus: string;
   previewError: string;
   hasPreview: boolean;
@@ -47,6 +49,7 @@ export class PlaygroundSession {
   private sequence = 0;
   private disposed = false;
   private started = false;
+  private proposalChecks = new Set<AbortController>();
   private disconnectPersistence?: () => void;
 
   constructor(private options: {
@@ -70,7 +73,7 @@ export class PlaygroundSession {
       saveStatus: options.saveStatus ?? { label: 'Not saved yet' },
       diagnostics: [], console: [], keymap: options.keymap ?? 'default', toolPanel: 'problems',
       theme: options.theme ?? 'dark',
-      buildStatus: 'Initializing compiler', buildError: false, previewStatus: 'Starting',
+      buildStatus: 'Initializing compiler', buildError: false, previewMode: 'local', previewStatus: 'Starting',
       previewError: '', hasPreview: false, compileFailed: false, previewFailed: false,
     };
     this.coordinator = new CompilationCoordinator({
@@ -132,6 +135,30 @@ export class PlaygroundSession {
     this.patch({ activeFile: this.project.activeFile,
       ...(focus ? { editorFocus: { revision: ++this.sequence, position } } : {}) });
   }
+  async applyRecommendation(file: string, original: string, source: string, generation: number, signal: AbortSignal) {
+    const before = this.state;
+    if (this.disposed || signal.aborted) throw new Error('Verification cancelled. No files changed.');
+    if (before.projectGeneration !== generation || this.read(file) !== original) {
+      throw new Error('The file or project changed since this response. Ask for a fresh recommendation.');
+    }
+    const abort = new AbortController();
+    const cancel = () => abort.abort();
+    signal.addEventListener('abort', cancel, { once: true });
+    this.proposalChecks.add(abort);
+    try {
+      await verifyProject({ ...before.project, files: { ...before.project.files, [file]: source } }, file, this.options.createWorker, abort.signal);
+      if (abort.signal.aborted || this.disposed) throw new Error('Verification cancelled. No files changed.');
+      if (this.state.project !== before.project || this.state.projectGeneration !== generation) {
+        throw new Error('The project changed during verification. No files changed; ask for a fresh recommendation.');
+      }
+      this.updateSource(file, source);
+      this.openFile(file, undefined, true);
+      this.run();
+    } finally {
+      signal.removeEventListener('abort', cancel);
+      this.proposalChecks.delete(abort);
+    }
+  }
   updateSource = (path: string, source: string) => {
     if (!this.project.fs.exists(path) || this.project.fs.read(path) === source) return;
     this.project.fs.write(path, source);
@@ -166,11 +193,18 @@ export class PlaygroundSession {
   };
   selectTool = (toolPanel: ToolPanel) => this.patch({ toolPanel });
   clearConsole = () => this.patch({ console: [] });
-  reloadPreview = () => {
-    if (!this.state.previewBuild) return;
-    this.patch({ previewFailed: false, previewError: '', previewStatus: 'Loading',
-      previewBuild: { ...this.state.previewBuild, revision: ++this.sequence, forceReload: true } });
+  setPreviewMode = (mode: 'local' | 'hosted') => {
+    if (mode !== this.state.previewMode) this.restartPreview(mode);
   };
+  reloadPreview = () => this.restartPreview();
+  private restartPreview(previewMode = this.state.previewMode) {
+    if (!this.state.previewBuild) { this.patch({ previewMode }); return; }
+    this.patch({ previewMode, previewFailed: false, previewError: '', previewStatus: 'Loading', hasPreview: false,
+      buildError: this.state.compileFailed,
+      buildStatus: this.state.compileFailed ? this.state.buildStatus : `Compiled in ${this.state.previewBuild.result.metadata.duration.toFixed(0)}ms`,
+      diagnostics: this.state.diagnostics.filter(diagnostic => diagnostic.source !== 'runtime'),
+      previewBuild: { ...this.state.previewBuild, revision: ++this.sequence, forceReload: true } });
+  }
   private compileError(diagnostics: Diagnostic[], result = this.state.lastResult) {
     this.patch({ diagnostics, lastResult: result, compileFailed: true, buildError: true,
       buildStatus: 'Build failed', toolPanel: 'problems',
@@ -197,6 +231,8 @@ export class PlaygroundSession {
     }
   };
   dispose() {
+    for (const check of this.proposalChecks) check.abort();
+    this.proposalChecks.clear();
     this.disconnectPersistence?.();
     this.disconnectPersistence = undefined;
     this.disposed = true;

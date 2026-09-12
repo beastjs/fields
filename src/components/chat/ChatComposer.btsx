@@ -4,7 +4,9 @@ import { fileLabel } from '../../playground/presentation'
 import type { ChatController } from '../../chat/controller'
 import type { PlaygroundSession } from '../../playground/session'
 
-props { chat, session }: { chat: ChatController; session: PlaygroundSession }
+module
+  interface ChatComposerProps { chat: ChatController; session: PlaygroundSession, auto: boolean, toggleAuto: VoidFunction }
+props { chat, session, auto, toggleAuto }: ChatComposerProps
 setup
   const state = useSyncExternalStore(chat.subscribe, chat.getSnapshot);
   const project = useSyncExternalStore(session.subscribe, session.getSnapshot);
@@ -12,7 +14,7 @@ setup
     if (chat.getSnapshot().busy) return;
     const active = session.getSnapshot().activeFile;
     const context = value.includeFile ? { file: active, source: session.read(active)! } : undefined;
-    void chat.submit(value.prompt, context);
+    void chat.submit(value.prompt, context, session.getSnapshot().projectGeneration);
     if (!context || context.source.length <= 60000) form.setFieldValue('prompt', '');
   } });
   const prompt = useField({ form, name: 'prompt', validators: { onSubmit: ({ value }) => value.trim() ? undefined : 'Write a message first.' } });
@@ -22,18 +24,23 @@ setup
     if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); if (!state.busy) void form.handleSubmit(); }
   };
 
+
 form.chat-composer(onSubmit={submit})
   if !state.messages.length
     div.chat-suggestions
       button(type='button' onClick={() => prompt.handleChange('Explain how the active file works.')} ) Explain this file ↗
       button(type='button' onClick={() => prompt.handleChange('Review the active file and suggest one useful improvement.')} ) Suggest an improvement ↗
-  label.context-toggle
-    input(type='checkbox' checked={includeFile.state.value} onChange={event => includeFile.handleChange(event.currentTarget.checked)})
-    span Include active file
-    code(title={project.activeFile}) #{fileLabel(project.activeFile)}
+  div(className='w-full flex items-center justify-between')
+    label.context-toggle
+      input(type='checkbox' checked={includeFile.state.value} onChange={event => includeFile.handleChange(event.currentTarget.checked)})
+      span Include active file
+      code(title={project.activeFile}) #{fileLabel(project.activeFile)}
+    label.context-toggle(htmlFor='auto-apply')
+      input#auto-apply(type='checkbox' checked={auto} onChange={toggleAuto})
+      span(className='select-none') Apply updates
   div.composer-input
     label.sr-only(for='chat-prompt') Message AI
-    textarea#chat-prompt(value={prompt.state.value} onInput={event => prompt.handleChange(event.currentTarget.value)} onKeyDown={keydown} placeholder='Ask about your code…' rows='3' maxlength='32000')
+    textarea#chat-prompt(value={prompt.state.value} onInput={event => prompt.handleChange(event.currentTarget.value)} onKeyDown={keydown} placeholder='Ask about your code…' rows='3' maxlength='32000' resize='none')
     div.composer-actions
       span Enter to send · Shift Enter for a new line
       if state.busy

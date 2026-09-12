@@ -14,7 +14,7 @@ export const paneDefinitions = [
   { id: 'preview', label: 'Preview', icon: 'browser' },
   { id: 'output', label: 'Output', icon: 'terminal' },
   { id: 'chat', label: 'AI chat', icon: 'sparkle' }
-] as Pane[]
+] as const satisfies readonly Pane[]
 export type PaneId = (typeof paneDefinitions)[number]['id']
 type Visibility = Record<PaneId, boolean>
 const ref = <T>() => ({ current: null as T | null })

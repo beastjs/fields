@@ -6,6 +6,16 @@ All notable changes to `play` will be recorded here.
 
 ### Added
 
+- Chat Apply & verify for explicit complete-file recommendations, with local
+  compiler verification, stale-project protection, diagnostics in chat, and
+  undoable editor synchronization. Failed checks leave source and preview intact.
+
+- Optional hosted preview with a generated static bootstrap, build-time endpoint
+  configuration, explicit local/hosted selection, versioned handshake, and startup
+  recovery that preserves project source and editor history.
+- Hosted transport browser coverage and a responsiveness probe using the generated
+  document, with explicit browser-dependent containment limits.
+
 - Native Octane HMR for compatible component and CSS edits, including consecutive
   hook-state retention, effect/module disposal, mapped errors across evaluations,
   and full reload fallback for unsupported changes or runtime recovery.

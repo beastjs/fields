@@ -1,9 +1,41 @@
-import { useState } from 'octane'
+import { fileRecommendation } from '../../chat/recommendation'
+import type { PlaygroundSession } from '../../playground/session'
+import { useEffect, useRef, useState } from 'octane'
 import { renderChatMarkdown } from '../../chat/markdown'
 import type { ChatMessage } from '../../chat/controller'
 
-props { message }: { message: ChatMessage }
+
+module
+  interface ChatMessageProps { message: ChatMessage; session: PlaygroundSession, auto: boolean }
+props { message, session, auto }: ChatMessageProps
 setup
+  const recommendation = message.state === 'complete' ? fileRecommendation(message.content, message.context) : undefined;
+  const [applyState, setApplyState] = useState('');
+  const [applyError, setApplyError] = useState('');
+  const pending = useRef<AbortController | null>(null);
+  useEffect(() => () => pending.current?.abort(), []);
+
+  const apply = async () => {
+    if (!recommendation || !message.context || message.projectGeneration === undefined || pending.current || applyState === 'Applied and compiled successfully') return;
+    const abort = new AbortController();
+    pending.current = abort;
+    setApplyError('');
+    setApplyState('Checking compilation…');
+    try {
+      await session.applyRecommendation(recommendation.file, message.context.source, recommendation.source, message.projectGeneration, abort.signal);
+      setApplyState('Applied and compiled successfully');
+    } catch (error) {
+      setApplyState('');
+      setApplyError('Not applied. ' + (error instanceof Error ? error.message : 'Could not verify this change.'));
+    } finally { pending.current = null; }
+  };
+
+  useEffect(() => {
+    if(auto && applyState){
+      apply().catch(e => console.error(e))
+    }
+  }, [auto, apply])
+
   const [copied, setCopied] = useState(false);
   const copy = async () => { try { await navigator.clipboard.writeText(message.content); setCopied(true); } catch { setCopied(false); } };
 
@@ -26,3 +58,12 @@ article(className={'chat-message ' + message.role} data-message-state={message.s
   if message.content && message.role === 'assistant' && message.state !== 'streaming'
     div.message-actions
       button(type='button' onClick={copy} aria-label='Copy response') #{copied ? 'Copied' : 'Copy response'}
+
+  if recommendation && message.projectGeneration !== undefined
+    div.chat-apply
+      span.apply-target #{recommendation.file}
+      button.secondary-button(type='button' onClick={apply} disabled={!!applyState}) #{applyState === 'Checking compilation…' ? 'Checking compilation…' : applyState ? 'Applied' : 'Apply & verify'}
+      if applyState
+        p(role='status') #{applyState}
+      if applyError
+        p.chat-apply-error(role='alert') #{applyError}

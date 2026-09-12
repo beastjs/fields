@@ -1,0 +1,613 @@
+{
+  "measuredAt": "2026-09-12T14:50:49.952Z",
+  "platform": "darwin 25.6.0 arm64",
+  "workload": {
+    "burnMs": 600,
+    "heartbeatMs": 20,
+    "repetitions": 3,
+    "workerTerminateAfterMs": 100,
+    "workerFiniteFallbackMs": 2000
+  },
+  "scope": "Headless Playwright defaults plus explicitly labelled isolation overrides on this machine; responsiveness observations, not process IDs or hard resource quotas.",
+  "engines": [
+    {
+      "name": "chromium",
+      "version": "153.0.8010.12",
+      "launchOverrides": {},
+      "samples": [
+        {
+          "mode": "srcdoc",
+          "repetition": 1,
+          "outOfProcessIframeTargets": 0,
+          "baselineMaxGapMs": 23.600000023841858,
+          "maxHostGapMs": 600.6000000238419,
+          "hostCallbackAfterMs": 600.6000000238419,
+          "workElapsedMs": 600.0999999046326
+        },
+        {
+          "mode": "srcdoc",
+          "repetition": 2,
+          "outOfProcessIframeTargets": 0,
+          "baselineMaxGapMs": 27.59999990463257,
+          "maxHostGapMs": 600.7000000476837,
+          "hostCallbackAfterMs": 600.8000000715256,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "srcdoc",
+          "repetition": 3,
+          "outOfProcessIframeTargets": 0,
+          "baselineMaxGapMs": 27.200000047683716,
+          "maxHostGapMs": 600.5,
+          "hostCallbackAfterMs": 600.5,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "same-origin-url",
+          "repetition": 1,
+          "outOfProcessIframeTargets": 0,
+          "baselineMaxGapMs": 26.800000071525574,
+          "maxHostGapMs": 600.5,
+          "hostCallbackAfterMs": 600.6000000238419,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "same-origin-url",
+          "repetition": 2,
+          "outOfProcessIframeTargets": 0,
+          "baselineMaxGapMs": 20.700000047683716,
+          "maxHostGapMs": 600.5,
+          "hostCallbackAfterMs": 600.5,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "same-origin-url",
+          "repetition": 3,
+          "outOfProcessIframeTargets": 0,
+          "baselineMaxGapMs": 21.300000071525574,
+          "maxHostGapMs": 600.5,
+          "hostCallbackAfterMs": 600.6000000238419,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "cross-site-url",
+          "repetition": 1,
+          "outOfProcessIframeTargets": 0,
+          "baselineMaxGapMs": 22.100000023841858,
+          "maxHostGapMs": 601.1000000238419,
+          "hostCallbackAfterMs": 601.2000000476837,
+          "workElapsedMs": 600.1999999284744
+        },
+        {
+          "mode": "cross-site-url",
+          "repetition": 2,
+          "outOfProcessIframeTargets": 0,
+          "baselineMaxGapMs": 26.899999976158142,
+          "maxHostGapMs": 600.6000000238419,
+          "hostCallbackAfterMs": 600.6000000238419,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "cross-site-url",
+          "repetition": 3,
+          "outOfProcessIframeTargets": 0,
+          "baselineMaxGapMs": 22.399999976158142,
+          "maxHostGapMs": 600.6000000238419,
+          "hostCallbackAfterMs": 600.6999999284744,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "worker",
+          "repetition": 1,
+          "outOfProcessIframeTargets": 0,
+          "baselineMaxGapMs": 21.199999928474426,
+          "maxHostGapMs": 20.5,
+          "hostCallbackAfterMs": 101.89999997615814,
+          "terminationIssued": true,
+          "workerFinishedBeforeTermination": false
+        },
+        {
+          "mode": "worker",
+          "repetition": 2,
+          "outOfProcessIframeTargets": 0,
+          "baselineMaxGapMs": 21.100000023841858,
+          "maxHostGapMs": 20.100000023841858,
+          "hostCallbackAfterMs": 101,
+          "terminationIssued": true,
+          "workerFinishedBeforeTermination": false
+        },
+        {
+          "mode": "worker",
+          "repetition": 3,
+          "outOfProcessIframeTargets": 0,
+          "baselineMaxGapMs": 21.700000047683716,
+          "maxHostGapMs": 20.100000023841858,
+          "hostCallbackAfterMs": 100.89999997615814,
+          "terminationIssued": true,
+          "workerFinishedBeforeTermination": false
+        }
+      ]
+    },
+    {
+      "name": "firefox",
+      "version": "155.0",
+      "launchOverrides": {},
+      "samples": [
+        {
+          "mode": "srcdoc",
+          "repetition": 1,
+          "outOfProcessIframeTargets": null,
+          "baselineMaxGapMs": 37,
+          "maxHostGapMs": 600,
+          "hostCallbackAfterMs": 600,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "srcdoc",
+          "repetition": 2,
+          "outOfProcessIframeTargets": null,
+          "baselineMaxGapMs": 23,
+          "maxHostGapMs": 599,
+          "hostCallbackAfterMs": 599,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "srcdoc",
+          "repetition": 3,
+          "outOfProcessIframeTargets": null,
+          "baselineMaxGapMs": 24,
+          "maxHostGapMs": 600,
+          "hostCallbackAfterMs": 600,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "same-origin-url",
+          "repetition": 1,
+          "outOfProcessIframeTargets": null,
+          "baselineMaxGapMs": 24,
+          "maxHostGapMs": 600,
+          "hostCallbackAfterMs": 600,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "same-origin-url",
+          "repetition": 2,
+          "outOfProcessIframeTargets": null,
+          "baselineMaxGapMs": 24,
+          "maxHostGapMs": 600,
+          "hostCallbackAfterMs": 600,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "same-origin-url",
+          "repetition": 3,
+          "outOfProcessIframeTargets": null,
+          "baselineMaxGapMs": 25,
+          "maxHostGapMs": 600,
+          "hostCallbackAfterMs": 600,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "cross-site-url",
+          "repetition": 1,
+          "outOfProcessIframeTargets": null,
+          "baselineMaxGapMs": 25,
+          "maxHostGapMs": 599,
+          "hostCallbackAfterMs": 599,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "cross-site-url",
+          "repetition": 2,
+          "outOfProcessIframeTargets": null,
+          "baselineMaxGapMs": 25,
+          "maxHostGapMs": 600,
+          "hostCallbackAfterMs": 600,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "cross-site-url",
+          "repetition": 3,
+          "outOfProcessIframeTargets": null,
+          "baselineMaxGapMs": 29,
+          "maxHostGapMs": 600,
+          "hostCallbackAfterMs": 600,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "worker",
+          "repetition": 1,
+          "outOfProcessIframeTargets": null,
+          "baselineMaxGapMs": 25,
+          "maxHostGapMs": 26,
+          "hostCallbackAfterMs": 102,
+          "terminationIssued": true,
+          "workerFinishedBeforeTermination": false
+        },
+        {
+          "mode": "worker",
+          "repetition": 2,
+          "outOfProcessIframeTargets": null,
+          "baselineMaxGapMs": 23,
+          "maxHostGapMs": 26,
+          "hostCallbackAfterMs": 100,
+          "terminationIssued": true,
+          "workerFinishedBeforeTermination": false
+        },
+        {
+          "mode": "worker",
+          "repetition": 3,
+          "outOfProcessIframeTargets": null,
+          "baselineMaxGapMs": 24,
+          "maxHostGapMs": 26,
+          "hostCallbackAfterMs": 101,
+          "terminationIssued": true,
+          "workerFinishedBeforeTermination": false
+        }
+      ]
+    },
+    {
+      "name": "webkit",
+      "version": "26.6",
+      "launchOverrides": {},
+      "samples": [
+        {
+          "mode": "srcdoc",
+          "repetition": 1,
+          "outOfProcessIframeTargets": null,
+          "baselineMaxGapMs": 26,
+          "maxHostGapMs": 601,
+          "hostCallbackAfterMs": 601,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "srcdoc",
+          "repetition": 2,
+          "outOfProcessIframeTargets": null,
+          "baselineMaxGapMs": 27,
+          "maxHostGapMs": 600,
+          "hostCallbackAfterMs": 600,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "srcdoc",
+          "repetition": 3,
+          "outOfProcessIframeTargets": null,
+          "baselineMaxGapMs": 27,
+          "maxHostGapMs": 601,
+          "hostCallbackAfterMs": 601,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "same-origin-url",
+          "repetition": 1,
+          "outOfProcessIframeTargets": null,
+          "baselineMaxGapMs": 25,
+          "maxHostGapMs": 601,
+          "hostCallbackAfterMs": 601,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "same-origin-url",
+          "repetition": 2,
+          "outOfProcessIframeTargets": null,
+          "baselineMaxGapMs": 23,
+          "maxHostGapMs": 600,
+          "hostCallbackAfterMs": 600,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "same-origin-url",
+          "repetition": 3,
+          "outOfProcessIframeTargets": null,
+          "baselineMaxGapMs": 22,
+          "maxHostGapMs": 600,
+          "hostCallbackAfterMs": 600,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "cross-site-url",
+          "repetition": 1,
+          "outOfProcessIframeTargets": null,
+          "baselineMaxGapMs": 25,
+          "maxHostGapMs": 599,
+          "hostCallbackAfterMs": 600,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "cross-site-url",
+          "repetition": 2,
+          "outOfProcessIframeTargets": null,
+          "baselineMaxGapMs": 25,
+          "maxHostGapMs": 601,
+          "hostCallbackAfterMs": 601,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "cross-site-url",
+          "repetition": 3,
+          "outOfProcessIframeTargets": null,
+          "baselineMaxGapMs": 21,
+          "maxHostGapMs": 600,
+          "hostCallbackAfterMs": 600,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "worker",
+          "repetition": 1,
+          "outOfProcessIframeTargets": null,
+          "baselineMaxGapMs": 21,
+          "maxHostGapMs": 24,
+          "hostCallbackAfterMs": 101,
+          "terminationIssued": true,
+          "workerFinishedBeforeTermination": false
+        },
+        {
+          "mode": "worker",
+          "repetition": 2,
+          "outOfProcessIframeTargets": null,
+          "baselineMaxGapMs": 21,
+          "maxHostGapMs": 25,
+          "hostCallbackAfterMs": 101,
+          "terminationIssued": true,
+          "workerFinishedBeforeTermination": false
+        },
+        {
+          "mode": "worker",
+          "repetition": 3,
+          "outOfProcessIframeTargets": null,
+          "baselineMaxGapMs": 21,
+          "maxHostGapMs": 25,
+          "hostCallbackAfterMs": 101,
+          "terminationIssued": true,
+          "workerFinishedBeforeTermination": false
+        }
+      ]
+    },
+    {
+      "name": "chromium-site-per-process",
+      "version": "153.0.8010.12",
+      "launchOverrides": {
+        "args": [
+          "--site-per-process"
+        ]
+      },
+      "samples": [
+        {
+          "mode": "srcdoc",
+          "repetition": 1,
+          "outOfProcessIframeTargets": 1,
+          "baselineMaxGapMs": 20.700000047683716,
+          "maxHostGapMs": 20.600000023841858,
+          "hostCallbackAfterMs": 100.80000007152557,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "srcdoc",
+          "repetition": 2,
+          "outOfProcessIframeTargets": 1,
+          "baselineMaxGapMs": 21,
+          "maxHostGapMs": 20.899999976158142,
+          "hostCallbackAfterMs": 101.39999997615814,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "srcdoc",
+          "repetition": 3,
+          "outOfProcessIframeTargets": 1,
+          "baselineMaxGapMs": 21.399999976158142,
+          "maxHostGapMs": 20.899999976158142,
+          "hostCallbackAfterMs": 101.19999992847443,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "same-origin-url",
+          "repetition": 1,
+          "outOfProcessIframeTargets": 1,
+          "baselineMaxGapMs": 21.199999928474426,
+          "maxHostGapMs": 21.100000023841858,
+          "hostCallbackAfterMs": 102.10000002384186,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "same-origin-url",
+          "repetition": 2,
+          "outOfProcessIframeTargets": 1,
+          "baselineMaxGapMs": 20.899999976158142,
+          "maxHostGapMs": 21.100000023841858,
+          "hostCallbackAfterMs": 101.30000007152557,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "same-origin-url",
+          "repetition": 3,
+          "outOfProcessIframeTargets": 1,
+          "baselineMaxGapMs": 21,
+          "maxHostGapMs": 21,
+          "hostCallbackAfterMs": 100.39999997615814,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "cross-site-url",
+          "repetition": 1,
+          "outOfProcessIframeTargets": 1,
+          "baselineMaxGapMs": 21.09999990463257,
+          "maxHostGapMs": 21.100000023841858,
+          "hostCallbackAfterMs": 100.79999995231628,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "cross-site-url",
+          "repetition": 2,
+          "outOfProcessIframeTargets": 1,
+          "baselineMaxGapMs": 20.799999952316284,
+          "maxHostGapMs": 21.100000023841858,
+          "hostCallbackAfterMs": 101.5,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "cross-site-url",
+          "repetition": 3,
+          "outOfProcessIframeTargets": 1,
+          "baselineMaxGapMs": 21.200000047683716,
+          "maxHostGapMs": 21,
+          "hostCallbackAfterMs": 101.5,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "worker",
+          "repetition": 1,
+          "outOfProcessIframeTargets": 0,
+          "baselineMaxGapMs": 21.100000023841858,
+          "maxHostGapMs": 21,
+          "hostCallbackAfterMs": 101.10000002384186,
+          "terminationIssued": true,
+          "workerFinishedBeforeTermination": false
+        },
+        {
+          "mode": "worker",
+          "repetition": 2,
+          "outOfProcessIframeTargets": 0,
+          "baselineMaxGapMs": 21,
+          "maxHostGapMs": 20.899999976158142,
+          "hostCallbackAfterMs": 100.90000009536743,
+          "terminationIssued": true,
+          "workerFinishedBeforeTermination": false
+        },
+        {
+          "mode": "worker",
+          "repetition": 3,
+          "outOfProcessIframeTargets": 0,
+          "baselineMaxGapMs": 21.700000047683716,
+          "maxHostGapMs": 21,
+          "hostCallbackAfterMs": 101,
+          "terminationIssued": true,
+          "workerFinishedBeforeTermination": false
+        }
+      ]
+    },
+    {
+      "name": "firefox-fission",
+      "version": "155.0",
+      "launchOverrides": {
+        "firefoxUserPrefs": {
+          "fission.autostart": true,
+          "fission.webContentIsolationStrategy": 1
+        }
+      },
+      "samples": [
+        {
+          "mode": "srcdoc",
+          "repetition": 1,
+          "outOfProcessIframeTargets": null,
+          "baselineMaxGapMs": 25,
+          "maxHostGapMs": 600,
+          "hostCallbackAfterMs": 600,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "srcdoc",
+          "repetition": 2,
+          "outOfProcessIframeTargets": null,
+          "baselineMaxGapMs": 24,
+          "maxHostGapMs": 599,
+          "hostCallbackAfterMs": 599,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "srcdoc",
+          "repetition": 3,
+          "outOfProcessIframeTargets": null,
+          "baselineMaxGapMs": 25,
+          "maxHostGapMs": 599,
+          "hostCallbackAfterMs": 599,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "same-origin-url",
+          "repetition": 1,
+          "outOfProcessIframeTargets": null,
+          "baselineMaxGapMs": 29,
+          "maxHostGapMs": 601,
+          "hostCallbackAfterMs": 601,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "same-origin-url",
+          "repetition": 2,
+          "outOfProcessIframeTargets": null,
+          "baselineMaxGapMs": 24,
+          "maxHostGapMs": 600,
+          "hostCallbackAfterMs": 600,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "same-origin-url",
+          "repetition": 3,
+          "outOfProcessIframeTargets": null,
+          "baselineMaxGapMs": 26,
+          "maxHostGapMs": 601,
+          "hostCallbackAfterMs": 601,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "cross-site-url",
+          "repetition": 1,
+          "outOfProcessIframeTargets": null,
+          "baselineMaxGapMs": 25,
+          "maxHostGapMs": 26,
+          "hostCallbackAfterMs": 101,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "cross-site-url",
+          "repetition": 2,
+          "outOfProcessIframeTargets": null,
+          "baselineMaxGapMs": 26,
+          "maxHostGapMs": 26,
+          "hostCallbackAfterMs": 100,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "cross-site-url",
+          "repetition": 3,
+          "outOfProcessIframeTargets": null,
+          "baselineMaxGapMs": 26,
+          "maxHostGapMs": 26,
+          "hostCallbackAfterMs": 104,
+          "workElapsedMs": 600
+        },
+        {
+          "mode": "worker",
+          "repetition": 1,
+          "outOfProcessIframeTargets": null,
+          "baselineMaxGapMs": 24,
+          "maxHostGapMs": 25,
+          "hostCallbackAfterMs": 101,
+          "terminationIssued": true,
+          "workerFinishedBeforeTermination": false
+        },
+        {
+          "mode": "worker",
+          "repetition": 2,
+          "outOfProcessIframeTargets": null,
+          "baselineMaxGapMs": 24,
+          "maxHostGapMs": 26,
+          "hostCallbackAfterMs": 101,
+          "terminationIssued": true,
+          "workerFinishedBeforeTermination": false
+        },
+        {
+          "mode": "worker",
+          "repetition": 3,
+          "outOfProcessIframeTargets": null,
+          "baselineMaxGapMs": 23,
+          "maxHostGapMs": 25,
+          "hostCallbackAfterMs": 101,
+          "terminationIssued": true,
+          "workerFinishedBeforeTermination": false
+        }
+      ]
+    }
+  ]
+}

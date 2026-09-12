@@ -52,7 +52,7 @@ checks, and a changelog entry, as required by the master plan.
 
 ## Recommended next tickets
 
-1. Implement the optional separate-site preview transport described in preview-resource-isolation.md; retain local mode and explicit browser-dependent limitations.
+1. Select and deploy a dedicated preview site, then verify responsiveness against that actual deployment; the opt-in transport and loopback prototype are implemented.
 2. Improve editor assistance with formatting and completions against the supported compiler syntax.
 
 These are follow-on tickets, not claims that the full master plan is complete.
@@ -354,3 +354,42 @@ completion and no worker completion received before termination was issued.
 The script passed JavaScript syntax checking and the diff passed whitespace
 validation. This ticket adds a measurement harness and documentation, so the
 unrelated application browser suite was not rerun.
+
+
+## Milestone 12 — Optional hosted preview transport
+
+Implemented on 2026-09-12. The build emits an independently deployable static
+preview document sharing the existing local bootstrap, CSP, module loader, HMR,
+console, and runtime source mapping. A build-time trusted endpoint enables the
+Local/Hosted selector; local remains the default. Mode changes preserve editor
+history and project source. The versioned, one-shot parent handshake transfers
+builds only after readiness and validates the iframe window, fresh channel, and
+build generation. Expired startup responses cannot recover a timed-out document.
+
+Hosted startup failures stay in hosted mode with an actionable error and explicit
+local fallback/retry. The UI explains browser-dependent containment without
+claiming CPU/memory quotas. A small existing pane-ID type widening was corrected
+so repository typechecking could run; the preview status element again carries
+its stable test ID, and Reset layout has an explicit accessible label. See [setup and deployment limits](hosted-preview.md).
+
+Production deployment and measurements against a selected endpoint remain a
+follow-up ticket; this milestone implements and verifies the local prototype.
+
+Verification: TSRX/TypeScript checks, the production build, 66 Bun tests (684
+assertions), and all 15 hosted-browser cases across Chromium, Firefox, and WebKit
+passed. The hosted mobile screenshot was inspected. The initial full-suite attempt
+stopped at three failures: a missing Reset layout accessible label (restored in
+this change), and two existing persistence tests expecting `#save-status` and a
+Reset project control removed by the current UI. The persistence/sharing suites
+therefore remain outside this milestone's passing browser snapshot.
+
+The final selected regression run passed all 96 cases across the same three
+browsers: `chat-layout`, `examples`, `hmr-theme`, `playground`, `preview-controls`,
+`resource-limits`, and `viewport`. Together with hosted coverage, 111 targeted
+browser cases passed. No production preview endpoint was deployed.
+
+The final isolated responsiveness probe passed all 60 samples. The hosted callback
+median was 101.5 ms with explicit Chromium site isolation and 101.0 ms with Firefox
+Fission, versus approximately 600 ms in the default profiles. The generated static
+bootstrap and handshake were used for URL modes. See
+[the measured snapshot](hosted-preview-isolation-results.json).

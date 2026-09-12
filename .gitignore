@@ -8,6 +8,7 @@ dist/
 .DS_Store
 
 src/generated/
+public/preview.html
 .runtime-build/
 playwright-report/
 test-results/

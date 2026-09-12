@@ -111,3 +111,9 @@ The type-checker selects `octane/compiler/volar` explicitly so source-distribute
 TSRX bindings use the language compiler rather than Octane's runtime entry.
 `allowImportingTsExtensions` supports the binding's native `.ts` imports under
 the project's existing no-emit, bundler-based configuration.
+
+Hosted preview uses `playground/preview-bootstrap.ts` for the shared serialized
+runtime and `playground/preview-config.ts` for deployment URL validation.
+`prepare-runtime.mjs` generates the independently deployable `public/preview.html`
+(copied to `dist/preview.html` on build). `playwright.hosted.config.ts` exercises
+that artifact on loopback across the three browser engines.

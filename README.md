@@ -69,6 +69,13 @@ while retaining the Vim preference, panel layout, and chat settings.
 optional active-file context and stop/retry controls. Provider/model settings
 are remembered; keys and conversations are not saved in browser storage.
 
+For file recommendations, leave **Include active file** enabled and ask for a
+change. Complete replacement recommendations offer **Apply & verify** with the
+target filename. The playground compiles the proposed project in a separate
+worker before updating the file, reports errors in chat, and preserves the current
+source on failure or stale context. Successful edits refresh the preview, autosave,
+and can be undone in the editor. This checks compilation, not runtime correctness.
+
 Runtime errors appear in the console with clickable source locations. Click a
 frame such as `Counter.btsx:3:5` to open the authored file and highlight the line.
 Frames from changed or deleted files are marked **source changed** and cannot
@@ -127,6 +134,15 @@ ignored by Git. The browser build selects Beast's installed compiler module
 with a narrow alias because its root export also includes Node filesystem APIs.
 No production compiler source is copied or modified. Keep the pinned Beast
 version until its browser export contract is available upstream.
+
+## Optional hosted preview
+
+The default preview runs locally. Set `PLAYGROUND_PREVIEW_URL` at build time to
+add an explicit Hosted preview option. The build emits a standalone
+`dist/preview.html` for a trusted separate site. Source stays in the editor;
+builds transfer to the iframe after a versioned handshake. Startup failures offer
+reload or deliberate local fallback, and isolation remains browser-dependent.
+See [configuration, deployment, and tests](docs/hosted-preview.md).
 
 ## Milestone limits
 

@@ -21,7 +21,7 @@ test('Cohere defaults use the real compatibility endpoint and unprefixed native 
   expect(payload.stream).toBe(true);
   expect(payload.messages.at(-1)).toEqual(input.messages[0]);
   expect(payload.messages[1].content).toContain('h1 Hello');
-  expect(payload.messages[0].content).toContain('cannot execute commands or modify files');
+  expect(payload.messages[0].content).toContain('Apply & verify');
   expect(options!.redirect).toBe('error');
   expect(response.headers.get('Cache-Control')).toBe('no-store');
 });

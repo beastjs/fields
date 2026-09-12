@@ -1,6 +1,6 @@
 /** Run with Bun. Uses temporary loopback servers and finite CPU work only. */
 import { createServer } from 'node:http';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { platform, release, arch } from 'node:os';
 import { chromium, firefox, webkit } from '@playwright/test';
 import { compileProject } from '../src/playground/compiler.ts';
@@ -8,8 +8,9 @@ import { previewDocument } from '../src/playground/preview.ts';
 import { helloWorld } from '../src/playground/examples.ts';
 
 const burnMs = 600;
-const channel = 'local-isolation-probe';
+const channel = crypto.randomUUID();
 const document = previewDocument(channel, 1);
+const hostedDocument = await readFile(new URL('../public/preview.html', import.meta.url), 'utf8');
 const project = { ...helloWorld, files: { ...helloWorld.files } };
 project.files['/src/main.ts'] += `
 // Finite responsiveness probe; no allocation pressure or network access.
@@ -28,7 +29,7 @@ if (!result.entry || result.diagnostics.some(d => d.severity === 'error')) throw
 const serve = (request, response) => {
   response.setHeader('Content-Type', 'text/html; charset=utf-8');
   response.setHeader('Cache-Control', 'no-store');
-  response.end(request.url === '/preview' ? document : '<!doctype html><title>Local isolation probe</title><body>Host responsiveness probe</body>');
+  response.end(request.url === '/preview' ? hostedDocument : '<!doctype html><title>Local isolation probe</title><body>Host responsiveness probe</body>');
 };
 const server = createServer(serve);
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -114,7 +115,10 @@ try {
                   };
                   addEventListener('message', listener);
                   if (mode === 'srcdoc') frame.srcdoc = document;
-                  else frame.src = `http://${mode === 'cross-site-url' ? 'localhost' : '127.0.0.1'}:${port}/preview`;
+                  else {
+                    frame.addEventListener('load', () => frame.contentWindow.postMessage({ version: 1, type: 'connect', channel, build: 1, theme: 'dark' }, '*'));
+                    frame.src = `http://${mode === 'cross-site-url' ? 'localhost' : '127.0.0.1'}:${port}/preview`;
+                  }
                   window.document.body.append(frame);
                   await booted;
                   startWork = () => frame.contentWindow.postMessage({ type: 'probe-run', channel }, '*');
@@ -147,6 +151,12 @@ try {
             console.error(`${name} ${mode} #${repetition}: host callback ${sample.hostCallbackAfterMs.toFixed(1)}ms, max gap ${sample.maxHostGapMs.toFixed(1)}ms`);
           } finally { await page.close(); }
         }
+      }
+      // Finite-work acceptance only for profiles deliberately configured for isolation.
+      if (['chromium-site-per-process', 'firefox-fission'].includes(name)) {
+        const samples = entry.samples.filter(sample => sample.mode === 'cross-site-url');
+        const median = samples.map(sample => sample.hostCallbackAfterMs).sort((a, b) => a - b)[1];
+        if (samples.length !== 3 || median >= burnMs / 2) throw new Error(`Hosted preview did not keep the host responsive: median ${median}ms`);
       }
     } catch (error) {
       report.failed = true;
