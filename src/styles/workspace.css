@@ -212,10 +212,10 @@
 @media (max-width: 760px) {
   .topbar {
     padding: 8px 10px 0;
-    column-gap: 10px;
+    column-gap: 6px;
   }
   .topbar-context {
-    gap: 10px;
+    gap: 4px;
   }
   .project-title {
     padding-left: 0;

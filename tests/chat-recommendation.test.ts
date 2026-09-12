@@ -55,6 +55,13 @@ test('a fence opened mid-sentence still parses, with or without hunks', () => {
   expect(fileRecommendation('Applying a style.```btsx patch=' + patched.file + '\n  h2 Keep\n\n```', patched)?.error).toContain('no SEARCH/REPLACE hunks');
 });
 
+test('hunks apply even when the model omits the patch= marker', () => {
+  expect(fileRecommendation('```btsx\n' + hunk('h2 Keep\n', 'h2 Tomato\n') + '```', patched))
+    .toEqual({ file: patched.file, source: 'h1 Before\nh2 Tomato\np Tail\n', hunks: 1 });
+  expect(fileRecommendation('```btsx\n' + hunk('h2 Keep\n', 'h2 A\n') + '```\n```btsx\n' + hunk('p Tail\n', 'p B\n') + '```', patched)).toBeUndefined();
+  expect(fileRecommendation('```btsx\n<<<<<<< SEARCH\nh2 Keep\n', patched)?.error).toContain('cut off');
+});
+
 test('completed replies and retries retain original file and project identity', async () => {
   const chat = new ChatController(defaultSettings, () => {}, async () => new Response(
     `data: ${JSON.stringify({ choices: [{ delta: { content: block() } }] })}\n\ndata: [DONE]\n\n`, { headers: { 'Content-Type': 'text/event-stream' } }));

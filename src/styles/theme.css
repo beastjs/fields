@@ -1,5 +1,6 @@
 @theme inline {
   --color-accent: var(--accent);
+  --color-background: var(--canvas);
 }
 :root {
   color-scheme: dark;
@@ -29,6 +30,10 @@
   --syntax-tag: #a5b6bd;
   --syntax-comment: #8c8c86;
   --syntax-number: #ee9b68;
+  --diff-add: #a8c98a;
+  --diff-add-surface: rgba(122, 168, 90, 0.16);
+  --diff-del: #d99a94;
+  --diff-del-surface: rgba(190, 90, 80, 0.16);
 }
 :root[data-theme='light'] {
   color-scheme: light;
@@ -58,6 +63,10 @@
   --syntax-tag: #3e6878;
   --syntax-comment: #79816e;
   --syntax-number: #a85124;
+  --diff-add: #3f6b28;
+  --diff-add-surface: rgba(90, 140, 60, 0.16);
+  --diff-del: #9a3428;
+  --diff-del-surface: rgba(180, 70, 55, 0.14);
 }
 .theme-toggle {
   flex-shrink: 0;

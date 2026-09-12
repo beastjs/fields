@@ -3,6 +3,7 @@ import type { PlaygroundSession } from '../../playground/session'
 import { useEffect, useRef, useState } from 'octane'
 import { renderChatMarkdown } from '../../chat/markdown'
 import type { ChatMessage } from '../../chat/controller'
+import Accordion, {AccordionItem, AccordionTrigger, AccordionPanel} from "../ui/accordion.btsx";
 
 
 module
@@ -54,7 +55,7 @@ article(className={'chat-message ' + message.role} data-message-state={message.s
   if message.role === 'user'
     p.user-message #{message.content}
   elseif message.content
-    div.chat-markdown(dangerouslySetInnerHTML={{ __html: renderChatMarkdown(message.content) }})
+    div.chat-markdown(dangerouslySetInnerHTML={{ __html: renderChatMarkdown(message.content, message.context?.source) }})
   elseif message.state === 'streaming'
     div.thinking-indicator(role='status')
       span

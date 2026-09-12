@@ -26,9 +26,9 @@ setup
 
 PaneSurface(layout={layout} pane='chat' label='AI chat' className='chat-pane')
   div(className='h-9 flex items-center justify-between border-b border-[var(--edge)] px-1 text-xs ')
-    div(className='flex items-center gap-1')
-      span(className='text-[10px] opacity-80') ✦
-      span Assistant
+    div(className='flex items-center gap-1 text-[11px]')
+      span(className='opacity-70') ✦
+      span(className='') Assistant
     div.panel-actions
       button.icon-button(type='button' title='New chat' aria-label='New chat' onClick={chat.clear})
         Icon(name='plus' className='size-3.5')
@@ -43,9 +43,11 @@ PaneSurface(layout={layout} pane='chat' label='AI chat' className='chat-pane')
     if !state.messages.length
       div.chat-welcome
         div.assistant-dial(aria-hidden={true}) ✦
-        span.eyebrow-label YOUR CODING COMPANION
-        h2 Build something fast.
-        p Explore an idea, untangle an error, or find the next step.
+        h2 Fast Builder
+        each idea in ['Explore an idea', 'untangle an error', 'or find the next step'] key idea
+          p(className='space-x-1')
+            span(className='size-2 aspect-square rounded-full bg-background')
+            span #{idea}
         button.connection-prompt(type='button' hidden={connected} onClick={() => setSettingsOpen(true)}) Set up your connection ↗
     each message in state.messages key message.id
       ChatMessage(message={message} session={session} auto={isAutoApply})

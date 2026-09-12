@@ -5,6 +5,7 @@ import ExampleLibrary from './ExampleLibrary.btsx'
 import ProjectSharing from './ProjectSharing.btsx'
 import ViewToolbar from '../layout/ViewToolbar.btsx'
 import {Icon} from '@/lib/icons'
+import Switcher from "../ui/switcher.btsx";
 
 props { session, layout }: WorkspaceProps
 setup const state = useSyncExternalStore(session.subscribe, session.getSnapshot);
@@ -12,11 +13,11 @@ setup const state = useSyncExternalStore(session.subscribe, session.getSnapshot)
 div.topbar-container
   header.topbar
     div.topbar-context
-      a.brand(href='/' aria-label='Beast Playground home')
+      a.brand(href='/' aria-label='Team')
         img(src='/beast.svg' alt='' width='20' height='20')
-        span.local-label /
-        span.brand-product beast
-      ProjectHeading(session={session})
+      Icon(name='chevron-down-tiny' className='size-3 opacity-60 -rotate-45')
+      Switcher(items={[{id: 'beast', icon: 'new-folder', label: 'Beast' }]} title='Teams')
+      Icon(name='slice' className='size-3 opacity-40 -rotate-6')
       ExampleLibrary(session={session})
     ViewToolbar(layout={layout})
     div.topbar-actions
@@ -25,7 +26,7 @@ div.topbar-container
       button.theme-toggle(type='button' aria-label='Light mode' aria-pressed={state.theme === 'light'} title={state.theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'} onClick={session.toggleTheme})
         div.play-icon
           Icon(name='theme' className='size-3')
-      button#run-build(type='button' aria-label='Run project' onClick={session.run} title='Run project (⌘/Ctrl + Enter)')
+      button#run-build.theme-toggle(type='button' aria-label='Run project' onClick={session.run} title='Run project (⌘/Ctrl + Enter)')
         div.play-icon
           Icon(name='play' className='size-3')
   p#save-notice.persistence-notice(role='status' hidden={!state.saveStatus.issue}) #{state.saveStatus.issue}

@@ -12,7 +12,7 @@
 .topbar-context {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 4px;
   min-width: 0;
 }
 .reset-project {
@@ -136,10 +136,11 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-transform: capitalize;
 }
 .project-symbol {
   color: var(--accent);
-  font-size: 18px;
+  font-size: 12px;
 }
 .project-kind {
   flex-shrink: 0;
@@ -280,16 +281,15 @@
 }
 
 .examples-button {
-  padding: 6px 8px;
-  border: 1px solid var(--edge);
-  border-radius: 4px;
-  background: var(--surface-recessed);
+  padding: 5px 8px;
+  border-radius: 8px;
   color: var(--text-secondary);
   font-size: 10px;
   white-space: nowrap;
+  background: var(--canvas);
 }
 .examples-button:hover {
-  color: var(--accent);
+  background: var(--surface-recessed);
 }
 .example-choice {
   width: 100%;
@@ -305,7 +305,7 @@
 @media (max-width: 1200px) {
   .topbar {
     grid-template-columns: minmax(0, 1fr) auto;
-    column-gap: 12px;
+    column-gap: 4px;
     row-gap: 0;
     padding-top: 8px;
   }

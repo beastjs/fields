@@ -24,7 +24,7 @@ module
     direction: FluidTooltipDirection;
     keyboardNavigation: boolean;
     registerPointerTarget: (element: HTMLElement) => void;
-    registerKeyboardTarget: () => void;
+    registerKeyboardTarget: VoidFunction;
   }
   interface FluidTooltipRootContextValue {
     id: string;
@@ -182,7 +182,7 @@ component FluidTooltipContent
     }, [children, className, root, showArrow]);
   | #{null}
 
-props { children, orientation = "auto", openDelay = 350, closeDelay = 100, disabled = false, className, }: FluidTooltipGroupProps
+props { children, orientation = "auto", openDelay = 150, closeDelay = 100, disabled = false, className, }: FluidTooltipGroupProps
 setup
   const handle = useMemo(() => T.createHandle<FluidTooltipPayload>(), []);
 

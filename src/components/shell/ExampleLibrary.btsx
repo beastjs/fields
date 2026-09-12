@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'octane'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'octane'
 import { examples } from '../../playground/examples'
 import type { SessionProps } from '../types'
+import {Icon} from '@/lib/icons'
 
 props { session }: SessionProps
 setup
@@ -11,7 +12,15 @@ setup
   const load = () => { session.resetProject(selected.project); close(); };
   useEffect(() => () => dialog.current?.close(), []);
 
-button.examples-button(type='button' onClick={event => { event.currentTarget.focus(); dialog.current?.showModal(); }}) Examples
+  const state = useSyncExternalStore(session.subscribe, session.getSnapshot);
+  const example = examples.find(item => item.project.entry === state.project.entry && Object.keys(item.project.files).length === Object.keys(state.project.files).length && Object.entries(item.project.files).every(([path, source]) => state.project.files[path] === source));
+
+
+button.examples-button(className='hover:bg-background' type='button' onClick={event => { event.currentTarget.focus(); dialog.current?.showModal(); }})
+  div.project-title
+    span.project-symbol(className='text-xs opacity-80') ◈
+    span.project-name(title={example?.title ?? 'Your project'}) #{example?.title ?? 'Your project'}
+    Icon(name='chevron-down-tiny' className='size-3')
 dialog.project-transfer(ref={dialog} aria-labelledby='examples-title')
   div.settings-heading
     div

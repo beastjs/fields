@@ -1,0 +1,56 @@
+module "use client";
+import DropdownMenu, { DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuShortcut, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import Button from '@/components/ui/button.btsx'
+import { useState } from "octane";
+import type { OctaneNode } from "octane";
+import { Icon, type IconName } from "@/lib/icons";
+
+module
+  interface SwitcherProps {
+    items: {
+      id: string
+      label: string
+      icon: IconName
+      logo?: OctaneNode
+    }[]
+    title: string
+  }
+component SwitcherRoot
+  props { items, title }: SwitcherProps
+  setup
+    const [isMobile] = useState(false);
+    const [activeItem, setActiveItem] = useState(items[0]);
+
+    if (!activeItem) {
+      return null;
+    }
+    const trigger = <Button/>
+  DropdownMenu
+    DropdownMenuTrigger(render={trigger} className='bg-background/80 hover:bg-background/90 data-pressed:bg-background ps-0 pe-1 rounded-lg gap-0.5')
+      div(className="flex aspect-square size-8 items-center justify-center rounded-lg text-sidebar-primary-foreground")
+        Icon(name={activeItem.icon} className='size-4')
+      div(className="grid flex-1 text-left text-sm leading-tight")
+        span(className="font-medium capitalize truncate ") #{activeItem.id}
+      Icon(name='select-caret' className='size-3 ml-1 opacity-70')
+    DropdownMenuContent(
+      ~ className="w-fit bg-background"
+      ~ align="start"
+      ~ side={isMobile ? "bottom" : "right"}
+      ~ sideOffset={4}
+      ~ )
+      DropdownMenuGroup
+        DropdownMenuLabel(className="font-normal text-xs text-muted-foreground opacity-80") #{title}
+        each item, index in items key item.id
+          DropdownMenuItem(onClick={() => setActiveTeam(item)} className="gap-1 p-2 hover:bg-foreground/10!")
+            div(className="flex size-6 items-center justify-center")
+              Icon(name={item.icon} className='size-4')
+            span(className='capitalize pe-2') #{item.id}
+      DropdownMenuSeparator
+      DropdownMenuGroup
+        DropdownMenuItem(className="gap-2 p-2 hover:bg-foreground/10!")
+          div(className="flex size-6 items-center justify-center rounded-md")
+            Icon(name='plus' className='size-3')
+          div(className="font-medium text-muted-foreground text-xs") New Team
+
+props {...props}: SwitcherProps
+SwitcherRoot({...props})

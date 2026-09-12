@@ -12,14 +12,14 @@ setup const visible = useSyncExternalStore(layout.subscribe, layout.getSnapshot)
 div.view-toolbar(role='group' aria-label='Workspace views')
   span.view-caption PANES
   FluidTooltip
-    ButtonGroup
+    ButtonGroup(className='bg-background')
       each pane in paneDefinitions
         FluidTooltipRoot(id={pane.id})
           FluidTooltipTrigger(className='min-h-8 h-full w-9 whitespace-nowrap' asChild)
             button(type='button' data-view={pane.id} aria-controls={'pane-' + pane.id} aria-pressed={visible[pane.id]} onClick={() => layout.toggle(pane.id)} title={(visible[pane.id] ? 'Collapse ' : 'Expand ') + pane.label} disabled={visible[pane.id] && (pane.id === 'editor' ? !visible.preview : pane.id === 'preview' ? !visible.editor : false)})
-              Icon(name={pane.icon} className={cn('size-3 opacity-50',{'opacity-100': visible[pane.id]} )})
-          FluidTooltipContent(className='font-mono capitalize')
-            | #{pane.id}
+              Icon(name={pane.icon} className={cn('size-3 opacity-60',{'opacity-100': visible[pane.id]} )})
+          FluidTooltipContent(className='font-mono text-[10px] capitalize')
+            | #{pane.label}
     // each pane in paneDefinitions key pane.id
     //   button.view-toggle(type='button' data-view={pane.id} aria-controls={'pane-' + pane.id} aria-pressed={visible[pane.id]} onClick={() => layout.toggle(pane.id)} title={(visible[pane.id] ? 'Collapse ' : 'Expand ') + pane.label} disabled={visible[pane.id] && (pane.id === 'editor' ? !visible.preview : pane.id === 'preview' ? !visible.editor : false)})
     //     span.view-indicator(aria-hidden={true})

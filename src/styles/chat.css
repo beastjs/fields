@@ -310,6 +310,57 @@
 .chat-markdown pre code {
   color: var(--text-secondary);
 }
+.chat-markdown pre.chat-diff {
+  padding: 0;
+}
+.chat-diff code {
+  /* inline-block so the rows below size against the widest line, not the visible width. */
+  display: inline-block;
+  min-width: 100%;
+  padding: 8px 0;
+}
+.chat-diff .diff-row {
+  --diff-tint: transparent;
+  display: flex;
+  padding-right: 10px;
+  /* Keeps the row tint spanning the full width of a horizontally scrolled diff. */
+  width: max-content;
+  min-width: 100%;
+}
+.chat-diff .diff-num {
+  flex: none;
+  width: 3ch;
+  /* Padding, not a flex gap: the gap would scroll away and let code touch the numbers. */
+  padding: 0 10px 0 8px;
+  text-align: right;
+  color: var(--faint);
+  user-select: none;
+  /* Stays put while a long line scrolls past; inherits its row's tint to stay opaque. */
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  /* The row tints are translucent, so the gutter needs the block's own surface underneath
+     it to stay opaque while a long line scrolls behind. */
+  background-color: var(--inset);
+  background-image: linear-gradient(var(--diff-tint), var(--diff-tint));
+}
+.chat-diff .diff-text {
+  white-space: pre;
+}
+.chat-diff .diff-del {
+  --diff-tint: var(--diff-del-surface);
+  color: var(--diff-del);
+  background: var(--diff-tint);
+}
+.chat-diff .diff-add {
+  --diff-tint: var(--diff-add-surface);
+  color: var(--diff-add);
+  background: var(--diff-tint);
+}
+.chat-diff .diff-gap {
+  color: var(--faint);
+}
+
 .chat-markdown blockquote {
   margin: 10px 0;
   padding-left: 12px;
