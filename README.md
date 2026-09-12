@@ -42,9 +42,9 @@ the running app and zoom, and exits through its toolbar button or the browser's
 Escape control. Unsupported browsers disable the button; denied requests show a
 message. Zoom and fullscreen are session-only view controls, excluded from shares.
 
-Open **Examples** in the top bar to browse five self-contained projects: Hello
-World/counter, props/components, state/events, nested components, and async
-loading/recovery. Inspect their source before choosing **Load example**; loading
+Open **Examples** in the top bar to browse eight self-contained projects: Hello
+World/counter, props/components, state/events, nested components, async
+loading/recovery, reducer undo/redo, nested context providers, and effect cleanup. Inspect their source before choosing **Load example**; loading
 replaces the current files, saved copy, undo history, and running preview. Cancel
 or Escape keeps your work. Save a Share link first if you want to return to it.
 The async example uses a local simulated request and works without network access.
@@ -119,6 +119,7 @@ bun run check                  # Type checks, unit/fixture tests, production bui
 bunx playwright install chromium firefox webkit
 bun run test:browser            # Full Chromium, Firefox, and WebKit suites
 bun run test:browser --project=chromium # Chromium only
+bun run probe:isolation          # Bounded CPU-isolation experiment; fresh browsers
 ```
 
 Runtime source is generated from installed packages before builds/tests and is
@@ -168,6 +169,9 @@ string length and skip property getters; later logs resume automatically.
 The host retains the latest 200 entries. The sandbox blocks parent DOM/storage
 access but cannot enforce CPU or memory quotas on arbitrary preview JavaScript;
 infinite loops, custom proxy traps, and excessive allocation remain limitations.
+The [resource isolation evaluation](docs/preview-resource-isolation.md) records
+browser measurements and the proposed separate-site preview transport. It does
+not add production CPU or memory quotas.
 
 The complete browser suite runs against production output in Chromium, Firefox,
 and WebKit, including editor/Vim, layout, persistence, chat, examples, HMR,

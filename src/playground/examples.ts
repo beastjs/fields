@@ -204,4 +204,116 @@ export async function loadMessage(fail: boolean): Promise<string> {
   return 'Your async message has arrived.';
 }
 ` }) },
+  { id: 'reducer-history', title: 'Reducer & undo history',
+    description: 'Keep related updates in a typed reducer. Undo and redo a counter, then make a new edit to discard the redo branch.',
+    project: exampleProject(`import { useReducer } from 'octane'
+import { historyReducer, initialHistory } from './history'
+
+setup const [history, dispatch] = useReducer(historyReducer, initialHistory);
+
+main.page
+  h1 Reducer & undo history
+  p.description A reducer owns the current count and both history stacks.
+  p(role='status') Count: #{history.present}
+  button(type='button' onClick={() => dispatch({ type: 'change', delta: -1 })}) Decrease
+  button(type='button' onClick={() => dispatch({ type: 'change', delta: 1 })}) Increase
+  button(type='button' disabled={history.past.length === 0} onClick={() => dispatch({ type: 'undo' })}) Undo
+  button(type='button' disabled={history.future.length === 0} onClick={() => dispatch({ type: 'redo' })}) Redo
+  p History: #{history.past.length} undo / #{history.future.length} redo
+`, { '/src/history.ts': `export interface History { past: number[]; present: number; future: number[] }
+export type Action = { type: 'change'; delta: number } | { type: 'undo' } | { type: 'redo' };
+export const initialHistory: History = { past: [], present: 0, future: [] };
+
+// Return fresh arrays; never mutate a previous state. Keep the latest 50 steps.
+export function historyReducer(state: History, action: Action): History {
+  switch (action.type) {
+    case 'change': return { past: [...state.past, state.present].slice(-50), present: state.present + action.delta, future: [] };
+    case 'undo': {
+      if (!state.past.length) return state;
+      return { past: state.past.slice(0, -1), present: state.past[state.past.length - 1], future: [state.present, ...state.future] };
+    }
+    case 'redo': {
+      if (!state.future.length) return state;
+      return { past: [...state.past, state.present], present: state.future[0], future: state.future.slice(1) };
+    }
+  }
+}
+` }) },
+  { id: 'context', title: 'Context & nested providers',
+    description: 'Share a display preference across distant components. A nested provider overrides one branch while a consumer outside the provider uses the default.',
+    project: exampleProject(`import { useState } from 'octane'
+import { DensityContext } from './density'
+import DensityCard from './DensityCard.btsx'
+import Workspace from './Workspace.btsx'
+
+setup const [density, setDensity] = useState('comfortable');
+
+main.page
+  h1 Context & nested providers
+  p.description Toggle the shared preference and compare the three scopes.
+  button(type='button' onClick={() => setDensity(value => value === 'comfortable' ? 'compact' : 'comfortable')}) Toggle density
+  DensityContext.Provider(value={density})
+    Workspace
+    DensityContext.Provider(value='compact')
+      DensityCard(label='Nested override')
+  DensityCard(label='Outside provider')
+`, {
+      '/src/density.ts': `import { createContext } from 'octane';
+
+export const DensityContext = createContext('comfortable');
+`,
+      '/src/Workspace.btsx': `import DensityCard from './DensityCard.btsx'
+
+section
+  h2 Shared workspace
+  DensityCard(label='Shared preference')
+`,
+      '/src/DensityCard.btsx': `import { useContext } from 'octane'
+import { DensityContext } from './density'
+
+props { label }: { label: string }
+setup const density = useContext(DensityContext);
+
+article.card(style={{ padding: density === 'compact' ? '8px' : '24px' }})
+  h3 #{label}
+  p(role='status') Density: #{density}
+`,
+    }) },
+  { id: 'effect-cleanup', title: 'Effects & subscription cleanup',
+    description: 'Subscribe to local browser events in an effect, then unmount the component to remove the listener. Remount it to start with fresh state.',
+    project: exampleProject(`import { useState } from 'octane'
+import Listener from './Listener.btsx'
+
+setup const [visible, setVisible] = useState(true);
+
+main.page
+  h1 Effects & subscription cleanup
+  p.description Send a local signal. Hide the listener and inspect the console for cleanup.
+  button(type='button' onClick={() => window.dispatchEvent(new Event('recipe-signal'))}) Send signal
+  button(type='button' onClick={() => setVisible(value => !value)}) #{visible ? 'Hide listener' : 'Show listener'}
+  if visible
+    Listener
+  else
+    p(role='status') Listener is unmounted.
+`, { '/src/Listener.btsx': `import { useEffect, useState } from 'octane'
+
+setup
+  const [signals, setSignals] = useState(0);
+  useEffect(() => {
+    const receive = () => {
+      setSignals(value => value + 1);
+      console.info('Listener received a signal.');
+    };
+    window.addEventListener('recipe-signal', receive);
+    console.info('Listener connected.');
+    return () => {
+      window.removeEventListener('recipe-signal', receive);
+      console.info('Listener disconnected.');
+    };
+  }, []);
+
+section.card
+  h2 Active listener
+  p(role='status') Signals received: #{signals}
+` }) },
 ];

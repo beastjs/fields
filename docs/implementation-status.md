@@ -47,13 +47,13 @@ checks, and a changelog entry, as required by the master plan.
 | 16 | Integrate real Octane HMR, preserve component state | Complete for component/style boundaries; reload fallback for unsupported changes |
 | 17 | Versioned local persistence and restore validation | Complete for current project/editor/preview settings |
 | 18 | Serializable projects and sharing transport | Complete for bounded snapshot links and reviewed imports |
-| 19 | Expand validated example library | Core library complete: five reviewed projects; advanced recipes later |
+| 19 | Expand validated example library | Eight validated projects, including reducer history, context providers, and effect cleanup |
 | 20 | Broaden browser tests and production hardening | Full Chromium/Firefox/WebKit matrix; compiler input bounds and console throttling; strict runtime CPU/memory isolation remains open |
 
 ## Recommended next tickets
 
-1. Extend the example library with advanced recipes as compiler capabilities grow.
-2. Evaluate stronger preview isolation for CPU/memory exhaustion; the iframe sandbox does not enforce resource quotas.
+1. Implement the optional separate-site preview transport described in preview-resource-isolation.md; retain local mode and explicit browser-dependent limitations.
+2. Improve editor assistance with formatting and completions against the supported compiler syntax.
 
 These are follow-on tickets, not claims that the full master plan is complete.
 
@@ -302,3 +302,55 @@ that assertion to poll for the expected dimensions, the resize test passed three
 consecutive runs in each engine (9/9). All 114 cases therefore have passing
 coverage across the full run and focused reruns. The full suite was not repeated
 after that test-only adjustment.
+
+
+## Milestone 10 — Advanced example recipes
+
+Implemented on 2026-09-11. The Examples catalog now offers eight self-contained
+projects. Three new recipes demonstrate typed reducer actions with bounded
+undo/redo history, context consumers with a nested provider override and an
+outside-provider default, and a browser-event subscription with effect cleanup.
+Each source project includes its own imported modules and stylesheet and runs
+without network access or additional packages.
+
+Browser checks exercise both history directions and discarded redo branches,
+reactive context updates across an intermediate component, independent overrides,
+mobile containment and reload restoration, and listener removal/reconnection
+without duplicate callbacks. The existing compiler fixture validates all eight
+projects and their complete import graphs. Loading still uses the existing
+review, replacement, persistence, and editor-history reset contract.
+
+Verification: all 62 unit/fixture tests passed (657 assertions), including
+compilation of all eight examples. All 15 example-browser cases passed across
+Chromium, Firefox, and WebKit against the production build. Typechecking and
+production build passed; the mobile context screenshot was inspected. The wider
+browser suite was not rerun for this catalog-only change.
+
+
+## Milestone 11 — Preview resource isolation evaluation
+
+Evaluated on 2026-09-12. Added `bun run probe:isolation`, a bounded loopback-only
+experiment using the production preview bootstrap and a real compiled project.
+The checked-in measurements cover 60 samples: four modes, three repetitions, and
+five browser profiles (default Chromium/Firefox/WebKit plus explicit Chromium
+site isolation and Firefox Fission controls). The probe performs finite CPU work,
+records host scheduling delays, tests issuing worker termination, and samples
+Chromium iframe targets while mounted. A supervisor closes stalled profiles.
+
+The evaluation separates data isolation, responsiveness, and enforceable resource
+limits. Default probe iframe profiles blocked a nominal 100 ms host callback for
+about 600 ms. Explicit Chromium isolation kept all iframe modes responsive;
+Firefox Fission kept only the cross-site iframe responsive. Workers stayed
+responsive but do not provide a drop-in DOM renderer or a per-worker heap budget.
+
+See [the decision and next implementation contract](preview-resource-isolation.md)
+and [raw measurements](preview-isolation-results.json). The recommendation is an
+optional dedicated-site preview transport with an explicit local fallback;
+strict CPU/memory enforcement would require a separately scoped supervised runner.
+Production preview behavior and the compiler/runtime packages are unchanged.
+
+Verification: the final probe completed all 60 samples, with normal iframe
+completion and no worker completion received before termination was issued.
+The script passed JavaScript syntax checking and the diff passed whitespace
+validation. This ticket adds a measurement harness and documentation, so the
+unrelated application browser suite was not rerun.

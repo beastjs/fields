@@ -27,7 +27,7 @@ PaneSurface(layout={layout} pane='files' label='File explorer' className='explor
     svg(width='17' height='17' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.7' aria-hidden={true})
       circle(cx='10.5' cy='10.5' r='6.5')
       path(d='m16 16 4.5 4.5')
-    input(type='search' aria-label='Search files' placeholder='Search files…' value={search.state.value} onInput={event => search.handleChange(event.currentTarget.value)})
+    input(type='search' aria-label='Search files' placeholder='Search files…' value={search.state.value} onInput={event => search.handleChange(event.currentTarget.value)} className='ring-0 outline-none w-full')
   div.panel-heading
     span PROJECT FILES
     div.panel-actions

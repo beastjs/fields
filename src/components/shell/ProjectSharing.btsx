@@ -3,6 +3,7 @@ import { createProjectShareURL, decodeSharedProject, projectPayloadFromHash } fr
 import type { SessionProps } from '../types'
 import type { ProjectTransfer } from './project-transfer'
 import ProjectTransferDialog from './ProjectTransferDialog.btsx'
+import {Icon} from '@/lib/icons'
 
 props { session }: SessionProps
 setup
@@ -64,7 +65,7 @@ setup
   }, [session]);
 
 button.share-project(type='button' aria-label='Share project' title='Share project' onClick={event => { event.currentTarget.focus(); void share(); }})
-  span(aria-hidden='true') ↗
-  span.share-label Share
+  Icon(name='external' className='size-3')
+  // span.share-label Share
 if transfer
   ProjectTransferDialog(transfer={transfer} onClose={close} onCopy={copy} onImport={importProject})

@@ -5,7 +5,6 @@ import { createPlaygroundSession } from '../../playground/app'
 import { WorkspaceLayout } from '../../playground/workspace-layout'
 import Topbar from './Topbar.btsx'
 import Statusbar from './Statusbar.btsx'
-import ViewToolbar from '../layout/ViewToolbar.btsx'
 import Workspace from '../layout/Workspace.btsx'
 
 setup
@@ -17,7 +16,6 @@ setup
   useEffect(() => layout.restore(query), [layout, query.dock, query.split, query.rows]);
 
 main.playground
-  Topbar(session={session})
-  ViewToolbar(layout={layout})
+  Topbar(session={session} layout={layout})
   Workspace(session={session} layout={layout})
   Statusbar(session={session})

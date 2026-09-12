@@ -3,9 +3,10 @@ import { connectPreview } from '../../playground/preview-connection'
 import PaneSurface from '../layout/PaneSurface.btsx'
 import CollapseButton from '../layout/CollapseButton.btsx'
 import type { WorkspaceProps } from '../types'
+import {Icon} from '@/lib/icons'
 
 module
-  const viewports = [{ width: '100%', label: 'Desktop', symbol: '▰' }, { width: '768px', label: 'Tablet', symbol: '▯' }, { width: '375px', label: 'Mobile', symbol: '▯' }] as const;
+  const viewports = [{ width: '100%', label: 'Desktop', symbol: 'desktop' }, { width: '768px', label: 'Tablet', symbol: 'tablet' }, { width: '375px', label: 'Mobile', symbol: 'smartphone' }] as const;
 
 props { session, layout }: WorkspaceProps
 setup
@@ -66,7 +67,8 @@ PaneSurface(layout={layout} pane='preview' label='Application preview' className
         strong Preview
       div.viewport-controls(role='group' aria-label='Preview size')
         each viewport in viewports key viewport.width
-          button(type='button' className={'viewport-button' + (state.previewWidth === viewport.width ? ' active' : '')} data-width={viewport.width} aria-label={viewport.label + ' preview'} aria-pressed={state.previewWidth === viewport.width} title={viewport.label} onClick={() => session.setPreviewWidth(viewport.width)}) #{viewport.symbol}
+          button(type='button' className={'viewport-button flex items-center justify-center' + (state.previewWidth === viewport.width ? ' active' : '')} data-width={viewport.width} aria-label={viewport.label + ' preview'} aria-pressed={state.previewWidth === viewport.width} title={viewport.label} onClick={() => session.setPreviewWidth(viewport.width)})
+            Icon(name={viewport.symbol} className='size-3')
       select.preview-zoom(aria-label='Preview zoom' value={String(zoom)} onChange={event => setZoom(Number(event.currentTarget.value))})
         option(value='0.5') 50%
         option(value='0.75') 75%
