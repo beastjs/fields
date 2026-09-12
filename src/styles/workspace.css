@@ -41,6 +41,7 @@
   position: relative;
   background: var(--seam);
   z-index: 1;
+  border-radius: 999px;
   outline: none;
 }
 .pane-separator[aria-orientation='vertical'] {
@@ -105,9 +106,8 @@
 }
 .view-caption {
   font: 8px var(--mono);
-  letter-spacing: 1px;
   color: var(--faint);
-  margin-right: 9px;
+  margin-right: 8px;
 }
 .view-toggle {
   display: flex;
@@ -156,13 +156,14 @@
   left: 6px;
 }
 .reset-layout {
-  margin-left: 9px;
+  margin-left: 4px;
   flex-shrink: 0;
   border: 0;
   background: transparent;
   color: var(--muted);
   font: 8px var(--mono);
   padding: 5px;
+  text-transform: uppercase;
 }
 .reset-layout:hover {
   color: var(--text);
@@ -235,7 +236,7 @@
     display: none;
   }
   .topbar-actions {
-    gap: 12px;
+    gap: 2px;
   }
   .view-toolbar {
     padding: 0 6px;

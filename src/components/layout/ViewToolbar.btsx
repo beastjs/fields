@@ -10,7 +10,7 @@ props { layout }: { layout: WorkspaceLayout }
 setup const visible = useSyncExternalStore(layout.subscribe, layout.getSnapshot);
 
 div.view-toolbar(role='group' aria-label='Workspace views')
-  span.view-caption VIEWS
+  span.view-caption PANES
   FluidTooltip
     ButtonGroup
       each pane in paneDefinitions
@@ -24,4 +24,4 @@ div.view-toolbar(role='group' aria-label='Workspace views')
     //   button.view-toggle(type='button' data-view={pane.id} aria-controls={'pane-' + pane.id} aria-pressed={visible[pane.id]} onClick={() => layout.toggle(pane.id)} title={(visible[pane.id] ? 'Collapse ' : 'Expand ') + pane.label} disabled={visible[pane.id] && (pane.id === 'editor' ? !visible.preview : pane.id === 'preview' ? !visible.editor : false)})
     //     span.view-indicator(aria-hidden={true})
     //     | #{pane.label}
-  button.reset-layout(type='button' onClick={layout.reset} title='Restore the default pane sizes and views') Reset layout
+  button.reset-layout(type='button' onClick={layout.reset} title='Restore the default pane sizes and views') Reset

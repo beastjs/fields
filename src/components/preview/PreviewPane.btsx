@@ -63,8 +63,9 @@ PaneSurface(layout={layout} pane='preview' label='Application preview' className
   div.preview-surface(ref={surface})
     div.preview-toolbar
       div.preview-label
-        span.status-dot
-        strong Preview
+        Icon(name='browser' className='size-3.5')
+        span(className='opacity-80') playground.local
+        span(className='uppercase') #{state.previewStatus}
       div.viewport-controls(role='group' aria-label='Preview size')
         each viewport in viewports key viewport.width
           button(type='button' className={'viewport-button flex items-center justify-center' + (state.previewWidth === viewport.width ? ' active' : '')} data-width={viewport.width} aria-label={viewport.label + ' preview'} aria-pressed={state.previewWidth === viewport.width} title={viewport.label} onClick={() => session.setPreviewWidth(viewport.width)})
@@ -76,14 +77,12 @@ PaneSurface(layout={layout} pane='preview' label='Application preview' className
         option(value='1.25') 125%
         option(value='1.5') 150%
       button.icon-button(ref={fullscreenButton} type='button' aria-label={fullscreen ? 'Exit fullscreen preview' : 'Enter fullscreen preview'} aria-pressed={fullscreen} title={fullscreenSupported ? (fullscreen ? 'Exit fullscreen (Esc)' : 'Fullscreen preview') : 'Fullscreen is unavailable in this browser'} disabled={!fullscreenSupported || fullscreenPending} onClick={toggleFullscreen}) #{fullscreen ? '⊡' : '⛶'}
-      button#reload-preview.icon-button(type='button' aria-label='Reload preview' title='Reload preview' onClick={session.reloadPreview}) ↻
+      button#reload-preview.icon-button(type='button' aria-label='Reload preview' title='Reload preview' onClick={session.reloadPreview})
+        Icon(name='refresh' className='size-4')
       if !fullscreen
         CollapseButton(layout={layout} pane='preview')
     p.fullscreen-notice(role='status' hidden={!fullscreenError}) #{fullscreenError}
-    div.preview-address
-      span ◇
-      span playground.local
-      span#preview-status.preview-status #{state.previewStatus}
+
     div.preview-stage(ref={stage})
       div.preview-canvas(style={{ width: `${width * zoom}px`, height: `${size.height}px` }})
         iframe#preview-frame(ref={iframe} title='Application preview' sandbox='allow-scripts' style={{ width: `${width}px`, height: `${size.height / zoom}px`, transform: `scale(${zoom})` }} data-build-revision={state.previewBuild?.revision})

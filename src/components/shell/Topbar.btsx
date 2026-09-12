@@ -23,8 +23,9 @@ div.topbar-container
       // button.reset-project(type='button' onClick={() => resetPlaygroundProject(session)}) Reset project
       ProjectSharing(session={session})
       button.theme-toggle(type='button' aria-label='Light mode' aria-pressed={state.theme === 'light'} title={state.theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'} onClick={session.toggleTheme})
-        Icon(name='theme' className='size-3')
-      button#run-build.run-button(type='button' aria-label='Run project' onClick={session.run} title='Run project (⌘/Ctrl + Enter)')
+        div.play-icon
+          Icon(name='theme' className='size-3')
+      button#run-build(type='button' aria-label='Run project' onClick={session.run} title='Run project (⌘/Ctrl + Enter)')
         div.play-icon
           Icon(name='play' className='size-3')
   p#save-notice.persistence-notice(role='status' hidden={!state.saveStatus.issue}) #{state.saveStatus.issue}

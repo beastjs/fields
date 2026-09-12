@@ -5,6 +5,7 @@ import PaneSurface from '../layout/PaneSurface.btsx'
 import CollapseButton from '../layout/CollapseButton.btsx'
 import NewFileForm from './NewFileForm.btsx'
 import type { WorkspaceProps, NavigateToSource } from '../types'
+import {Icon} from '@/lib/icons'
 
 props { session, layout, navigate }: WorkspaceProps & { navigate: NavigateToSource }
 setup
@@ -36,8 +37,7 @@ PaneSurface(layout={layout} pane='files' label='File explorer' className='explor
   if adding
     NewFileForm(session={session} onCreate={create} onCancel={cancel})
   div.folder-label
-    span ▾
-    span.folder-icon ▱
+    Icon(name='folder' className='size-3')
     | src
   div#file-list.file-list
     each path in files key path
