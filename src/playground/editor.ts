@@ -2,46 +2,33 @@ import { basicSetup } from 'codemirror';
 import { Compartment, EditorState, Prec } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
 import { isolateHistory, indentWithTab } from '@codemirror/commands';
-import { StreamLanguage, syntaxHighlighting, HighlightStyle } from '@codemirror/language';
+import { syntaxHighlighting, HighlightStyle } from '@codemirror/language';
 import { javascript } from '@codemirror/lang-javascript';
 import { css } from '@codemirror/lang-css';
 import { setDiagnostics, lintGutter } from '@codemirror/lint';
 import { tags } from '@lezer/highlight';
 import { getCM, vim } from '@replit/codemirror-vim';
 import type { Diagnostic, Position } from './contracts';
+import { indentGuides } from './indent-guides';
+import { btsx } from './btsx-language';
 import type { EditorKeymap } from './editor-preferences';
 import type { Theme } from './theme';
 
-// A lexical highlighting mode only. Compilation and validation belong to Beast.
-const beast = StreamLanguage.define({
-  startState: () => ({}),
-  token(stream) {
-    if (stream.eatSpace()) return null;
-    if (stream.match('//')) { stream.skipToEnd(); return 'comment'; }
-    if (stream.match(/^(import|from|module|props|setup|if|else|each|key|scope|switch|case|try|catch|finally|const|let|return|type|interface)\b/)) return 'keyword';
-    if (stream.match(/^(['"])(?:\\.|[^\\])*?\1/)) return 'string';
-    if (stream.match(/^#[{]/)) return 'operator';
-    if (stream.match(/^\.[\w-]+/)) return 'className';
-    if (stream.match(/^[A-Z][\w]*/)) return 'typeName';
-    if (stream.match(/^\d+/)) return 'number';
-    if (stream.sol() && stream.match(/^[\w-]+/)) return 'tagName';
-    if (stream.match(/^[\w-]+(?==)/)) return 'attributeName';
-    stream.next();
-    return null;
-  },
-});
 const highlight = HighlightStyle.define([
-  { tag: tags.keyword, color: 'var(--syntax-keyword)' },
+  { tag: [tags.keyword, tags.self, tags.special(tags.punctuation)], color: 'var(--syntax-keyword)' },
   { tag: tags.string, color: 'var(--syntax-string)' },
-  { tag: [tags.typeName, tags.className], color: 'var(--syntax-type)' },
-  { tag: [tags.tagName, tags.attributeName], color: 'var(--syntax-tag)' },
-  { tag: tags.comment, color: 'var(--syntax-comment)' },
-  { tag: tags.number, color: 'var(--syntax-number)' },
+  { tag: tags.typeName, color: 'var(--syntax-type)' },
+  { tag: tags.definition(tags.typeName), color: 'var(--syntax-type)', fontWeight: '600' },
+  { tag: tags.tagName, color: 'var(--syntax-tag)' },
+  { tag: [tags.attributeName, tags.className], color: 'var(--syntax-attribute)' },
+  { tag: [tags.function(tags.variableName), tags.function(tags.propertyName)], color: 'var(--syntax-function)' },
+  { tag: tags.comment, color: 'var(--syntax-comment)', fontStyle: 'italic' },
+  { tag: [tags.number, tags.atom, tags.bool, tags.null, tags.character], color: 'var(--syntax-number)' },
 ]);
 const theme = EditorView.theme({
   '&': { height: '100%', backgroundColor: 'var(--editor-background)', color: 'var(--text)', fontSize: '12px' },
   '.cm-scroller': { fontFamily: '"SFMono-Regular", Consolas, "Liberation Mono", monospace', lineHeight: '1.85' },
-  '.cm-content': { padding: '20px 0', caretColor: 'var(--accent)' },
+  '.cm-content': { padding: '20px 0', caretColor: 'var(--accent)', '--indent-guide': 'var(--edge)', '--indent-guide-active': 'var(--faint)', '--indent-guide-offset': '10px' },
   '.cm-line': { padding: '0 22px 0 10px' },
   '.cm-gutters': { backgroundColor: 'var(--editor-background)', color: 'var(--faint)', border: 'none', padding: '0 10px 0 12px' },
   '.cm-activeLineGutter, .cm-activeLine': { backgroundColor: 'var(--surface-hover)' },
@@ -76,8 +63,8 @@ export class ProjectEditor {
     const state = this.states.get(path) ?? EditorState.create({ doc: source, extensions: [
       this.keymapCompartment.of(this.keymap === 'vim' ? this.vimExtension : []),
       this.themeCompartment.of(EditorView.darkTheme.of(this.themeMode === 'dark')),
-      basicSetup, theme, syntaxHighlighting(highlight), lintGutter(),
-      path.endsWith('.css') ? css() : path.endsWith('.btsx') ? beast : javascript({ typescript: true, jsx: path.endsWith('.tsrx') }),
+      basicSetup, theme, syntaxHighlighting(highlight), lintGutter(), indentGuides,
+      path.endsWith('.css') ? css() : path.endsWith('.btsx') ? btsx : javascript({ typescript: true, jsx: path.endsWith('.tsrx') }),
       keymap.of([indentWithTab]),
       Prec.highest(keymap.of([{ key: 'Mod-Enter', run: () => { this.run(); return true; } }, { key: 'Mod-s', run: () => { this.run(); return true; } }])),
       EditorView.contentAttributes.of({ 'aria-label': 'Source editor', spellcheck: 'false' }),

@@ -41,8 +41,8 @@
   display: flex;
   flex-shrink: 0;
   align-items: center;
-  gap: 11px;
   text-decoration: none;
+  margin-right: 4px;
 }
 .brand img {
   filter: invert(1);

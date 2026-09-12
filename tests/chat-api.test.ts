@@ -71,3 +71,24 @@ test('provider errors are useful without reflecting upstream secrets', async () 
     expect(body).not.toContain('private');
   }
 });
+
+test('reference files are sent as separate read-only context after the active file', async () => {
+  let options: RequestInit | undefined;
+  const fetcher = (async (_url, init) => { options = init; return stream(); }) as FetchLike;
+  const response = await handleAIRequest(request({ ...input, context: { file: '/src/App.btsx', source: 'h1 Hello' }, references: [{ file: '/src/Button.btsx', source: 'button Click' }] }), { COHERE_API_KEY: 'server-key' }, fetcher);
+  expect(response.status).toBe(200);
+  const payload = JSON.parse(options!.body as string);
+  expect(payload.messages[1].content).toContain('Active project file');
+  expect(payload.messages[2].content).toContain('Reference project file');
+  expect(payload.messages[2].content).toContain('/src/Button.btsx');
+  expect(payload.messages[2].content).toContain('button Click');
+  expect(payload.messages.at(-1)).toEqual(input.messages[0]);
+});
+
+test('reference files are limited in count and combined size', () => {
+  const many = Array.from({ length: 9 }, (_, index) => ({ file: `/src/F${index}.ts`, source: 'x' }));
+  expect(() => validateChatRequest({ ...input, references: many })).toThrow('at most 8');
+  expect(() => validateChatRequest({ ...input, references: [{ file: '/a.ts', source: 'x'.repeat(30001) }, { file: '/b.ts', source: 'x'.repeat(30000) }] })).toThrow('too large together');
+  expect(() => validateChatRequest({ ...input, references: [{ file: '/a.ts' }] })).toThrow();
+  expect(validateChatRequest({ ...input, references: [{ file: '/a.ts', source: 'x' }] }).references).toHaveLength(1);
+});

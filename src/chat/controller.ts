@@ -1,8 +1,8 @@
 import type { FetchLike } from './contracts';
-import type { AIStatus, ChatRequest, ChatSettings, ChatTurn, FileContext } from './contracts';
+import { MAX_REFERENCE_CHARS, MAX_REFERENCES, type AIStatus, type ChatRequest, type ChatSettings, type ChatTurn, type FileContext } from './contracts';
 import { streamChat } from './transport';
 
-export interface ChatMessage extends ChatTurn { context?: FileContext; projectGeneration?: number; id: number; model?: string; state?: 'complete' | 'streaming' | 'stopped' | 'error' }
+export interface ChatMessage extends ChatTurn { context?: FileContext; attachments?: string[]; projectGeneration?: number; id: number; model?: string; state?: 'complete' | 'streaming' | 'stopped' | 'error' }
 export interface ChatSnapshot {
   settings: ChatSettings;
   messages: ChatMessage[];
@@ -44,15 +44,18 @@ export class ChatController {
     this.persist(settings);
     this.patch({ settings: { ...settings }, error: '' });
   };
-  async submit(prompt: string, context?: FileContext, projectGeneration?: number) {
+  async submit(prompt: string, context?: FileContext, projectGeneration?: number, references: FileContext[] = []) {
     if (this.state.busy || !prompt.trim()) return;
     if (prompt.length > 32000) { this.patch({ error: 'Keep your message under 32,000 characters.' }); return; }
     if (context && context.source.length > 60000) { this.patch({ error: 'This file is too large to attach. Turn off active-file context or select a smaller file.' }); return; }
-    const user: ChatMessage = { id: ++this.sequence, role: 'user', content: prompt.trim() };
+    if (references.length > MAX_REFERENCES) { this.patch({ error: `Include at most ${MAX_REFERENCES} other files.` }); return; }
+    if (references.reduce((sum, reference) => sum + reference.source.length, 0) > MAX_REFERENCE_CHARS) { this.patch({ error: 'The included files are too large together (60,000 characters maximum). Remove one and retry.' }); return; }
+    const attachments = [...(context ? [context.file] : []), ...references.map(reference => reference.file)];
+    const user: ChatMessage = { id: ++this.sequence, role: 'user', content: prompt.trim(), attachments: attachments.length ? attachments : undefined };
     const messages = [...this.state.messages, user];
     this.patch({ messages });
     const settings = this.state.settings;
-    const request: ChatRequest = { ...settings, messages: messages.filter(message => message.state !== 'error' && message.state !== 'stopped').slice(-30).map(({ role, content }) => ({ role, content })), context };
+    const request: ChatRequest = { ...settings, messages: messages.filter(message => message.state !== 'error' && message.state !== 'stopped').slice(-30).map(({ role, content }) => ({ role, content })), context, references: references.length ? references : undefined };
     this.lastRequest = request;
     this.lastGeneration = projectGeneration;
     await this.run(request);

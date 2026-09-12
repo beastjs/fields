@@ -30,6 +30,8 @@
   --syntax-tag: #a5b6bd;
   --syntax-comment: #8c8c86;
   --syntax-number: #ee9b68;
+  --syntax-attribute: #c4a79f;
+  --syntax-function: #9fc2b1;
   --diff-add: #a8c98a;
   --diff-add-surface: rgba(122, 168, 90, 0.16);
   --diff-del: #d99a94;
@@ -63,6 +65,8 @@
   --syntax-tag: #3e6878;
   --syntax-comment: #79816e;
   --syntax-number: #a85124;
+  --syntax-attribute: #8a4f47;
+  --syntax-function: #2d6b5a;
   --diff-add: #3f6b28;
   --diff-add-surface: rgba(90, 140, 60, 0.16);
   --diff-del: #9a3428;

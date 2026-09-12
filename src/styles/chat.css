@@ -113,14 +113,12 @@
 }
 .chat-suggestions {
   display: flex;
-  flex-direction: column;
-  gap: 5px;
   margin-bottom: 12px;
-}
-.chat-suggestions button {
-  background: var(--surface-hover);
   border: 1px solid var(--edge-strong);
   border-radius: 4px;
+  background: var(--surface-hover);
+}
+.chat-suggestions button {
   color: var(--text-secondary);
   text-align: left;
   padding: 8px 9px;
@@ -155,6 +153,69 @@
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.context-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  margin: 0 0 9px;
+}
+.context-files:empty {
+  display: none;
+}
+.context-file {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  background: var(--surface-hover);
+  border: 1px solid var(--edge);
+  border-radius: 3px;
+}
+.context-file code {
+  font: 8px var(--mono);
+  color: #c5ac8c;
+  padding: 3px 0 3px 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.context-file button {
+  background: none;
+  border: 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1;
+  padding: 0 5px;
+  cursor: pointer;
+}
+.context-file button:hover {
+  color: var(--text);
+}
+.context-add {
+  font: 8px var(--mono);
+  color: var(--muted);
+  background: transparent;
+  border: 1px dashed var(--edge-strong);
+  border-radius: 3px;
+  padding: 2px 4px;
+  cursor: pointer;
+}
+.context-add:hover {
+  color: var(--text);
+}
+.message-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.message-attachments code {
+  font: 8px var(--mono);
+  color: var(--muted);
+  padding: 2px 4px;
+  border: 1px solid var(--edge);
+  border-radius: 3px;
 }
 .composer-input {
   border: 1px solid var(--edge-strong);

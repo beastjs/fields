@@ -67,3 +67,26 @@ test('stopping cancels the request, preserves partial output, and clearing remov
   expect(chat.getSnapshot().error).toBe('');
   chat.clear(); expect(chat.getSnapshot().messages).toEqual([]); chat.dispose();
 });
+
+test('submitted reference files reach the request, are kept on retry, and are listed on the user message', async () => {
+  const requests: ChatRequest[] = [];
+  const fetcher = (async (_url, init) => {
+    requests.push(JSON.parse(init!.body as string));
+    return requests.length === 1 ? Response.json({ error: 'Try again' }, { status: 429 }) : response(delta('Done') + 'data: [DONE]\n\n');
+  }) as FetchLike;
+  const chat = new ChatController({ ...defaultSettings }, () => {}, fetcher);
+  await chat.submit('Explain', { file: '/src/App.btsx', source: 'h1 Hello' }, 0, [{ file: '/src/Button.btsx', source: 'button Click' }]);
+  expect(chat.getSnapshot().messages[0].attachments).toEqual(['/src/App.btsx', '/src/Button.btsx']);
+  await chat.retry();
+  expect(requests.map(request => request.references?.[0]?.file)).toEqual(['/src/Button.btsx', '/src/Button.btsx']);
+  chat.dispose();
+});
+
+test('oversized reference files are rejected before sending', async () => {
+  let sent = false;
+  const chat = new ChatController({ ...defaultSettings }, () => {}, (async () => { sent = true; return new Response(); }) as FetchLike);
+  await chat.submit('Explain', undefined, 0, [{ file: '/a.ts', source: 'x'.repeat(60001) }]);
+  expect(sent).toBe(false);
+  expect(chat.getSnapshot().error).toContain('too large together');
+  chat.dispose();
+});

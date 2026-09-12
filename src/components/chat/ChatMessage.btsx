@@ -54,6 +54,10 @@ article(className={'chat-message ' + message.role} data-message-state={message.s
       span.message-state #{message.state === 'streaming' ? 'WORKING' : message.state === 'stopped' ? 'STOPPED' : message.state === 'error' ? 'INTERRUPTED' : 'DONE'}
   if message.role === 'user'
     p.user-message #{message.content}
+    if message.attachments
+      div.message-attachments
+        each file in message.attachments key file
+          code(title={file}) #{file.replace(/^\/src\//, '')}
   elseif message.content
     div.chat-markdown(dangerouslySetInnerHTML={{ __html: renderChatMarkdown(message.content, message.context?.source) }})
   elseif message.state === 'streaming'
