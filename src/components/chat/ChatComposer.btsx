@@ -4,6 +4,7 @@ import { MAX_REFERENCES } from '../../chat/contracts'
 import { fileLabel } from '../../playground/presentation'
 import type { ChatController } from '../../chat/controller'
 import type { PlaygroundSession } from '../../playground/session'
+import NativeSelect, {NativeSelectOption} from "../ui/native-select.btsx";
 
 module
   interface ChatComposerProps { chat: ChatController; session: PlaygroundSession, auto: boolean, toggleAuto: VoidFunction }
@@ -59,10 +60,9 @@ form.chat-composer(onSubmit={submit})
             code #{fileLabel(file)}
             button(type='button' onClick={() => removeFile(file)} aria-label={'Remove ' + file + ' from chat'}) ×
         if available.length && visible.length < MAX_REFERENCES
-          select#chat-add-file.context-add(value='' onChange={addFile} aria-label='Include another file in chat')
-            option(value='') + Add
+          NativeSelect#chat-add-file.context-add(className='py-0.75!' value='' onChange={addFile} aria-label='Include another file in chat' placeholder='+ Add')
             each file in available key file
-              option(value={file}) #{fileLabel(file)}
+              NativeSelectOption( value={file}) #{fileLabel(file)}
     label.context-toggle(htmlFor='auto-apply')
       input#auto-apply(type='checkbox' checked={auto} onChange={toggleAuto})
       span(className='select-none') Auto-apply

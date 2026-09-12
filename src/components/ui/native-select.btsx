@@ -19,7 +19,7 @@ component NativeSelectRoot
       ~ )
     Icon(
       ~ name='select-caret'
-      ~ className="size-3 cn-native-select-icon pointer-events-none absolute select-none right-1"
+      ~ className="size-3 cn-native-select-icon pointer-events-none absolute select-none right-0.25"
       ~ aria-hidden="true"
       ~ data-slot="select-icon"
       ~ )

@@ -2,12 +2,17 @@ import { useSyncExternalStore } from 'octane'
 import type { SessionProps } from '../types'
 
 props { session }: SessionProps
-setup const state = useSyncExternalStore(session.subscribe, session.getSnapshot);
+setup
+  const state = useSyncExternalStore(session.subscribe, session.getSnapshot);
 
 footer.statusbar
   div.statusbar-left
-    span#build-dot.status-dot(style={{ background: state.buildError ? '#e7b54a' : '#ff641b' }})
-    span#build-status(aria-live='polite') #{state.buildStatus}
+    div(className='flex items-center space-x-6')
+      button(onClick={undefined})
+        span(classNamb='font-sans font-medium text-accent!') Sign in
+      span(className='space-x-1')
+        span#build-dot.status-dot(style={{ background: state.buildError ? '#e7b54a' : '#e8a471' }})
+        span#build-status(aria-live='polite') #{state.buildStatus}
   div#stage-timings.stage-timings
     span Beast #{state.lastResult ? state.lastResult.metadata.timings.beast.toFixed(1) + 'ms' : '—'}
     span Octane #{state.lastResult ? state.lastResult.metadata.timings.octane.toFixed(1) + 'ms' : '—'}

@@ -4,6 +4,7 @@ import PaneSurface from '../layout/PaneSurface.btsx'
 import CollapseButton from '../layout/CollapseButton.btsx'
 import type { WorkspaceProps } from '../types'
 import {Icon} from '@/lib/icons'
+import NativeSelect, {NativeSelectOption} from "../ui/native-select.btsx";
 
 module
   const hostedURL = __HOSTED_PREVIEW_URL__;
@@ -59,6 +60,13 @@ setup
     };
   }, []);
   useEffect(() => connectPreview(iframe.current!, session, hostedURL), [session]);
+  const zoomOptions = [
+    {id: '0.5', label: '50%'},
+    {id: '0.75', label: '75%'},
+    {id: '1.0', label: '100%'},
+    {id: '1.25', label: '125%'},
+    {id: '1.5', label: '150%'},
+  ]
 
 PaneSurface(layout={layout} pane='preview' label='Application preview' className='preview-pane')
   div.preview-surface(ref={surface})
@@ -76,12 +84,9 @@ PaneSurface(layout={layout} pane='preview' label='Application preview' className
         each viewport in viewports key viewport.width
           button(type='button' className={'viewport-button flex items-center justify-center' + (state.previewWidth === viewport.width ? ' active' : '')} data-width={viewport.width} aria-label={viewport.label + ' preview'} aria-pressed={state.previewWidth === viewport.width} title={viewport.label} onClick={() => session.setPreviewWidth(viewport.width)})
             Icon(name={viewport.symbol} className='size-3')
-      select.preview-zoom(aria-label='Preview zoom' value={String(zoom)} onChange={event => setZoom(Number(event.currentTarget.value))})
-        option(value='0.5') 50%
-        option(value='0.75') 75%
-        option(value='1') 100%
-        option(value='1.25') 125%
-        option(value='1.5') 150%
+      NativeSelect.preview-zoom(aria-label='Preview zoom' value={String(zoom)} onChange={event => setZoom(Number(event.currentTarget.value))})
+        each option in zoomOptions key option.id
+          NativeSelectOption(value={option.id}) #{option.label}
       button.icon-button(ref={fullscreenButton} type='button' aria-label={fullscreen ? 'Exit fullscreen preview' : 'Enter fullscreen preview'} aria-pressed={fullscreen} title={fullscreenSupported ? (fullscreen ? 'Exit fullscreen (Esc)' : 'Fullscreen preview') : 'Fullscreen is unavailable in this browser'} disabled={!fullscreenSupported || fullscreenPending} onClick={toggleFullscreen}) #{fullscreen ? '⊡' : '⛶'}
       button#reload-preview.icon-button(type='button' aria-label='Reload preview' title='Reload preview' onClick={session.reloadPreview})
         Icon(name='refresh' className='size-4')

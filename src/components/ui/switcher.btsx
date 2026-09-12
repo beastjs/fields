@@ -40,12 +40,12 @@ component SwitcherRoot
       ~ )
       DropdownMenuGroup
         DropdownMenuLabel(className="font-normal text-xs text-muted-foreground opacity-80") #{title}
+        DropdownMenuSeparator
         each item, index in items key item.id
           DropdownMenuItem(onClick={() => setActiveTeam(item)} className="gap-1 p-2 hover:bg-foreground/10!")
             div(className="flex size-6 items-center justify-center")
               Icon(name={item.icon} className='size-4')
             span(className='capitalize pe-2') #{item.id}
-      DropdownMenuSeparator
       DropdownMenuGroup
         DropdownMenuItem(className="gap-2 p-2 hover:bg-foreground/10!")
           div(className="flex size-6 items-center justify-center rounded-md")
