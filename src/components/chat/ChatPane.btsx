@@ -27,7 +27,7 @@ setup
 PaneSurface(layout={layout} pane='chat' label='AI chat' className='chat-pane')
   div(className='h-9 flex items-center justify-between border-b border-[var(--edge)] px-1 text-xs ')
     div(className='flex items-center gap-1')
-      Icon(name='sparkle' className='size-3')
+      span(className='text-[10px] opacity-80') ✦
       span Assistant
     div.panel-actions
       button.icon-button(type='button' title='New chat' aria-label='New chat' onClick={chat.clear})
@@ -42,7 +42,7 @@ PaneSurface(layout={layout} pane='chat' label='AI chat' className='chat-pane')
   div.chat-history(ref={scroller} onScroll={scroll} role='log' aria-label='Chat messages' aria-live='polite')
     if !state.messages.length
       div.chat-welcome
-        div.assistant-dial(aria-hidden={true}) ✳
+        div.assistant-dial(aria-hidden={true}) ✦
         span.eyebrow-label YOUR CODING COMPANION
         h2 Build something fast.
         p Explore an idea, untangle an error, or find the next step.

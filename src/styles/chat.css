@@ -16,7 +16,7 @@
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 4px;
+  padding: 4px 6px;
   border: 0;
   border-bottom: 1px solid var(--control);
   background: var(--editor-background);
@@ -478,18 +478,25 @@
     padding-bottom: 5px;
   }
 }
-
 .chat-apply {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   margin-top: 10px;
-  font-size: 11px;
+  font-size: 10px;
 }
 .chat-apply .apply-target {
   overflow-wrap: anywhere;
   color: var(--text-secondary);
+  font-family: var(--mono);
+}
+.chat-apply .apply-scope {
+  padding: 1px 6px;
+  border: 1px solid var(--edge);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-family: var(--mono);
 }
 .chat-apply p {
   flex-basis: 100%;

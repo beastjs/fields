@@ -16,7 +16,7 @@ setup
   useEffect(() => () => pending.current?.abort(), []);
 
   const apply = async () => {
-    if (!recommendation || !message.context || message.projectGeneration === undefined || pending.current || applyState === 'Applied and compiled successfully') return;
+    if (!recommendation?.source || !message.context || message.projectGeneration === undefined || pending.current || applyState === 'Applied and compiled successfully') return;
     const abort = new AbortController();
     pending.current = abort;
     setApplyError('');
@@ -30,18 +30,24 @@ setup
     } finally { pending.current = null; }
   };
 
+  // Captured when this message first renders: toggling auto-apply later must not
+  // retroactively apply earlier responses.
+  const autoOnArrival = useRef(auto);
+  const autoApplied = useRef(false);
   useEffect(() => {
-    if(auto && applyState){
-      apply().catch(e => console.error(e))
-    }
-  }, [auto, apply])
+    if (!autoOnArrival.current || autoApplied.current) return;
+    if (message.state !== 'complete' || !recommendation?.source || message.projectGeneration === undefined) return;
+    autoApplied.current = true;
+    void apply();
+  }, [message.id, message.state, message.projectGeneration, recommendation?.file]);
 
   const [copied, setCopied] = useState(false);
   const copy = async () => { try { await navigator.clipboard.writeText(message.content); setCopied(true); } catch { setCopied(false); } };
 
 article(className={'chat-message ' + message.role} data-message-state={message.state})
   div.message-heading
-    span.message-avatar #{message.role === 'user' ? '↗' : '✳'}
+
+    span.message-avatar #{message.role === 'user' ? '↗' : '✦'}
     strong #{message.role === 'user' ? 'You' : 'Assistant'}
     if message.role === 'assistant'
       span.message-state #{message.state === 'streaming' ? 'WORKING' : message.state === 'stopped' ? 'STOPPED' : message.state === 'error' ? 'INTERRUPTED' : 'DONE'}
@@ -62,8 +68,17 @@ article(className={'chat-message ' + message.role} data-message-state={message.s
   if recommendation && message.projectGeneration !== undefined
     div.chat-apply
       span.apply-target #{recommendation.file}
-      button.secondary-button(type='button' onClick={apply} disabled={!!applyState}) #{applyState === 'Checking compilation…' ? 'Checking compilation…' : applyState ? 'Applied' : 'Apply & verify'}
-      if applyState
-        p(role='status') #{applyState}
-      if applyError
-        p.chat-apply-error(role='alert') #{applyError}
+      if recommendation.hunks
+        span.apply-scope #{recommendation.hunks}
+      if recommendation.error
+        p.chat-apply-error(role='alert') #{recommendation.error}
+      else
+        if !applyState
+          button.secondary-button(type='button' onClick={apply} disabled={!!applyState}) #{applyState === 'Checking compilation…' ? (autoOnArrival.current ? 'Auto-applying…' : 'Checking compilation…') : applyState ? 'Applied' : 'Apply & verify'}
+            p(role='status') #{applyState}
+        else
+          span(className='space-x-1')
+            span.apply-scope(className='text-accent') applied
+            span.apply-scope(className='text-accent') compiled
+        if applyError
+          p.chat-apply-error(role='alert') #{applyError}

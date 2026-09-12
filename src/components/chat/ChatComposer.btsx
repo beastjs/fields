@@ -37,7 +37,7 @@ form.chat-composer(onSubmit={submit})
       code(title={project.activeFile}) #{fileLabel(project.activeFile)}
     label.context-toggle(htmlFor='auto-apply')
       input#auto-apply(type='checkbox' checked={auto} onChange={toggleAuto})
-      span(className='select-none') Apply updates
+      span(className='select-none') Auto-apply
   div.composer-input
     label.sr-only(for='chat-prompt') Message AI
     textarea#chat-prompt(value={prompt.state.value} onInput={event => prompt.handleChange(event.currentTarget.value)} onKeyDown={keydown} placeholder='Ask about your code…' rows='3' maxlength='32000' resize='none')
