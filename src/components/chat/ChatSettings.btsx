@@ -3,6 +3,7 @@ import { useForm, useField } from '@octanejs/tanstack-form'
 import { DEFAULT_MODEL, providers } from '../../chat/contracts'
 import type { AIProvider } from '../../chat/contracts'
 import type { ChatController } from '../../chat/controller'
+import NativeSelect, {NativeSelectOption} from "../ui/native-select.btsx";
 
 props { chat, onClose }: { chat: ChatController; onClose: () => void }
 setup
@@ -38,9 +39,9 @@ dialog.chat-settings(ref={dialog} aria-labelledby='chat-settings-title' onCancel
         h2#chat-settings-title AI settings
       button.icon-button(type='button' aria-label='Close AI settings' onClick={onClose}) ×
     label(for='ai-provider') Provider
-    select#ai-provider(value={provider.state.value} onChange={changeProvider})
+    NativeSelect#ai-provider(className='w-full' value={provider.state.value} onChange={changeProvider})
       each option in providers key option.id
-        option(value={option.id}) #{option.label}
+        NativeSelectOption(value={option.id}) #{option.label}
     label(for='ai-model') Model ID
     input#ai-model(type='text' value={model.state.value} onInput={event => model.handleChange(event.currentTarget.value)} onBlur={model.handleBlur} maxlength='200' autocomplete='off' aria-describedby='ai-model-error' aria-invalid={model.state.meta.errors.length > 0})
     p#ai-model-error.field-error(role='alert' hidden={!model.state.meta.errors.length}) #{model.state.meta.errors.join(' ')}

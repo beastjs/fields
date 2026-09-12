@@ -1,0 +1,42 @@
+import { cn } from "@/lib/utils";
+import type { ComponentProps } from "octane";
+import {Icon} from '@/lib/icons'
+module
+  type NativeSelectProps = Omit<ComponentProps<"select">, "size"> & {size?: "sm" | "default"};
+  export { NativeSelectOptGroup, NativeSelectOption };
+component NativeSelectRoot
+  props { className, size = "default", ...props }: NativeSelectProps
+  div(
+    ~ className={cn("flex items-center justify-between cn-native-select-wrapper group/native-select relative w-fit has-[select:disabled]:opacity-50", className)}
+    ~ data-slot="native-select-wrapper"
+    ~ data-size={size}
+    ~ )
+    select(
+      ~ className="cn-native-select appearance-none outline-none disabled:pointer-events-none disabled:cursor-not-allowed"
+      ~ data-slot="native-select"
+      ~ data-size={size}
+      ~ {...props}
+      ~ )
+    Icon(
+      ~ name='select-caret'
+      ~ className="size-3 cn-native-select-icon pointer-events-none absolute select-none right-1"
+      ~ aria-hidden="true"
+      ~ data-slot="select-icon"
+      ~ )
+component NativeSelectOption
+  props { className, ...props }: ComponentProps<"option">
+  option(
+    ~ data-slot="native-select-option"
+    ~ className={cn("bg-[Canvas] text-[CanvasText]", className)}
+    ~ {...props}
+    ~ )
+component NativeSelectOptGroup
+  props { className, ...props }: ComponentProps<"optgroup">
+  optgroup(
+    ~ data-slot="native-select-optgroup"
+    ~ className={cn("bg-[Canvas] text-[CanvasText]", className)}
+    ~ {...props}
+    ~ )
+
+props {...props}: NativeSelectProps
+NativeSelectRoot({...props})

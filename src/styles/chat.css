@@ -544,6 +544,9 @@
   padding: 10px;
   font-size: 11px;
 }
+.chat-settings select {
+  padding-right: 28px;
+}
 .chat-settings input::placeholder {
   color: var(--faint);
 }
