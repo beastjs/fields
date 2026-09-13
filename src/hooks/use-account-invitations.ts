@@ -11,10 +11,10 @@ import { useConvexQuery } from '@/hooks/use-convex-query'
  * subscription.
  */
 export const listMyInvitationsQuery =
-  'accountMembers/q:listMyInvitations' as unknown as typeof api.accountMembers.q.listMyInvitations
+  'teams:listMyInvitations' as unknown as typeof api.teams.listMyInvitations
 
 export const acceptInviteMutation =
-  'accountMembers/m:acceptInvite' as unknown as typeof api.accountMembers.m.acceptInvite
+  'teams:acceptInvitation' as unknown as typeof api.teams.acceptInvitation
 
 /**
  * Invitations awaiting the signed-in viewer. `undefined` while the first read is
@@ -22,5 +22,8 @@ export const acceptInviteMutation =
  * verified one, so it is skipped rather than asked.
  */
 export function useAccountInvitations(isEmailVerified: boolean) {
-  return useConvexQuery(listMyInvitationsQuery, isEmailVerified ? {} : 'skip')
+  return useConvexQuery(
+    listMyInvitationsQuery,
+    isEmailVerified ? { paginationOpts: { cursor: null, numItems: 50 } } : 'skip'
+  )
 }

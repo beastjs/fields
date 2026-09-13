@@ -3,7 +3,7 @@ import { examples } from '../../playground/examples'
 import type { SessionProps } from '../types'
 import {Icon} from '@/lib/icons'
 
-props { session }: SessionProps
+props { session, compact = false }: SessionProps & { compact?: boolean }
 setup
   const dialog = useRef<HTMLDialogElement | null>(null);
   const [selectedId, setSelectedId] = useState(examples[0].id);
@@ -16,11 +16,16 @@ setup
   const example = examples.find(item => item.project.entry === state.project.entry && Object.keys(item.project.files).length === Object.keys(state.project.files).length && Object.entries(item.project.files).every(([path, source]) => state.project.files[path] === source));
 
 
-button.examples-button(className='hover:bg-background' type='button' onClick={event => { event.currentTarget.focus(); dialog.current?.showModal(); }})
-  div.project-title
-    span.project-symbol(className='text-xs opacity-80') ◈
-    span.project-name(title={example?.title ?? 'Your project'}) #{example?.title ?? 'Your project'}
-    Icon(name='chevron-down-tiny' className='size-3')
+button.examples-button(className='hover:bg-background' type='button' title={compact ? 'Browse example projects' : undefined} onClick={event => { event.currentTarget.focus(); dialog.current?.showModal(); }})
+  if compact
+    div.project-title
+      Icon(name='editor' className='size-3')
+      span.project-name Examples
+  else
+    div.project-title
+      span.project-symbol(className='text-xs opacity-80') ◈
+      span.project-name(title={example?.title ?? 'Your project'}) #{example?.title ?? 'Your project'}
+      Icon(name='chevron-down-tiny' className='size-3')
 dialog.project-transfer(ref={dialog} aria-labelledby='examples-title')
   div.settings-heading
     div

@@ -23,17 +23,66 @@ const normalize = (content: string) => content.replace(/([^\n])(`{3,}[a-z]*[ \t]
 
 type HunkResult = { source: string; hunks: number; error?: undefined } | { source?: undefined; error: string };
 
-/** Applies SEARCH/REPLACE hunks in order; every search must match exactly once. */
+interface HunkMatch { at: number; length: number }
+
+const occurrenceMatches = (source: string, search: string) => {
+  const matches: HunkMatch[] = [];
+  let cursor = 0;
+  while (cursor <= source.length - search.length) {
+    const at = source.indexOf(search, cursor);
+    if (at < 0) break;
+    matches.push({ at, length: search.length });
+    cursor = at + 1;
+  }
+  return matches;
+};
+
+/**
+ * Find one safe target for a model-authored SEARCH block. Exact matches remain
+ * preferred. The fallback only normalizes line-ending details that models
+ * commonly lose: CRLF, trailing horizontal whitespace, and a final newline at
+ * EOF. It never guesses between multiple possible locations.
+ */
+function findHunkMatches(source: string, search: string): HunkMatch[] {
+  const exact = occurrenceMatches(source, search);
+  if (exact.length) return exact;
+
+  const searchHasFinalNewline = search.endsWith('\n');
+  const searchBody = searchHasFinalNewline ? search.slice(0, -1) : search;
+  const wanted = searchBody.split('\n').map(line => line.trimEnd());
+  const sourceLines: { start: number; contentEnd: number; end: number; text: string }[] = [];
+  let start = 0;
+  while (start < source.length) {
+    const newline = source.indexOf('\n', start);
+    const contentEnd = newline < 0 ? source.length : newline;
+    const end = newline < 0 ? source.length : newline + 1;
+    sourceLines.push({ start, contentEnd, end, text: source.slice(start, contentEnd).trimEnd() });
+    start = end;
+  }
+
+  const matches: HunkMatch[] = [];
+  for (let line = 0; line + wanted.length <= sourceLines.length; line += 1) {
+    if (!wanted.every((text, index) => sourceLines[line + index].text === text)) continue;
+    const first = sourceLines[line];
+    const last = sourceLines[line + wanted.length - 1];
+    const end = searchHasFinalNewline ? last.end : last.contentEnd;
+    matches.push({ at: first.start, length: end - first.start });
+  }
+  return matches;
+}
+
+/** Applies SEARCH/REPLACE hunks in order; every search must resolve to exactly one safe location. */
 function applyHunks(original: string, body: string): HunkResult {
   const hunks = parseHunks(body);
   if (!hunks.length) return { error: 'That patch block has no SEARCH/REPLACE hunks, so there is nothing to apply. Ask again for a patch with SEARCH and REPLACE sections.' };
-  let source = original;
+  let source = original.replace(/\r\n/g, '\n');
   for (const { search, replace } of hunks) {
     if (!search) return { error: 'A hunk has an empty SEARCH section. Anchor insertions on a nearby line.' };
-    const at = source.indexOf(search);
-    if (at < 0) return { error: 'A hunk does not match the current file. Ask for a fresh recommendation.' };
-    if (source.indexOf(search, at + 1) >= 0) return { error: 'A hunk matches more than once. It needs more surrounding context.' };
-    source = source.slice(0, at) + replace + source.slice(at + search.length);
+    const matches = findHunkMatches(source, search);
+    if (!matches.length) return { error: 'A hunk does not match the current file closely enough to apply safely. Ask for a fresh recommendation.' };
+    if (matches.length > 1) return { error: 'A hunk matches more than once. It needs more surrounding context.' };
+    const { at, length } = matches[0];
+    source = source.slice(0, at) + replace + source.slice(at + length);
   }
   return { source, hunks: hunks.length };
 }

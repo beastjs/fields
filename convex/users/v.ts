@@ -14,13 +14,28 @@ export const userFields = {
   preferredUsername: v.union(v.string(), v.null()),
   profileUrl: v.optional(v.string()),
   phone: v.union(v.string(), v.null()),
-  emailVerified: v.union(v.boolean(), v.null())
+  emailVerified: v.union(v.boolean(), v.null()),
+  activeTeamId: v.optional(v.id('teams')),
+  activeProjectId: v.optional(v.id('projects'))
 }
 
 export const userUpsertSchema = v.object(userFields)
 
 export const userValidator = v.object({
   ...userFields,
+  createdAt: v.number(),
+  updatedAt: v.number()
+})
+
+export const publicUserValidator = v.object({
+  _id: v.id('users'),
+  _creationTime: v.number(),
+  name: v.optional(v.string()),
+  email: v.optional(v.string()),
+  imageUrl: v.optional(v.string()),
+  nickname: v.union(v.string(), v.null()),
+  preferredUsername: v.union(v.string(), v.null()),
+  emailVerified: v.union(v.boolean(), v.null()),
   createdAt: v.number(),
   updatedAt: v.number()
 })

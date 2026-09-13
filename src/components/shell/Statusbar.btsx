@@ -1,15 +1,33 @@
-import { useSyncExternalStore } from 'octane'
+import { useState, useSyncExternalStore } from 'octane'
+import { signInWithGoogle, signOutUser, useFirebaseUser } from '../../lib/firebase/auth'
 import type { SessionProps } from '../types'
 
 props { session }: SessionProps
 setup
   const state = useSyncExternalStore(session.subscribe, session.getSnapshot);
+  const { user, isLoading } = useFirebaseUser();
+  const [isPending, setIsPending] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const runAuth = async (action: () => Promise<unknown>) => {
+    setIsPending(true);
+    setAuthError(null);
+    try { await action(); }
+    catch (error) { setAuthError(error instanceof Error ? error.message : 'Authentication failed.'); }
+    finally { setIsPending(false); }
+  };
 
 footer.statusbar
   div.statusbar-left
     div(className='flex items-center space-x-6')
-      button(onClick={undefined})
-        span(classNamb='font-sans font-medium text-accent!') Sign in
+      if isLoading
+        span(className='font-sans font-medium opacity-60') Checking…
+      else
+        if user
+          button(onClick={() => runAuth(signOutUser)} disabled={isPending} title={authError ?? user.email ?? undefined})
+            span(className='font-sans font-medium text-accent!') #{user.displayName ?? user.email ?? 'Signed in'} · Sign out
+        else
+          button(onClick={() => runAuth(signInWithGoogle)} disabled={isPending} title={authError ?? undefined})
+            span(className='font-sans font-medium text-accent!') #{isPending ? 'Signing in…' : 'Sign in'}
       span(className='space-x-1')
         span#build-dot.status-dot(style={{ background: state.buildError ? '#e7b54a' : '#e8a471' }})
         span#build-status(aria-live='polite') #{state.buildStatus}

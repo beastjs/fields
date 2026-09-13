@@ -1,14 +1,87 @@
+import type { api } from '../../../convex/_generated/api'
+import { useEffect, useSyncExternalStore } from 'octane'
+import { useConvexAuth } from '@/hooks/use-convex'
+import { useConvexQuery } from '@/hooks/use-convex-query'
 import type { WorkspaceProps } from '../types'
-import { useSyncExternalStore } from 'octane'
-import ProjectHeading from './ProjectHeading.btsx'
+import type { CloudProjectChoice, CloudProjectController, CloudTeamId } from '../../playground/cloud-project-persistence'
+import type { SavedWorkspace } from '../../playground/project-storage'
+import { helloWorld } from '../../playground/examples'
 import ExampleLibrary from './ExampleLibrary.btsx'
 import ProjectSharing from './ProjectSharing.btsx'
 import ViewToolbar from '../layout/ViewToolbar.btsx'
-import {Icon} from '@/lib/icons'
-import Switcher from "../ui/switcher.btsx";
+import { Icon } from '@/lib/icons'
+import Switcher from '../ui/switcher.btsx'
 
-props { session, layout }: WorkspaceProps
-setup const state = useSyncExternalStore(session.subscribe, session.getSnapshot);
+module
+  interface TopbarProps extends WorkspaceProps {
+    cloud: CloudProjectController
+  }
+
+  const listTeamsQuery = 'teams:listMine' as unknown as typeof api.teams.listMine
+  const listProjectsQuery = 'projects:listByTeam' as unknown as typeof api.projects.listByTeam
+  const paginationOpts = { cursor: null, numItems: 100 }
+
+  const starterWorkspace = (): SavedWorkspace => ({
+    version: 1,
+    project: helloWorld,
+    activeFile: helloWorld.files['/src/App.btsx'] === undefined ? helloWorld.entry : '/src/App.btsx',
+    preview: { width: '100%' }
+  })
+
+props { session, layout, cloud }: TopbarProps
+setup
+  const state = useSyncExternalStore(session.subscribe, session.getSnapshot);
+  const cloudState = useSyncExternalStore(cloud.subscribe, cloud.getSnapshot);
+  const auth = useConvexAuth();
+  const teamsResult = useConvexQuery(
+    listTeamsQuery,
+    auth.isAuthenticated ? { paginationOpts } : 'skip',
+    'topbar-teams'
+  );
+  const projectsResult = useConvexQuery(
+    listProjectsQuery,
+    auth.isAuthenticated && cloudState.activeTeamId
+      ? { teamId: cloudState.activeTeamId, paginationOpts }
+      : 'skip',
+    'topbar-projects'
+  );
+  const teams = teamsResult?.page.filter(({ team }) => team.archivedAt === undefined) ?? [];
+  const projects = projectsResult?.page.filter(project => project.archivedAt === undefined) ?? [];
+  const teamItems = teams.map(({ team }) => ({ id: team._id, icon: team.kind === 'personal' ? 'cloud' : 'new-folder', label: team.name }));
+  const projectItems = projects.map(project => ({ id: project._id, icon: 'folder', label: project.name }));
+  const activeProject = projects.find(project => project._id === cloudState.activeProjectId);
+  const selectProject = (project: typeof projects[number]) => void cloud.selectProject({ projectId: project._id, teamId: project.teamId, name: project.name });
+  const chooseTeam = (item: { id: string }) => cloud.selectTeam(item.id as CloudTeamId);
+  const chooseProject = (item: { id: string }) => {
+    const project = projects.find(candidate => candidate._id === item.id);
+    if (project) selectProject(project);
+  };
+  const createTeam = () => {
+    const name = window.prompt('Name your new team:')?.trim();
+    if (name) void cloud.createTeam(name, starterWorkspace());
+  };
+  const createProject = () => {
+    if (!cloudState.activeTeamId) return;
+    const name = window.prompt('Name your new project:')?.trim();
+    if (name) void cloud.createProject(cloudState.activeTeamId, name, starterWorkspace());
+  };
+
+  useEffect(() => {
+    if (!auth.isAuthenticated || !teamsResult || cloudState.activeTeamId || teams.length === 0) return;
+    const preferred = teams.find(({ team }) => team.kind === 'personal') ?? teams[0];
+    cloud.selectTeam(preferred.team._id);
+  }, [auth.isAuthenticated, teamsResult, cloudState.activeTeamId, teams, cloud]);
+
+  useEffect(() => {
+    if (!auth.isAuthenticated || !projectsResult || cloudState.isSwitching) return;
+    if (activeProject) {
+      const choice: CloudProjectChoice = { projectId: activeProject._id, teamId: activeProject.teamId, name: activeProject.name };
+      cloud.synchronizeProject(choice);
+      return;
+    }
+    const preferred = projects.find(project => project.isDefault) ?? projects[0];
+    if (preferred) selectProject(preferred);
+  }, [auth.isAuthenticated, projectsResult, cloudState.activeProjectId, cloudState.isSwitching, activeProject, projects, cloud]);
 
 div.topbar-container
   header.topbar
@@ -16,12 +89,30 @@ div.topbar-container
       a.brand(href='/' aria-label='Team')
         img(src='/beast.svg' alt='' width='20' height='20')
       Icon(name='chevron-down-tiny' className='size-3 opacity-60 -rotate-45')
-      Switcher(items={[{id: 'beast', icon: 'new-folder', label: 'Beast' }]} title='Teams')
+      Switcher(
+        ~  items={teamItems}
+        ~  title='Teams'
+        ~  activeId={cloudState.activeTeamId}
+        ~  emptyLabel={auth.isAuthenticated ? 'No teams yet' : 'Sign in for teams'}
+        ~  busy={auth.isLoading || (auth.isAuthenticated && teamsResult === undefined)}
+        ~  createLabel={auth.isAuthenticated ? 'Create team' : undefined}
+        ~  onSelect={chooseTeam}
+        ~  onCreate={auth.isAuthenticated ? createTeam : undefined}
+        ~ )
       Icon(name='slice' className='size-3 opacity-40 -rotate-6')
-      ExampleLibrary(session={session})
+      Switcher(
+        ~ items={projectItems}
+        ~  title='Projects'
+        ~  activeId={cloudState.activeProjectId}
+        ~   emptyLabel={auth.isAuthenticated ? 'No projects yet' : 'Local project'}
+        ~   busy={cloudState.isSwitching || (auth.isAuthenticated && Boolean(cloudState.activeTeamId) && projectsResult === undefined)}
+        ~   createLabel={auth.isAuthenticated && cloudState.activeTeamId ? 'Create project' : undefined}
+        ~   onSelect={chooseProject}
+        ~   onCreate={auth.isAuthenticated && cloudState.activeTeamId ? createProject : undefined}
+        ~ )
+      // ExampleLibrary(session={session} compact)
     ViewToolbar(layout={layout})
     div.topbar-actions
-      // button.reset-project(type='button' onClick={() => resetPlaygroundProject(session)}) Reset project
       ProjectSharing(session={session})
       button.theme-toggle(type='button' aria-label='Light mode' aria-pressed={state.theme === 'light'} title={state.theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'} onClick={session.toggleTheme})
         div.play-icon
@@ -29,4 +120,4 @@ div.topbar-container
       button#run-build.theme-toggle(type='button' aria-label='Run project' onClick={session.run} title='Run project (⌘/Ctrl + Enter)')
         div.play-icon
           Icon(name='play' className='size-3')
-  p#save-notice.persistence-notice(role='status' hidden={!state.saveStatus.issue}) #{state.saveStatus.issue}
+  p#save-notice.persistence-notice(role='status' hidden={!state.saveStatus.issue && !cloudState.error}) #{cloudState.error || state.saveStatus.issue}

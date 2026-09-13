@@ -61,6 +61,7 @@ form.chat-composer(onSubmit={submit})
             button(type='button' onClick={() => removeFile(file)} aria-label={'Remove ' + file + ' from chat'}) ×
         if available.length && visible.length < MAX_REFERENCES
           NativeSelect#chat-add-file.context-add(className='py-0.75!' value='' onChange={addFile} aria-label='Include another file in chat' placeholder='+ Add')
+            option(value='add') +Add
             each file in available key file
               NativeSelectOption( value={file}) #{fileLabel(file)}
     label.context-toggle(htmlFor='auto-apply')

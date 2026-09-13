@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'octane'
 import { useQueryStates } from '@octanejs/nuqs'
 import { panelQueryParsers } from '../../playground/panel-query'
-import { createPlaygroundSession } from '../../playground/app'
+import { createPlaygroundApp } from '../../playground/app'
 import { WorkspaceLayout } from '../../playground/workspace-layout'
 import Topbar from './Topbar.btsx'
 import Statusbar from './Statusbar.btsx'
@@ -9,13 +9,14 @@ import Workspace from '../layout/Workspace.btsx'
 
 setup
   const [query, setQuery] = useQueryStates(panelQueryParsers, { history: 'replace', shallow: true, scroll: false });
-  const session = useMemo(() => createPlaygroundSession(), []);
+  const playground = useMemo(() => createPlaygroundApp(), []);
+  const { session, cloud } = playground;
   const layout = useMemo(() => new WorkspaceLayout(matchMedia('(max-width: 760px)').matches, query), []);
   useEffect(() => { session.start(); return () => session.dispose(); }, [session]);
   useEffect(() => layout.connectPersistence(value => { void setQuery(value); }), [layout, setQuery]);
   useEffect(() => layout.restore(query), [layout, query.dock, query.split, query.rows]);
 
 main.playground
-  Topbar(session={session} layout={layout})
+  Topbar(session={session} layout={layout} cloud={cloud})
   Workspace(session={session} layout={layout})
   Statusbar(session={session})

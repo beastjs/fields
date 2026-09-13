@@ -27,6 +27,25 @@ test('patch hunks replace, insert and delete without a full rewrite', () => {
     .toEqual({ file: patched.file, source: 'h1 One\nh2 Keep\np End\n', hunks: 2 });
 });
 
+test('patch hunks tolerate safe line-ending differences without guessing a location', () => {
+  const noFinalNewline = { file: patched.file, source: 'h1 Before\nh2 Keep' };
+  expect(fileRecommendation(patch(hunk('h2 Keep\n', 'h2 Changed\n')), noFinalNewline))
+    .toEqual({ file: patched.file, source: 'h1 Before\nh2 Changed\n', hunks: 1 });
+
+  const trailingSpaces = { file: patched.file, source: 'h1 Before  \nh2 Keep\t\np Tail\n' };
+  expect(fileRecommendation(patch(hunk('h1 Before\nh2 Keep\n', 'h1 After\nh2 Changed\n')), trailingSpaces))
+    .toEqual({ file: patched.file, source: 'h1 After\nh2 Changed\np Tail\n', hunks: 1 });
+
+  const windowsSource = { file: patched.file, source: 'h1 Before\r\nh2 Keep\r\n' };
+  expect(fileRecommendation(patch(hunk('h2 Keep\n', 'h2 Changed\n')), windowsSource))
+    .toEqual({ file: patched.file, source: 'h1 Before\nh2 Changed\n', hunks: 1 });
+});
+
+test('line-aware matching still rejects whitespace-normalized ambiguity', () => {
+  const ambiguous = { file: patched.file, source: 'p Same  \np Same\t\n' };
+  expect(fileRecommendation(patch(hunk('p Same\n', 'p Other\n')), ambiguous)?.error).toContain('more than once');
+});
+
 test('unmatched, ambiguous and empty hunks report an error instead of applying', () => {
   const twice = { file: patched.file, source: 'p Same\np Same\n' };
   expect(fileRecommendation(patch(hunk('h2 Missing\n', 'h2 New\n')), patched)?.error).toContain('does not match');

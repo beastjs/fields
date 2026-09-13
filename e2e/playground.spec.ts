@@ -20,7 +20,8 @@ test('compiles and renders real Beast components, events and styles', async ({ p
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   await ready(page);
-  await expect(page.locator('.topbar .project-title')).toContainText('Hello world');
+  await expect(page.getByRole('button', { name: 'Local project', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Examples', exact: true })).toBeVisible();
   const frame = page.frameLocator('#preview-frame');
   await frame.getByRole('button', { name: 'Increase count' }).click();
   await expect(frame.locator('.value')).toHaveText('1');

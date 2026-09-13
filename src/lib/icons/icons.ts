@@ -397,6 +397,12 @@ export const icons = {
       '<path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.334" d="m14.674 1.334-13.34 13.34"/>',
     viewBox: '0 0 16 16',
     set: 'svg'
+  },
+  cloud: {
+    symbol:
+      '<g transform="scale(0.667)"><path fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="2" d="M21 14a5 5 0 0 1-5 5H7a4 4 0 0 1-.966-7.883 5.5 5.5 0 0 1 10.777-2.052A5 5 0 0 1 21 14Z"/></g>',
+    viewBox: '0 0 16 16',
+    set: 'svg'
   }
 }
 

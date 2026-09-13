@@ -1,9 +1,58 @@
 import { defineSchema, defineTable } from 'convex/server'
 import { userValidator } from './users/v'
+import {
+  buildRunValidator,
+  chatValidator,
+  projectFileValidator,
+  projectLogValidator,
+  projectValidator,
+  teamInvitationValidator,
+  teamMemberValidator,
+  teamValidator
+} from './validators'
 
 export default defineSchema({
   users: defineTable(userValidator)
     .index('by_tokenIdentifier', ['tokenIdentifier'])
     .index('by_firebaseUid', ['firebaseUid'])
-    .index('by_email', ['email'])
+    .index('by_email', ['email']),
+
+  teams: defineTable(teamValidator)
+    .index('by_personalOwnerId', ['personalOwnerId'])
+    .index('by_updatedAt', ['updatedAt']),
+
+  teamMembers: defineTable(teamMemberValidator)
+    .index('by_teamId', ['teamId'])
+    .index('by_userId', ['userId'])
+    .index('by_teamId_and_userId', ['teamId', 'userId'])
+    .index('by_teamId_and_role', ['teamId', 'role']),
+
+  teamInvitations: defineTable(teamInvitationValidator)
+    .index('by_teamId_and_createdAt', ['teamId', 'createdAt'])
+    .index('by_teamId_and_email', ['teamId', 'email'])
+    .index('by_email_and_status', ['email', 'status']),
+
+  projects: defineTable(projectValidator)
+    .index('by_teamId_and_updatedAt', ['teamId', 'updatedAt'])
+    .index('by_teamId_and_isDefault', ['teamId', 'isDefault'])
+    .index('by_createdBy_and_updatedAt', ['createdBy', 'updatedAt']),
+
+  projectFiles: defineTable(projectFileValidator)
+    .index('by_projectId', ['projectId'])
+    .index('by_projectId_and_path', ['projectId', 'path'])
+    .index('by_projectId_and_updatedAt', ['projectId', 'updatedAt']),
+
+  chats: defineTable(chatValidator)
+    .index('by_projectId_and_updatedAt', ['projectId', 'updatedAt'])
+    .index('by_agentThreadId', ['agentThreadId'])
+    .index('by_createdBy_and_updatedAt', ['createdBy', 'updatedAt']),
+
+  buildRuns: defineTable(buildRunValidator)
+    .index('by_projectId_and_startedAt', ['projectId', 'startedAt'])
+    .index('by_projectId_and_status', ['projectId', 'status']),
+
+  projectLogs: defineTable(projectLogValidator)
+    .index('by_projectId_and_occurredAt', ['projectId', 'occurredAt'])
+    .index('by_projectId_and_source_and_occurredAt', ['projectId', 'source', 'occurredAt'])
+    .index('by_buildId_and_occurredAt', ['buildId', 'occurredAt'])
 })
