@@ -10,7 +10,9 @@ import ExampleLibrary from './ExampleLibrary.btsx'
 import ProjectSharing from './ProjectSharing.btsx'
 import ViewToolbar from '../layout/ViewToolbar.btsx'
 import { Icon } from '@/lib/icons'
+import { useTheme } from '../theme/theme-context'
 import Switcher from '../ui/switcher.btsx'
+import LayoutBuilder from "./LayoutBuilder.btsx";
 
 module
   interface TopbarProps extends WorkspaceProps {
@@ -32,6 +34,7 @@ props { session, layout, cloud }: TopbarProps
 setup
   const state = useSyncExternalStore(session.subscribe, session.getSnapshot);
   const cloudState = useSyncExternalStore(cloud.subscribe, cloud.getSnapshot);
+  const { theme, toggleTheme } = useTheme();
   const auth = useConvexAuth();
   const teamsResult = useConvexQuery(
     listTeamsQuery,
@@ -113,11 +116,12 @@ div.topbar-container
       // ExampleLibrary(session={session} compact)
     ViewToolbar(layout={layout})
     div.topbar-actions
+      LayoutBuilder(compact={false})
       ProjectSharing(session={session})
-      button.theme-toggle(type='button' aria-label='Light mode' aria-pressed={state.theme === 'light'} title={state.theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'} onClick={session.toggleTheme})
-        div.play-icon
-          Icon(name='theme' className='size-3')
-      button#run-build.theme-toggle(type='button' aria-label='Run project' onClick={session.run} title='Run project (⌘/Ctrl + Enter)')
-        div.play-icon
-          Icon(name='play' className='size-3')
+      button(type='button' aria-label='Light mode' aria-pressed={theme === 'light'} title={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'} onClick={toggleTheme})
+        div.big-icon
+          Icon(name='theme' className='size-4')
+      button#run-build(type='button' aria-label='Run project' onClick={session.run} title='Run project (⌘/Ctrl + Enter)')
+        div.big-icon
+          Icon(name='play' className='size-4')
   p#save-notice.persistence-notice(role='status' hidden={!state.saveStatus.issue && !cloudState.error}) #{cloudState.error || state.saveStatus.issue}

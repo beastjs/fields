@@ -1,4 +1,5 @@
 import { fileRecommendation } from '../../chat/recommendation'
+import { MAX_ATTEMPTS } from '../../chat/iterate'
 import type { PlaygroundSession } from '../../playground/session'
 import { useEffect, useRef, useState } from 'octane'
 import { renderChatMarkdown } from '../../chat/markdown'
@@ -7,8 +8,8 @@ import Accordion, {AccordionItem, AccordionTrigger, AccordionPanel} from "../ui/
 
 
 module
-  interface ChatMessageProps { message: ChatMessage; session: PlaygroundSession, auto: boolean }
-props { message, session, auto }: ChatMessageProps
+  interface ChatMessageProps { message: ChatMessage; session: PlaygroundSession, auto: boolean, onAutoFailure?: (message: ChatMessage, error: string) => void }
+props { message, session, auto, onAutoFailure }: ChatMessageProps
 setup
   const recommendation = message.state === 'complete' ? fileRecommendation(message.content, message.context) : undefined;
   const [applyState, setApplyState] = useState('');
@@ -16,7 +17,8 @@ setup
   const pending = useRef<AbortController | null>(null);
   useEffect(() => () => pending.current?.abort(), []);
 
-  const apply = async () => {
+  // `automatic` marks auto-apply runs, whose failures are fed back to the model.
+  const apply = async (automatic = false) => {
     if (!recommendation?.source || !message.context || message.projectGeneration === undefined || pending.current || applyState === 'Applied and compiled successfully') return;
     const abort = new AbortController();
     pending.current = abort;
@@ -27,7 +29,9 @@ setup
       setApplyState('Applied and compiled successfully');
     } catch (error) {
       setApplyState('');
-      setApplyError('Not applied. ' + (error instanceof Error ? error.message : 'Could not verify this change.'));
+      const reason = error instanceof Error ? error.message : 'Could not verify this change.';
+      setApplyError('Not applied. ' + reason);
+      if (automatic) onAutoFailure?.(message, reason);
     } finally { pending.current = null; }
   };
 
@@ -39,8 +43,17 @@ setup
     if (!autoOnArrival.current || autoApplied.current) return;
     if (message.state !== 'complete' || !recommendation?.source || message.projectGeneration === undefined) return;
     autoApplied.current = true;
-    void apply();
+    void apply(true);
   }, [message.id, message.state, message.projectGeneration, recommendation?.file]);
+
+  // A change that cannot even be applied (no match, wrong file, cut off) is fed back the same way.
+  const errorReported = useRef(false);
+  useEffect(() => {
+    if (!autoOnArrival.current || errorReported.current || message.state !== 'complete' || !recommendation?.error) return;
+    errorReported.current = true;
+    onAutoFailure?.(message, recommendation.error);
+  }, [message.id, message.state, recommendation?.error]);
+  const exhausted = autoOnArrival.current && (message.attempt ?? 1) >= MAX_ATTEMPTS && !!(recommendation?.error || applyError);
 
   const [copied, setCopied] = useState(false);
   const copy = async () => { try { await navigator.clipboard.writeText(message.content); setCopied(true); } catch { setCopied(false); } };
@@ -49,7 +62,9 @@ article(className={'chat-message ' + message.role} data-message-state={message.s
   div.message-heading
 
     span.message-avatar #{message.role === 'user' ? '↗' : '✦'}
-    strong #{message.role === 'user' ? 'You' : 'Assistant'}
+    strong #{message.role === 'user' ? (message.attempt ? 'Auto-fix' : 'You') : 'Assistant'}
+    if message.attempt && message.attempt > 1
+      span.message-state #{'ATTEMPT ' + message.attempt + '/' + MAX_ATTEMPTS}
     if message.role === 'assistant'
       span.message-state #{message.state === 'streaming' ? 'WORKING' : message.state === 'stopped' ? 'STOPPED' : message.state === 'error' ? 'INTERRUPTED' : 'DONE'}
   if message.role === 'user'
@@ -79,7 +94,7 @@ article(className={'chat-message ' + message.role} data-message-state={message.s
         p.chat-apply-error(role='alert') #{recommendation.error}
       else
         if !applyState
-          button.secondary-button(type='button' onClick={apply} disabled={!!applyState}) #{applyState === 'Checking compilation…' ? (autoOnArrival.current ? 'Auto-applying…' : 'Checking compilation…') : applyState ? 'Applied' : 'Apply & verify'}
+          button.secondary-button(type='button' onClick={() => apply()} disabled={!!applyState}) #{applyState === 'Checking compilation…' ? (autoOnArrival.current ? 'Auto-applying…' : 'Checking compilation…') : applyState ? 'Applied' : 'Apply & verify'}
             p(role='status') #{applyState}
         else
           span(className='space-x-1')
@@ -87,3 +102,5 @@ article(className={'chat-message ' + message.role} data-message-state={message.s
             span.apply-scope(className='text-accent') compiled
         if applyError
           p.chat-apply-error(role='alert') #{applyError}
+      if exhausted
+        p.chat-apply-error(role='status') #{'Stopped auto-fixing after ' + MAX_ATTEMPTS + ' attempts. Adjust the request and try again.'}

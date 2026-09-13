@@ -111,6 +111,18 @@
   padding-left: 9px;
   border-left: 1px solid var(--edge-strong);
 }
+.big-icon {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--accent) * 80%;
+  background: var(--surface-recessed);
+  border: 1px solid var(--seam);
+  box-shadow: inset 0 1px var(--edge-strong);
+  font-size: 16px;
+}
 .play-icon {
   width: 25px;
   height: 25px;

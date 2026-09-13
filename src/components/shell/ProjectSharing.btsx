@@ -64,9 +64,9 @@ setup
     return () => { revision.current++; window.removeEventListener('hashchange', readLink); };
   }, [session]);
 
-button.theme-toggle(type='button' aria-label='Share project' title='Share project' onClick={event => { event.currentTarget.focus(); void share(); }})
-  div.play-icon
-    Icon(name='share' className='size-3')
+button(type='button' aria-label='Share project' title='Share project' onClick={event => { event.currentTarget.focus(); void share(); }})
+  div.big-icon
+    Icon(name='share' className='size-4')
   // span.share-label Share
 if transfer
   ProjectTransferDialog(transfer={transfer} onClose={close} onCopy={copy} onImport={importProject})

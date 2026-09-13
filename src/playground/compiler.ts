@@ -8,6 +8,7 @@ import { runtimeImports, runtimeModules } from '../generated/runtime';
 import type { CompilationProject, CompilationResult, CompiledModule, Diagnostic } from './contracts';
 import { normalizePath, VirtualFileSystem } from './virtual-fs';
 import { mapPosition, normalizeError, offsetPosition } from './diagnostics';
+import { compileTailwind, extractCandidates, usesTailwind } from './tailwind';
 
 export const moduleId = (path: string) => `@playground${path}`;
 
@@ -80,6 +81,19 @@ export async function compileProject(project: CompilationProject): Promise<Compi
     return finish();
   }
   await init();
+  // Tailwind compiles asynchronously; resolve opted-in stylesheets before the synchronous graph walk.
+  // Failures are kept and surface only if the stylesheet is actually imported.
+  const tailwind = new Map<string, { css: string } | { error: unknown }>();
+  const tailwindFiles = fs.list().filter(path => path.endsWith('.css') && usesTailwind(fs.read(path)!));
+  if (tailwindFiles.length) {
+    const start = performance.now();
+    const candidates = extractCandidates(Object.fromEntries(fs.list().map(path => [path, fs.read(path)!])));
+    await Promise.all(tailwindFiles.map(async path => {
+      try { tailwind.set(path, { css: await compileTailwind(fs.read(path)!, candidates) }); }
+      catch (error) { tailwind.set(path, { error }); }
+    }));
+    result.metadata.timings.web += performance.now() - start;
+  }
   const visited = new Set<string>();
   const visit = (file: string) => {
     if (visited.has(file)) return;
@@ -106,6 +120,9 @@ export async function compileProject(project: CompilationProject): Promise<Compi
           sourceMap = compiled.sourceMap;
         } finally { result.metadata.timings.octane += performance.now() - start; }
       } else if (file.endsWith('.css')) {
+        const compiled = tailwind.get(file);
+        if (compiled && 'error' in compiled) throw compiled.error;
+        if (compiled) code = compiled.css;
         result.assets.push({ id: file, content: code, type: 'text/css' });
         code = `const style = document.createElement('style'); style.dataset.playgroundStyle = ${JSON.stringify(file)}; style.textContent = ${JSON.stringify(code)}; document.head.append(style);`;
       } else if (file.endsWith('.json')) {

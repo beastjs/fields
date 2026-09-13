@@ -92,3 +92,12 @@ test('reference files are limited in count and combined size', () => {
   expect(() => validateChatRequest({ ...input, references: [{ file: '/a.ts' }] })).toThrow();
   expect(validateChatRequest({ ...input, references: [{ file: '/a.ts', source: 'x' }] }).references).toHaveLength(1);
 });
+
+test('injects Beast skill references into the system prompt', async () => {
+  const { beastSkill } = await import('../server/beast-skill');
+  const base = beastSkill('change the heading');
+  expect(base).toContain('Beast BTSX core syntax');
+  expect(base).not.toContain('TanStack Table');
+  expect(beastSkill('add a data table')).toContain('table');
+  expect(beastSkill('add a data table').length).toBeGreaterThan(base.length);
+});

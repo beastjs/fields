@@ -78,8 +78,8 @@ PaneSurface(layout={layout} pane='preview' label='Application preview' className
             option(value='local') Local preview
             option(value='hosted') Hosted preview
         else
-          span(className='opacity-80') Local preview
-        span#preview-status(className='uppercase') #{state.previewStatus}
+          span(className='opacity-80') local : preview :
+        span#preview-status(className='uppercase text-xs') #{state.previewStatus}
       div.viewport-controls(role='group' aria-label='Preview size')
         each viewport in viewports key viewport.width
           button(type='button' className={'viewport-button flex items-center justify-center' + (state.previewWidth === viewport.width ? ' active' : '')} data-width={viewport.width} aria-label={viewport.label + ' preview'} aria-pressed={state.previewWidth === viewport.width} title={viewport.label} onClick={() => session.setPreviewWidth(viewport.width)})

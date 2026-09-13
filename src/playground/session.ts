@@ -186,11 +186,12 @@ export class PlaygroundSession {
     this.options.persistKeymap?.(keymap);
     this.patch({ keymap, editorFocus: { revision: ++this.sequence } });
   };
-  toggleTheme = () => {
-    const theme = this.state.theme === 'dark' ? 'light' : 'dark';
+  setTheme = (theme: Theme) => {
+    if (theme === this.state.theme) return;
     this.options.persistTheme?.(theme);
     this.patch({ theme });
   };
+  toggleTheme = () => this.setTheme(this.state.theme === 'dark' ? 'light' : 'dark');
   selectTool = (toolPanel: ToolPanel) => this.patch({ toolPanel });
   clearConsole = () => this.patch({ console: [] });
   setPreviewMode = (mode: 'local' | 'hosted') => {

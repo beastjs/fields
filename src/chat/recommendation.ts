@@ -1,16 +1,17 @@
 import type { FileContext } from './contracts';
+import { normalizeFences } from './fences';
 
 export interface FileRecommendation { file: string; source?: string; hunks?: number; error?: string }
 
 // The language tag and quoting around the path vary between models; the file=/patch= marker
 // is what makes a block actionable, so only that part is required.
-const marker = '^`{3,}[a-z]*[ \\t]*MARKER=[\'"]?(/[^\\s\'"`]+)[\'"]?[ \\t]*\\r?\\n';
+const marker = '^`{3,}[\\w+-]*[ \\t]*MARKER=[\'"]?((?:\\./|/)?[^\\s\'"`]+)[\'"]?[ \\t]*\\r?\\n';
 const fullBlock = new RegExp(marker.replace('MARKER', 'file') + '([\\s\\S]*?)^`{3,}[ \\t]*\\r?$', 'gm');
 const patchBlock = new RegExp(marker.replace('MARKER', 'patch') + '([\\s\\S]*?)^`{3,}[ \\t]*\\r?$', 'gm');
 const unterminated = new RegExp(marker.replace('MARKER', '(?:file|patch)'), 'm');
 const hunkPattern = /^<{3,}[ \t]*SEARCH[ \t]*\r?\n([\s\S]*?)^={3,}[ \t]*\r?\n([\s\S]*?)^>{3,}[ \t]*REPLACE[ \t]*\r?$/gm;
 
-const plainBlock = new RegExp('^`{3,}[a-z]*[ \\t]*\\r?\\n([\\s\\S]*?)^`{3,}[ \\t]*\\r?$', 'gm');
+const plainBlock = new RegExp('^`{3,}[^\\n`]*\\r?\\n([\\s\\S]*?)^`{3,}[ \\t]*\\r?$', 'gm');
 const openHunk = /^<{3,}[ \t]*SEARCH/m;
 
 /** Hunks as parsed pairs, shared by the applier and the diff renderer. */
@@ -18,8 +19,6 @@ export function parseHunks(body: string) {
   return [...body.matchAll(hunkPattern)].map(([, search, replace]) => ({ search, replace }));
 }
 
-/** Models often open a fence mid-sentence; markdown needs it on its own line. */
-const normalize = (content: string) => content.replace(/([^\n])(`{3,}[a-z]*[ \t]*(?:file|patch)=)/g, '$1\n$2');
 
 type HunkResult = { source: string; hunks: number; error?: undefined } | { source?: undefined; error: string };
 
@@ -87,34 +86,50 @@ function applyHunks(original: string, body: string): HunkResult {
   return { source, hunks: hunks.length };
 }
 
-/** Only explicit complete-file or patch blocks are actionable; ordinary snippets stay illustrative. */
+/** Models write the attached path as /src/App.btsx, src/App.btsx or ./src/App.btsx. */
+const projectPath = (path: string) => '/' + path.replace(/^\.?\/+/, '');
+
+/**
+ * Only explicit complete-file or patch blocks, or bare blocks of hunks, are actionable; ordinary
+ * snippets stay illustrative. Anything that renders as a change (a marked block or hunks) returns
+ * a result: either the new source or an error explaining why it cannot apply, never silence.
+ */
 export function fileRecommendation(raw: string, context?: FileContext): FileRecommendation | undefined {
-  if (!context) return;
-  const content = normalize(raw);
+  const content = normalizeFences(raw);
   const full = [...content.matchAll(fullBlock)];
   const patches = [...content.matchAll(patchBlock)];
   // A block of SEARCH/REPLACE hunks is a patch for the attached file even when the model
   // forgets the patch= marker: the hunks still have to match that file exactly to apply.
   const bare = full.length + patches.length ? [] : [...content.matchAll(plainBlock)].filter(block => parseHunks(block[1]).length);
-  if (full.length + patches.length + bare.length !== 1) {
-    if (full.length + patches.length + bare.length) return;
+  if (!full.length && !patches.length && !bare.length) {
     // An opened but unclosed block means the reply stopped before the code finished.
     const opened = unterminated.exec(content);
-    if (opened ? opened[1] === context.file : openHunk.test(content)) {
-      return { file: context.file, error: 'The response was cut off before its code block finished. Ask for a smaller change, or for a patch instead of a full file.' };
+    if (opened || openHunk.test(content)) {
+      return { file: opened ? projectPath(opened[1]) : context?.file ?? 'attached file', error: 'The response was cut off before its code block finished. Ask for a smaller change, or for a patch instead of a full file.' };
     }
     return;
   }
-  const file = full[0]?.[1] ?? patches[0]?.[1] ?? context.file;
-  const body = full[0]?.[2] ?? patches[0]?.[2] ?? bare[0][1];
-  if (file !== context.file) return;
+  const targets = [...full, ...patches].map(block => projectPath(block[1]));
+  if (!context) {
+    return { file: targets[0] ?? 'attached file', error: 'No file was attached to this message, so there is nothing to apply it to. Turn on active-file context and ask again.' };
+  }
+  const other = targets.find(target => target !== context.file);
+  if (other) return { file: other, error: `This change targets ${other}, but the attached file is ${context.file}. Open that file and ask again.` };
+  const file = context.file;
+  if (full.length > 1 || (full.length && patches.length)) {
+    return { file, error: 'The reply has more than one change block for this file. Ask for a single patch.' };
+  }
   if (full.length) {
-    const source = body.replace(/\r\n/g, '\n');
-    if (source.length > 60000 || source === context.source) return;
+    const source = full[0][2].replace(/\r\n/g, '\n');
+    if (source.length > 60000) return { file, error: 'The rewritten file is over 60,000 characters and cannot be applied.' };
+    if (source === context.source.replace(/\r\n/g, '\n')) return { file, error: 'This change is already in the file.' };
     return { file, source };
   }
+  // Several patch (or bare hunk) blocks for the same file apply in order, like one block.
+  const body = (patches.length ? patches.map(block => block[2]) : bare.map(block => block[1])).join('\n');
   const applied = applyHunks(context.source, body.replace(/\r\n/g, '\n'));
   if (applied.source === undefined) return { file, error: applied.error };
-  if (applied.source.length > 60000 || applied.source === context.source) return;
+  if (applied.source.length > 60000) return { file, error: 'The patched file is over 60,000 characters and cannot be applied.' };
+  if (applied.source === context.source.replace(/\r\n/g, '\n')) return { file, error: 'This change is already in the file.' };
   return { file, source: applied.source, hunks: applied.hunks };
 }

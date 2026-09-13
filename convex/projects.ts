@@ -1,7 +1,13 @@
 import { paginationOptsValidator, paginationResultValidator } from 'convex/server'
 import { ConvexError, v } from 'convex/values'
-import { ensureCurrentUser, getTeamMembership, requireCurrentUser, requireProjectMember, requireTeamMember } from './auth'
 import { mutation, query } from './_generated/server'
+import {
+  ensureCurrentUser,
+  getTeamMembership,
+  requireCurrentUser,
+  requireProjectMember,
+  requireTeamMember
+} from './auth'
 import schema from './schema'
 import { optionalTrimmed, requireTrimmed } from './utils'
 import { workspaceResultValidator, workspaceValidator } from './validators'
@@ -33,8 +39,9 @@ export const ensureDefault = mutation({
       .unique()
 
     if (!team) {
+      const firstName = user.name?.trim().split(/\s+/)[0]
       const teamId = await ctx.db.insert('teams', {
-        name: user.name ? `${user.name}'s workspace` : 'Personal workspace',
+        name: firstName || 'Workspace',
         kind: 'personal',
         personalOwnerId: user._id,
         createdBy: user._id,

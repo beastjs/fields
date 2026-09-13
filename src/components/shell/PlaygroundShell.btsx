@@ -6,6 +6,7 @@ import { WorkspaceLayout } from '../../playground/workspace-layout'
 import Topbar from './Topbar.btsx'
 import Statusbar from './Statusbar.btsx'
 import Workspace from '../layout/Workspace.btsx'
+import ThemeProvider from '../theme/ThemeProvider.btsx'
 
 setup
   const [query, setQuery] = useQueryStates(panelQueryParsers, { history: 'replace', shallow: true, scroll: false });
@@ -16,7 +17,8 @@ setup
   useEffect(() => layout.connectPersistence(value => { void setQuery(value); }), [layout, setQuery]);
   useEffect(() => layout.restore(query), [layout, query.dock, query.split, query.rows]);
 
-main.playground
-  Topbar(session={session} layout={layout} cloud={cloud})
-  Workspace(session={session} layout={layout})
-  Statusbar(session={session})
+ThemeProvider(session={session})
+  main.playground
+    Topbar(session={session} layout={layout} cloud={cloud})
+    Workspace(session={session} layout={layout})
+    Statusbar(session={session})

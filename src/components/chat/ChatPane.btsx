@@ -6,6 +6,8 @@ import CollapseButton from '../layout/CollapseButton.btsx'
 import ChatSettings from './ChatSettings.btsx'
 import ChatComposer from './ChatComposer.btsx'
 import ChatMessage from './ChatMessage.btsx'
+import { fixUpPrompt } from '../../chat/iterate'
+import type { ChatMessage as Message } from '../../chat/controller'
 import {Icon} from '@/lib/icons'
 import type { WorkspaceProps } from '../types'
 
@@ -22,6 +24,26 @@ setup
   const scroll = () => { const node = scroller.current!; follow.current = node.scrollHeight - node.scrollTop - node.clientHeight < 80; };
   const [isAutoApply, setIsAutoApply] = useState(true)
   const toggleAuto = () => setIsAutoApply(v => !v)
+  const autoRef = useRef(isAutoApply)
+  autoRef.current = isAutoApply
+  // Auto-apply failures go back to the model with the current file until a change applies
+  // cleanly or the attempts run out. Only the latest reply iterates, and only while auto is on.
+  const autoFix = (message: Message, error: string) => {
+    // The reply is marked complete just before the controller clears `busy`; wait for idle.
+    if (chat.getSnapshot().busy) {
+      const unsubscribe = chat.subscribe(() => { if (!chat.getSnapshot().busy) { unsubscribe(); autoFix(message, error); } });
+      return;
+    }
+    if (!autoRef.current || chat.getSnapshot().messages.at(-1)?.id !== message.id || !message.context) return;
+    const prompt = fixUpPrompt(error, message.context.file, message.attempt ?? 1);
+    const source = session.read(message.context.file);
+    if (!prompt || source === undefined) return;
+    const references = chat.lastReferences.flatMap(reference => {
+      const current = session.read(reference.file);
+      return current === undefined ? [] : [{ file: reference.file, source: current }];
+    });
+    void chat.submit(prompt, { file: message.context.file, source }, session.getSnapshot().projectGeneration, references, (message.attempt ?? 1) + 1);
+  }
 
 
 PaneSurface(layout={layout} pane='chat' label='AI chat' className='chat-pane')
@@ -50,7 +72,7 @@ PaneSurface(layout={layout} pane='chat' label='AI chat' className='chat-pane')
             span #{idea}
         button.connection-prompt(type='button' hidden={connected} onClick={() => setSettingsOpen(true)}) Set up your connection ↗
     each message in state.messages key message.id
-      ChatMessage(message={message} session={session} auto={isAutoApply})
+      ChatMessage(message={message} session={session} auto={isAutoApply} onAutoFailure={autoFix})
     if state.error || state.connectionError
       div.chat-error(role='alert')
         p #{state.error || state.connectionError}

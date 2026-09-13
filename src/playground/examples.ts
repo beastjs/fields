@@ -35,7 +35,13 @@ if (!container) throw new Error('Missing #app container.');
 createRoot(container).render(App, {});
 console.info('Hello from the preview.');
 `,
-    '/src/style.css': `:root { color: light-dark(#252723, #e1e1db); background: light-dark(#faf9f5, #303030); color-scheme: inherit; }
+    '/src/style.css': `/* Tailwind utilities are available as classes: div.flex.gap-4 or div(class='p-4 text-sm'). */
+/* Replace these imports with @import "tailwindcss"; to also include Tailwind's Preflight reset. */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+:root { color: light-dark(#252723, #e1e1db); background: light-dark(#faf9f5, #303030); color-scheme: inherit; }
 .page { max-width: 620px; margin: 0 auto; padding: 80px 40px; }
 .eyebrow { color: light-dark(#ba4915, #ff773d); font-size: 10px; letter-spacing: .16em; font-weight: 650; }
 h1 { margin: 25px 0 14px; font-size: clamp(36px, 7vw, 52px); font-weight: 500; letter-spacing: -.06em; }

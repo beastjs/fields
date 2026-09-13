@@ -7,6 +7,8 @@ export function readTheme(): Theme {
 }
 export function applyTheme(theme: Theme) {
   document.documentElement.dataset.theme = theme;
+  // Tailwind's `dark:` variant is keyed on the `.dark` class (see style.css).
+  document.documentElement.classList.toggle('dark', theme === 'dark');
 }
 export function saveTheme(theme: Theme) {
   applyTheme(theme);

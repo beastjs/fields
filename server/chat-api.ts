@@ -1,4 +1,5 @@
 import type { FetchLike } from '../src/chat/contracts'
+import { beastSkill } from './beast-skill'
 import { DEFAULT_MODEL, MAX_REFERENCE_CHARS, MAX_REFERENCES, type ChatRequest } from '../src/chat/contracts'
 
 export interface AIEnvironment {
@@ -180,7 +181,8 @@ export async function handleAIRequest(
     return json({ error: (error as Error).message }, 400)
   }
   const model = input.provider === 'cohere' ? input.model.replace(/^cohere\//, '') : input.model
-  const messages: { role: string; content: string }[] = [{ role: 'system', content: system }]
+  const skillTopics = [input.messages.at(-1)!.content, input.context?.source ?? ''].join('\n')
+  const messages: { role: string; content: string }[] = [{ role: 'system', content: system + beastSkill(skillTopics) }]
   if (input.context) {
     // Raw text, not JSON: the model must be able to copy SEARCH lines character for character.
     // A per-request random marker keeps file contents from forging the delimiter.

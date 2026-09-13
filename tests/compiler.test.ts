@@ -39,6 +39,30 @@ describe('production compiler boundaries', () => {
     }
     expect(result.assets.map(asset => asset.id)).toEqual(['/src/style.css']);
   });
+  test('stylesheets importing Tailwind generate utilities used in project sources', async () => {
+    const result = await compileProject({ entry: '/main.ts', files: {
+      '/main.ts': "import './App.btsx'; import './style.css';",
+      '/App.btsx': "div.flex.gap-4(class='p-[13px] text-red-500') Hi",
+      '/style.css': '@import "tailwindcss";\n.custom { color: red; }',
+    } });
+    expect(result.diagnostics).toEqual([]);
+    const css = result.assets.find(asset => asset.id === '/style.css')!.content;
+    for (const rule of ['.flex', '.gap-4', '.p-\\[13px\\]', '.text-red-500', '.custom']) expect(css).toContain(rule);
+    expect(css).not.toContain('@import');
+    const plain = await compileProject({ entry: '/main.ts', files: { '/main.ts': "import './style.css';", '/style.css': '.flex { color: red; }' } });
+    expect(plain.assets[0].content).toBe('.flex { color: red; }');
+    const broken = await compileProject({ entry: '/main.ts', files: { '/main.ts': "import './style.css';", '/style.css': '@import "tailwindcss"; @apply nope;' } });
+    expect(broken.entry).toBeUndefined();
+  });
+  test('the starter project exposes Tailwind utilities without Preflight', async () => {
+    const result = await compileProject({ ...helloWorld, files: { ...helloWorld.files,
+      '/src/App.btsx': helloWorld.files['/src/App.btsx'].replace('main.page', 'main.page.italic') } });
+    expect(result.diagnostics).toEqual([]);
+    const css = result.assets[0].content;
+    expect(css).toContain('.italic');
+    expect(css).not.toContain('@import');
+    expect(css).toContain('.counter-row');
+  });
   test('fixtures traverse nested and reexported modules', async () => {
     for (const [name, entry] of [['simple-component', '/App.btsx'], ['multiple-components', '/App.btsx'], ['imports', '/main.ts']]) {
       const result = await fixture(name, entry);

@@ -1,0 +1,16 @@
+import { useMemo, useSyncExternalStore } from 'octane'
+import type { OctaneNode } from 'octane'
+import type { PlaygroundSession } from '../../playground/session'
+import { ThemeContext, type ThemeContextValue } from './theme-context'
+
+props { session, children }: { session: PlaygroundSession; children?: OctaneNode }
+setup
+  // The session owns theme state (the editor syncs from it); this only exposes it to the tree.
+  const theme = useSyncExternalStore(session.subscribe, () => session.getSnapshot().theme);
+  const value = useMemo<ThemeContextValue>(() => ({
+    theme,
+    setTheme: session.setTheme,
+    toggleTheme: session.toggleTheme,
+  }), [theme, session]);
+
+ThemeContext.Provider(value={value}) #{children}

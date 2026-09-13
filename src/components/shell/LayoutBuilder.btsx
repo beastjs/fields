@@ -1,0 +1,28 @@
+import { useEffect, useRef, useState } from 'octane'
+import { examples } from '../../playground/examples'
+import {Icon} from '@/lib/icons'
+
+props { compact = false }: { compact?: boolean }
+setup
+  const dialog = useRef<HTMLDialogElement | null>(null);
+  const close = () => dialog.current?.close();
+  useEffect(() => () => dialog.current?.close(), []);
+
+button(className='bg-background dark:hover:bg-foreground/15 hover:bg-white py-1 px-3 rounded-2xl' type='button' title={compact ? 'Browse example projects' : undefined} onClick={event => { event.currentTarget.focus(); dialog.current?.showModal(); }})
+  if compact
+    div.big-icon
+      Icon(name='build' className='size-4')
+  else
+    div(className='flex items-center gap-1.5 text-xs')
+      Icon(name='build' className='size-3.5')
+      span.project-name(title={'Builder'}) Builder
+dialog.project-transfer(ref={dialog} aria-labelledby='project-builder')
+  div.settings-heading
+    div
+      span.eyebrow-label DESIGN TOOLS
+      h2#examples-title App Layout Builder
+    button.icon-button(type='button' aria-label='Close examples' onClick={close}) ×
+  label.transfer-label(for='stepper') A guided layout selector.
+  p.transfer-note Topbar
+  div.settings-actions
+    button.secondary-button(type='button' onClick={close}) Let's begin
