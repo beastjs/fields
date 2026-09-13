@@ -1,14 +1,49 @@
 import { useEffect, useRef, useState } from 'octane'
-import { examples } from '../../playground/examples'
-import {Icon} from '@/lib/icons'
+import { Icon } from '@/lib/icons'
+import { useTheme } from '../theme/theme-context'
+import { topbarTemplates, templatePreviewProject } from '../../playground/layout-templates'
+import { TemplatePreview, type TemplatePreviewStatus } from '../../playground/template-preview'
 
 props { compact = false }: { compact?: boolean }
 setup
   const dialog = useRef<HTMLDialogElement | null>(null);
-  const close = () => dialog.current?.close();
-  useEffect(() => () => dialog.current?.close(), []);
+  const frame = useRef<HTMLIFrameElement | null>(null);
+  const preview = useRef<TemplatePreview | null>(null);
+  const [open, setOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState(topbarTemplates[0].id);
+  const [view, setView] = useState<'preview' | 'source'>('preview');
+  const [status, setStatus] = useState<TemplatePreviewStatus>({ state: 'compiling' });
+  const [copied, setCopied] = useState(false);
+  const { theme } = useTheme();
+  const selected = topbarTemplates.find(template => template.id === selectedId) ?? topbarTemplates[0];
+  const statusText = status.state === 'compiling' ? 'Compiling…' : status.state === 'error' ? status.message : selected.file.replace('/src/', '');
 
-button(className='bg-background dark:hover:bg-foreground/15 hover:bg-white py-1 px-3 rounded-2xl' type='button' title={compact ? 'Browse example projects' : undefined} onClick={event => { event.currentTarget.focus(); dialog.current?.showModal(); }})
+  const show = () => { setOpen(true); dialog.current?.showModal(); };
+  const close = () => dialog.current?.close();
+  const copySource = async () => {
+    try { await navigator.clipboard.writeText(selected.source); setCopied(true); }
+    catch { setCopied(false); }
+  };
+
+  // Escape and form-method dialogs close natively; keep `open` in sync with the element.
+  useEffect(() => {
+    const element = dialog.current;
+    if (!element) return;
+    const onClose = () => setOpen(false);
+    element.addEventListener('close', onClose);
+    return () => { element.removeEventListener('close', onClose); element.close(); };
+  }, []);
+  // The compiler worker and iframe runtime only exist while the builder is open.
+  useEffect(() => {
+    if (!open || !frame.current) return;
+    const instance = new TemplatePreview(frame.current, theme, () => new Worker(new URL('../../playground/compiler.worker.ts', import.meta.url), { type: 'module' }), setStatus);
+    preview.current = instance;
+    return () => { instance.dispose(); preview.current = null; };
+  }, [open]);
+  useEffect(() => { preview.current?.show(templatePreviewProject(selected)); setCopied(false); }, [open, selected]);
+  useEffect(() => { preview.current?.setTheme(theme); }, [theme]);
+
+button(className='bg-background dark:hover:bg-foreground/15 hover:bg-white py-1 px-3 rounded-2xl' type='button' title={compact ? 'Open layout builder' : undefined} onClick={event => { event.currentTarget.focus(); show(); }})
   if compact
     div.big-icon
       Icon(name='build' className='size-4')
@@ -16,13 +51,30 @@ button(className='bg-background dark:hover:bg-foreground/15 hover:bg-white py-1 
     div(className='flex items-center gap-1.5 text-xs')
       Icon(name='build' className='size-3.5')
       span.project-name(title={'Builder'}) Builder
-dialog.project-transfer(ref={dialog} aria-labelledby='project-builder')
+dialog.project-transfer.layout-builder(ref={dialog} aria-labelledby='layout-builder-title')
   div.settings-heading
     div
       span.eyebrow-label DESIGN TOOLS
-      h2#examples-title App Layout Builder
-    button.icon-button(type='button' aria-label='Close examples' onClick={close}) ×
-  label.transfer-label(for='stepper') A guided layout selector.
-  p.transfer-note Topbar
+      h2#layout-builder-title App Layout Builder
+    button.icon-button(type='button' aria-label='Close layout builder' onClick={close}) ×
+  ol.layout-builder-steps(aria-label='Layout sections')
+    li(aria-current='step') Topbar
+  p.transfer-description Pick a topbar to start your layout. Each template is a Beast component styled with Tailwind — preview it live or read its source.
+  div.layout-builder-body
+    div.layout-template-list(role='radiogroup' aria-label='Topbar templates')
+      each template in topbarTemplates key template.id
+        button.layout-template(type='button' role='radio' aria-checked={template.id === selected.id} onClick={() => setSelectedId(template.id)})
+          span.layout-template-title #{template.title}
+          span.layout-template-description #{template.description}
+    div.layout-template-stage
+      div.layout-template-toolbar
+        div.layout-template-tabs(role='tablist' aria-label='Template view')
+          button(type='button' role='tab' aria-selected={view === 'preview'} onClick={() => setView('preview')}) Preview
+          button(type='button' role='tab' aria-selected={view === 'source'} onClick={() => setView('source')}) Source
+        span.layout-template-status(role='status' data-state={status.state}) #{statusText}
+      iframe.layout-template-frame(ref={frame} title={`${selected.title} topbar preview`} hidden={view !== 'preview'})
+      if view === 'source'
+        pre.layout-template-source #{selected.source}
   div.settings-actions
-    button.secondary-button(type='button' onClick={close}) Let's begin
+    button.secondary-button(type='button' onClick={copySource}) #{copied ? 'Copied' : 'Copy source'}
+    button.primary-button(type='button' onClick={close}) Done
