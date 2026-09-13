@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import type { ChatRequest } from '../src/chat/contracts';
 
 async function ready(page: Page, url = '/') {
@@ -10,12 +10,20 @@ const answer = (text: string) => `data: ${JSON.stringify({ choices: [{ delta: { 
 const openChat = async (page: Page) => {
   if (await page.locator('[data-view="chat"]').getAttribute('aria-pressed') !== 'true') await page.locator('[data-view="chat"]').click();
 };
+const dragBetween = async (page: Page, source: Locator, target: Locator) => {
+  const sourceBox = (await source.boundingBox())!;
+  const targetBox = (await target.boundingBox())!;
+  await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 20 });
+  await page.mouse.up();
+};
 
 test('panel URLs restore proportions, collapsed views, back navigation, and reset', async ({ page }) => {
   await ready(page, '/?dock=0,75,25&split=60,40&rows=65,35&keep=hello');
   await expect(page.locator('#pane-files')).toBeHidden();
   await expect(page.locator('#pane-chat')).toBeVisible();
-  await expect(page.getByRole('separator', { name: 'Resize editor and preview', exact: true })).toHaveAttribute('aria-valuenow', '60');
+  await expect(page.getByRole('separator', { name: 'Resize editor and preview', exact: true })).toHaveAttribute('aria-valuenow', '45');
   await expect(page.getByRole('separator', { name: 'Resize output', exact: true })).toHaveAttribute('aria-valuenow', '65');
   const preview = await page.locator('#preview-frame').getAttribute('srcdoc');
   await page.evaluate(() => history.pushState({}, '', location.href));
@@ -32,6 +40,62 @@ test('panel URLs restore proportions, collapsed views, back navigation, and rese
   await expect(page).toHaveURL('/?keep=hello');
   await expect(page.locator('#pane-files')).toBeVisible();
   await expect(page.locator('#pane-chat')).toBeHidden();
+});
+
+test('workbench panes reorder without losing state and restore from the URL', async ({ page }) => {
+  await page.route('**/api/ai/chat', route => route.fulfill({
+    contentType: 'text/event-stream',
+    body: answer('This message stays put.'),
+  }));
+  await ready(page, '/?dock=14,68,18');
+  await page.getByRole('button', { name: 'Disable pane dragging', exact: true }).click();
+  await expect(page.locator('[data-reorder-handle="chat"]')).toBeDisabled();
+  await page.reload();
+  await expect(page.locator('#preview-status')).toHaveText('Live', { timeout: 20000 });
+  await expect(page.getByRole('button', { name: 'Enable pane dragging', exact: true })).toBeVisible();
+  await expect(page.locator('[data-reorder-handle="chat"]')).toBeDisabled();
+  await page.getByRole('button', { name: 'Enable pane dragging', exact: true }).click();
+  await expect(page.locator('[data-reorder-handle="chat"]')).toBeEnabled();
+
+  await page.getByRole('textbox', { name: 'Message AI' }).fill('Keep this message');
+  await page.getByRole('button', { name: 'Send message', exact: true }).click();
+  await expect(page.locator('.chat-markdown')).toContainText('This message stays put.');
+
+  const chatHandle = page.locator('[data-reorder-handle="chat"]');
+  const filesHandle = page.locator('[data-reorder-handle="files"]');
+  await dragBetween(page, chatHandle, filesHandle);
+  await expect.poll(() => new URL(page.url()).searchParams.get('order')).toBe('chat,files,editor,preview');
+  await expect.poll(async () => {
+    const chatBox = (await page.locator('#pane-chat').boundingBox())!;
+    const filesBox = (await page.locator('#pane-files').boundingBox())!;
+    return chatBox.x < filesBox.x;
+  }).toBe(true);
+  await expect(page.locator('.chat-markdown')).toContainText('This message stays put.');
+
+  await page.reload();
+  await expect(page.locator('#preview-status')).toHaveText('Live', { timeout: 20000 });
+  expect((await page.locator('#pane-chat').boundingBox())!.x).toBeLessThan((await page.locator('#pane-files').boundingBox())!.x);
+  await page.locator('[data-reorder-handle="chat"]').press('Space');
+  await page.locator('[data-reorder-handle="chat"]').press('ArrowRight');
+  await page.locator('[data-reorder-handle="chat"]').press('Space');
+  await expect.poll(() => new URL(page.url()).searchParams.get('order')).toBe('files,chat,editor,preview');
+  await page.getByRole('button', { name: 'Reset layout', exact: true }).click();
+  await expect.poll(() => new URL(page.url()).searchParams.get('order')).toBeNull();
+});
+
+test('collapsed panes keep a boundary handle and any remaining workbench pane permits closing', async ({ page }) => {
+  await ready(page);
+  await openChat(page);
+  await page.getByRole('button', { name: 'Collapse preview', exact: true }).click();
+  await page.getByRole('button', { name: 'Collapse files', exact: true }).click();
+  await expect(page.getByRole('separator', { name: 'Resize files', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Collapse editor', exact: true })).toBeEnabled();
+  await page.getByRole('button', { name: 'Collapse editor', exact: true }).click();
+  await expect(page.locator('#pane-files')).toBeHidden();
+  await expect(page.locator('#pane-editor')).toBeHidden();
+  await expect(page.locator('#pane-preview')).toBeHidden();
+  await expect(page.locator('#pane-chat')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Collapse assistant', exact: true })).toBeDisabled();
 });
 
 test('invalid layout parameters recover and file search filters the explorer', async ({ page }) => {
@@ -56,8 +120,8 @@ test('chat sends the default model with optional file context and safely renders
   });
   await ready(page); await openChat(page);
   await expect(page.locator('.connection-label')).toHaveText('READY');
-  await page.getByRole('button', { name: 'Explain this file ↗', exact: true }).click();
-  await expect(page.getByRole('textbox', { name: 'Message AI' })).toHaveValue('Explain how the active file works.');
+  await page.getByRole('button', { name: 'Improve this file ↗', exact: true }).click();
+  await expect(page.getByRole('textbox', { name: 'Message AI' })).toHaveValue('Improve active file.');
   await page.getByRole('button', { name: 'Send message', exact: true }).click();
   await expect(page.locator('.chat-markdown strong')).toHaveText('Counter');
   await expect(page.locator('.chat-markdown pre')).toContainText('h1 Hello');
@@ -67,7 +131,7 @@ test('chat sends the default model with optional file context and safely renders
   expect(requests[0].model).toBe('cohere/north-mini-code-1-0');
   expect(requests[0].context?.file).toBe('/src/App.btsx');
   expect(requests[0].context?.source).toContain("import Counter");
-  await page.getByRole('checkbox', { name: /Include active file/ }).uncheck();
+  await page.getByRole('checkbox', { name: /Include App\.btsx/ }).uncheck();
   await page.getByRole('textbox', { name: 'Message AI' }).fill('Thanks');
   await page.getByRole('textbox', { name: 'Message AI' }).press('Enter');
   await expect(page.locator('.chat-message.assistant[data-message-state="complete"]')).toHaveCount(2);

@@ -3,6 +3,7 @@ import { ChatController } from '../../chat/controller'
 import { readChatSettings, saveChatSettings } from '../../chat/settings'
 import PaneSurface from '../layout/PaneSurface.btsx'
 import CollapseButton from '../layout/CollapseButton.btsx'
+import PaneReorderHandle from '../layout/PaneReorderHandle.btsx'
 import ChatSettings from './ChatSettings.btsx'
 import ChatComposer from './ChatComposer.btsx'
 import ChatMessage from './ChatMessage.btsx'
@@ -48,9 +49,11 @@ setup
 
 PaneSurface(layout={layout} pane='chat' label='AI chat' className='chat-pane')
   div(className='h-9 flex items-center justify-between border-b border-[var(--edge)] px-1 text-xs ')
-    div(className='flex items-center gap-1 text-[11px]')
-      span(className='opacity-70') ✦
-      span(className='') Assistant
+    div.panel-title
+      PaneReorderHandle(pane='chat')
+      div(className='flex items-center gap-1 text-[11px]')
+        span(className='opacity-70') ✦
+        span(className='') Assistant
     div.panel-actions
       button.icon-button(type='button' title='New chat' aria-label='New chat' onClick={chat.clear})
         Icon(name='plus' className='size-3.5')

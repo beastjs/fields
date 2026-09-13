@@ -3,6 +3,7 @@ import { useField, useForm } from '@octanejs/tanstack-form'
 import { fileIcon, fileLabel } from '../../playground/presentation'
 import PaneSurface from '../layout/PaneSurface.btsx'
 import CollapseButton from '../layout/CollapseButton.btsx'
+import PaneReorderHandle from '../layout/PaneReorderHandle.btsx'
 import NewFileForm from './NewFileForm.btsx'
 import type { WorkspaceProps, NavigateToSource } from '../types'
 import {Icon} from '@/lib/icons'
@@ -30,7 +31,9 @@ PaneSurface(layout={layout} pane='files' label='File explorer' className='explor
       path(d='m16 16 4.5 4.5')
     input(type='search' aria-label='Search files' placeholder='Search files…' value={search.state.value} onInput={event => search.handleChange(event.currentTarget.value)} className='ring-0 outline-none w-full')
   div.panel-heading
-    span PROJECT FILES
+    div.panel-title
+      PaneReorderHandle(pane='files')
+      span PROJECT FILES
     div.panel-actions
       button#add-file.icon-button(ref={addButton} type='button' onClick={() => setAdding(true)} aria-label='Add file' title='Add file')
         Icon(name='plus' className='size-3')

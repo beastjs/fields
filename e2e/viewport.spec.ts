@@ -21,7 +21,7 @@ test('workspace stays inside the viewport through chat collapse, restore, and sc
     await page.locator('[data-view="chat"]').click();
     await expect(page.locator('#pane-chat')).toBeVisible();
     await expectViewportFit(page);
-    await page.getByRole('button', { name: 'Collapse ai chat', exact: true }).click();
+    await page.getByRole('button', { name: 'Collapse assistant', exact: true }).click();
     await expect(page.locator('#pane-chat')).toBeHidden();
     await expectViewportFit(page);
     await page.getByRole('button', { name: 'Reset layout', exact: true }).click();

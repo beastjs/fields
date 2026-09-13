@@ -2,9 +2,11 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'octane'
 import { connectPreview } from '../../playground/preview-connection'
 import PaneSurface from '../layout/PaneSurface.btsx'
 import CollapseButton from '../layout/CollapseButton.btsx'
+import PaneReorderHandle from '../layout/PaneReorderHandle.btsx'
 import type { WorkspaceProps } from '../types'
 import {Icon} from '@/lib/icons'
 import NativeSelect, {NativeSelectOption} from "../ui/native-select.btsx";
+import ButtonGroup from "../ui/button-group.btsx";
 
 module
   const hostedURL = __HOSTED_PREVIEW_URL__;
@@ -71,6 +73,7 @@ setup
 PaneSurface(layout={layout} pane='preview' label='Application preview' className='preview-pane')
   div.preview-surface(ref={surface})
     div.preview-toolbar
+      PaneReorderHandle(pane='preview')
       div.preview-label
         Icon(name='browser' className='size-3.5')
         if hostedURL
@@ -80,16 +83,17 @@ PaneSurface(layout={layout} pane='preview' label='Application preview' className
         else
           span(className='opacity-80') local : preview :
         span#preview-status(className='uppercase text-xs') #{state.previewStatus}
-      div.viewport-controls(role='group' aria-label='Preview size')
+      ButtonGroup.viewport-controls(role='group' aria-label='Preview size')
         each viewport in viewports key viewport.width
           button(type='button' className={'viewport-button flex items-center justify-center' + (state.previewWidth === viewport.width ? ' active' : '')} data-width={viewport.width} aria-label={viewport.label + ' preview'} aria-pressed={state.previewWidth === viewport.width} title={viewport.label} onClick={() => session.setPreviewWidth(viewport.width)})
             Icon(name={viewport.symbol} className='size-3')
-      NativeSelect.preview-zoom(aria-label='Preview zoom' value={String(zoom)} onChange={event => setZoom(Number(event.currentTarget.value))})
-        each option in zoomOptions key option.id
-          NativeSelectOption(value={option.id}) #{option.label}
+        NativeSelect.preview-zoom(aria-label='Preview zoom' value={String(zoom)} onChange={event => setZoom(Number(event.currentTarget.value))})
+          each option in zoomOptions key option.id
+            NativeSelectOption(value={option.id}) #{option.label}
+        button#reload-preview.viewport-button(type='button' aria-label='Reload preview' title='Reload preview' onClick={session.reloadPreview})
+          Icon(name='refresh' className='size-3.5')
       button.icon-button(ref={fullscreenButton} type='button' aria-label={fullscreen ? 'Exit fullscreen preview' : 'Enter fullscreen preview'} aria-pressed={fullscreen} title={fullscreenSupported ? (fullscreen ? 'Exit fullscreen (Esc)' : 'Fullscreen preview') : 'Fullscreen is unavailable in this browser'} disabled={!fullscreenSupported || fullscreenPending} onClick={toggleFullscreen}) #{fullscreen ? '⊡' : '⛶'}
-      button#reload-preview.icon-button(type='button' aria-label='Reload preview' title='Reload preview' onClick={session.reloadPreview})
-        Icon(name='refresh' className='size-4')
+
       if !fullscreen
         CollapseButton(layout={layout} pane='preview')
     p.fullscreen-notice(role='status' hidden={!fullscreenError}) #{fullscreenError}

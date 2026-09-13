@@ -108,6 +108,13 @@
   font: 8px var(--mono);
   color: var(--faint);
   margin-right: 8px;
+  white-space: nowrap;
+}
+.pane-order-toggle {
+  transition:
+    opacity 120ms ease,
+    background-color 120ms ease,
+    box-shadow 120ms ease;
 }
 .view-toggle {
   display: flex;
@@ -172,6 +179,86 @@
   display: flex;
   align-items: center;
   gap: 2px;
+}
+.panel-title {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.pane-reorder-handle {
+  width: 24px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--faint);
+  cursor: grab;
+}
+.pane-reorder-handle:hover,
+.pane-reorder-handle:focus-visible {
+  color: var(--text);
+  background: var(--control);
+}
+.pane-reorder-handle:active {
+  cursor: grabbing;
+}
+.pane-reorder-handle[data-dragging] {
+  opacity: 0.35;
+}
+.pane-reorder-handle:disabled {
+  color: var(--faint);
+  background: transparent;
+  cursor: default;
+  opacity: 0.3;
+}
+.drag-mode-toggle {
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  padding: 0 6px;
+  background: transparent;
+  color: var(--muted);
+  font: 8px var(--mono);
+}
+.drag-mode-toggle:hover,
+.drag-mode-toggle:focus-visible {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+.drag-mode-toggle[aria-pressed='true'] {
+  color: var(--text-secondary);
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--edge));
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+}
+.drag-mode-state {
+  color: var(--faint);
+}
+.drag-mode-toggle[aria-pressed='true'] .drag-mode-state {
+  color: var(--accent);
+}
+.pane-drag-overlay {
+  z-index: 100;
+  pointer-events: none;
+}
+.pane-drag-preview {
+  min-width: 112px;
+  border: 1px solid color-mix(in srgb, var(--accent) 62%, var(--edge));
+  border-radius: 6px;
+  padding: 9px 12px;
+  background: color-mix(in srgb, var(--editor-background) 94%, transparent);
+  color: var(--text);
+  box-shadow: 0 12px 32px #0008;
+  font: 10px var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 .collapse-button {
   width: 23px;

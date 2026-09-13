@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'octane'
 import type { OctaneNode } from 'octane'
-import type { PaneId, WorkspaceLayout } from '../../playground/workspace-layout'
+import type { PaneId } from '../../playground/panes'
+import type { WorkspaceLayout } from '../../playground/workspace-layout'
 
 props { layout, pane, label, className, children }: { layout: WorkspaceLayout; pane: PaneId; label: string; className: string; children?: OctaneNode }
 setup const visible = useSyncExternalStore(layout.subscribe, layout.getSnapshot);

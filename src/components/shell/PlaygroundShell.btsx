@@ -15,7 +15,7 @@ setup
   const layout = useMemo(() => new WorkspaceLayout(matchMedia('(max-width: 760px)').matches, query), []);
   useEffect(() => { session.start(); return () => session.dispose(); }, [session]);
   useEffect(() => layout.connectPersistence(value => { void setQuery(value); }), [layout, setQuery]);
-  useEffect(() => layout.restore(query), [layout, query.dock, query.split, query.rows]);
+  useEffect(() => layout.restore(query), [layout, query.dock, query.split, query.rows, query.panes, query.order]);
 
 ThemeProvider(session={session})
   main.playground

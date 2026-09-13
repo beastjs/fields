@@ -77,4 +77,3 @@ form.chat-composer(onSubmit={submit})
         button.stop-button(type='button' onClick={chat.stop} aria-label='Stop response') ■
       else
         button.send-button(type='submit' disabled={!prompt.state.value.trim()} aria-label='Send message') ↑
-  p.context-disclosure #{'Conversation' + (includeFile.state.value ? ' + active file' : '') + (visible.length ? ` + ${visible.length} other file${visible.length === 1 ? '' : 's'}` : '')} → #{state.settings.provider === 'cohere' ? 'Cohere' : state.settings.provider === 'openrouter' ? 'OpenRouter' : 'your endpoint'}

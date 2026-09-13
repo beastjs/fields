@@ -1,16 +1,17 @@
 import { useSyncExternalStore } from 'octane'
-import { paneDefinitions } from '../../playground/workspace-layout'
-import type { PaneId, WorkspaceLayout } from '../../playground/workspace-layout'
+import { paneDefinitions } from '../../playground/panes'
+import type { PaneId } from '../../playground/panes'
+import type { WorkspaceLayout } from '../../playground/workspace-layout'
 
 props { layout, pane }: { layout: WorkspaceLayout; pane: PaneId }
 setup
   const visible = useSyncExternalStore(layout.subscribe, layout.getSnapshot);
   const label = paneDefinitions.find(item => item.id === pane)!.label.toLowerCase();
-  const disabled = pane === 'editor' ? !visible.preview : pane === 'preview' ? !visible.editor : false;
+  const disabled = visible[pane] && !layout.canCollapse(pane);
   const collapse = (event: MouseEvent) => {
     const shell = (event.currentTarget as HTMLElement).closest('.playground');
     layout.collapse(pane);
     shell?.querySelector<HTMLButtonElement>('[data-view="' + pane + '"]')?.focus();
   };
 
-button.collapse-button(type='button' disabled={disabled} onClick={collapse} aria-label={'Collapse ' + label} title={disabled ? 'Keep Editor or Preview open' : 'Collapse ' + label}) −
+button.collapse-button(type='button' disabled={disabled} onClick={collapse} aria-label={'Collapse ' + label} title={disabled ? 'Keep one workbench pane open' : 'Collapse ' + label}) −

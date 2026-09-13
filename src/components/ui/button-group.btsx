@@ -4,8 +4,9 @@ import { cva } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 import { Separator } from "@octanejs/base-ui/separator";
 import type { ComponentProps } from "octane";
+
 module
-  const buttonGroupVariants = cva("cn-button-group flex w-fit items-stretch *:focus-visible:relative *:focus-visible:z-10 [&>[data-slot=select-trigger]:not([class*='w-'])]:w-fit [&>input]:flex-1", {
+  const buttonGroupVariants = cva("cn-button-group rounded-md flex w-fit items-stretch *:focus-visible:relative *:focus-visible:z-10 [&>[data-slot=select-trigger]:not([class*='w-'])]:w-fit [&>input]:flex-1", {
     variants: {
       orientation: {
         horizontal: "cn-button-group-orientation-horizontal *:data-slot:rounded-r-none [&>[data-slot]~[data-slot]]:rounded-l-none [&>[data-slot]~[data-slot]]:border-l-0",
@@ -16,9 +17,11 @@ module
       orientation: "horizontal",
     },
   });
-  export { ButtonGroup, ButtonGroupSeparator, ButtonGroupText, buttonGroupVariants, };
-component ButtonGroup
-  props { className, orientation, ...props }: ComponentProps<"div"> & VariantProps<typeof buttonGroupVariants>
+  type ButtonGroupProps = ComponentProps<"div"> & VariantProps<typeof buttonGroupVariants>
+  export { ButtonGroupSeparator, ButtonGroupText, buttonGroupVariants };
+
+component ButtonGroupRoot
+  props { className, orientation, ...props }: ButtonGroupProps
   div(
     ~ role="group"
     ~ data-slot="button-group"
@@ -39,10 +42,14 @@ component ButtonGroupText
     ~ },
     ~ })
     ~ }
-props { className, orientation = "horizontal", ...props }: ComponentProps<typeof Separator>
-Separator(
-  ~ data-slot="button-group-separator"
-  ~ orientation={orientation}
-  ~ className={cn("cn-button-group-separator relative self-stretch data-horizontal:mx-px data-horizontal:w-auto data-vertical:my-px data-vertical:h-auto rounded-md overflow-hidden divide-x divide-foreground/15 border border-foreground/25", className)}
-  ~ {...props}
-  ~ )
+component ButtonGroupSeparator
+  props { className, orientation = "horizontal", ...props }: ComponentProps<typeof Separator>
+  Separator(
+    ~ data-slot="button-group-separator"
+    ~ orientation={orientation}
+    ~ className={cn("cn-button-group-separator relative self-stretch data-horizontal:mx-px data-horizontal:w-auto data-vertical:my-px data-vertical:h-auto", className)}
+    ~ {...props}
+    ~ )
+
+props {className, orientation, ...props}: ButtonGroupProps
+ButtonGroupRoot(className={cn('rounded-sm overflow-hidden divide-x divide-foreground/15 border border-foreground/25', className)} orientation={orientation} {...props})

@@ -3,6 +3,7 @@ import { connectEditor } from '../../playground/editor-connection'
 import { fileLabel, fileLanguage, navigateTabs } from '../../playground/presentation'
 import PaneSurface from '../layout/PaneSurface.btsx'
 import CollapseButton from '../layout/CollapseButton.btsx'
+import PaneReorderHandle from '../layout/PaneReorderHandle.btsx'
 import type { WorkspaceProps } from '../types'
 
 props { session, layout }: WorkspaceProps
@@ -13,6 +14,7 @@ setup
 
 PaneSurface(layout={layout} pane='editor' label='Code editor' className='editor-pane')
   div.editor-toolbar
+    PaneReorderHandle(pane='editor')
     div#editor-tabs.editor-tabs(role='tablist' aria-label='Open files' onKeyDown={navigateTabs})
       each path in Object.keys(state.project.files) key path
         button(type='button' className={'editor-tab' + (state.activeFile === path ? ' active' : '')} role='tab' aria-selected={state.activeFile === path} aria-controls='editor' tabIndex={state.activeFile === path ? 0 : -1} onClick={() => session.openFile(path)}) #{fileLabel(path)}
@@ -23,7 +25,7 @@ PaneSurface(layout={layout} pane='editor' label='Code editor' className='editor-
     span#active-filename #{fileLabel(state.activeFile)}
     span#language-label.language-label #{fileLanguage(state.activeFile)}
   div#editor.editor-mount(ref={mount} data-keymap={state.keymap})
-  div.editor-footer
+  div(className='editor-footer whitespace-nowrap')
     span#editor-file-info #{state.activeFile.split('.').at(-1)!.toUpperCase()}
     span UTF-8
     button#vim-toggle.editor-vim-toggle(type='button' aria-label='Vim mode' aria-pressed={state.keymap === 'vim'} title={state.keymap === 'vim' ? 'Disable Vim keybindings' : 'Enable Vim keybindings'} onClick={session.toggleKeymap}) VIM

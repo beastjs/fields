@@ -188,12 +188,12 @@ test('pane collapse keeps documents, undo history, output selection and the prev
   for (const pane of ['files', 'editor', 'output', 'preview']) {
     const handleName = pane === 'editor' || pane === 'preview' ? 'Resize editor and preview' : `Resize ${pane}`;
     const handle = page.getByRole('separator', { name: handleName, exact: true, includeHidden: true });
-    // Restoring each one keeps at least one of Editor/Preview visible.
+    // Restore each pane before collapsing the next so the rest of the scenario stays stable.
     await page.getByRole('button', { name: `Collapse ${pane}`, exact: true }).click();
     await expect(page.locator(`#pane-${pane}`)).toHaveAttribute('inert', '');
     await expect(page.locator(`#pane-${pane}`)).toBeHidden();
-    await expect(handle).toBeHidden();
-    await expect(handle).toHaveAttribute('aria-disabled', 'true');
+    await expect(handle).toBeVisible();
+    await expect(handle).not.toHaveAttribute('aria-disabled', 'true');
     const restore = page.locator(`[data-view="${pane}"]`);
     await expect(restore).toBeFocused();
     await expect(restore).toHaveAttribute('aria-pressed', 'false');
@@ -210,15 +210,15 @@ test('pane collapse keeps documents, undo history, output selection and the prev
   await expect(page.frameLocator('#preview-frame').getByRole('heading', { name: 'Hello, world.' })).toBeVisible();
   await page.frameLocator('#preview-frame').getByRole('button', { name: 'Increase count' }).click();
   await page.getByRole('button', { name: 'Collapse preview', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Collapse editor', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Collapse editor', exact: true })).toBeEnabled();
   await page.locator('[data-view="preview"]').click();
   await expect(page.frameLocator('#preview-frame').locator('.value')).toHaveText('1');
   await page.locator('[data-view="chat"]').click();
   await expect(page.getByRole('separator', { name: 'Resize AI chat', exact: true })).toBeVisible();
-  await expect(page.locator('#pane-chat')).toContainText('Make something work.');
-  await page.getByRole('button', { name: 'Collapse ai chat', exact: true }).click();
+  await expect(page.locator('#pane-chat')).toContainText('Fast Builder');
+  await page.getByRole('button', { name: 'Collapse assistant', exact: true }).click();
   await expect(page.locator('#pane-chat')).toBeHidden();
-  await expect(page.getByRole('separator', { name: 'Resize AI chat', exact: true, includeHidden: true })).toBeHidden();
+  await expect(page.getByRole('separator', { name: 'Resize AI chat', exact: true })).toBeVisible();
 });
 
 test('panes resize by pointer and keyboard, remember expansion size, and reset without reload', async ({ page }) => {
@@ -255,7 +255,7 @@ test('panes resize by pointer and keyboard, remember expansion size, and reset w
   expect((await dimensions()).output).toBeGreaterThan(outputBefore);
   await page.getByRole('separator', { name: 'Resize files', exact: true }).press('Enter');
   await expect(page.locator('[data-view="files"]')).toHaveAttribute('aria-pressed', 'false');
-  await expect(page.getByRole('separator', { name: 'Resize files', exact: true, includeHidden: true })).toBeHidden();
+  await expect(page.getByRole('separator', { name: 'Resize files', exact: true })).toBeVisible();
   await page.locator('[data-view="files"]').click();
   await expect(page.locator('#pane-files')).toBeVisible();
   await page.locator('[data-view="chat"]').click();
