@@ -2,10 +2,10 @@ import { cn } from "@/lib/utils";
 import type { ComponentProps } from "octane";
 import {Icon} from '@/lib/icons'
 module
-  type NativeSelectProps = Omit<ComponentProps<"select">, "size"> & {size?: "sm" | "default"};
+  type NativeSelectProps = Omit<ComponentProps<"select">, "size"> & {size?: "sm" | "default", placeholder?: string};
   export { NativeSelectOptGroup, NativeSelectOption };
 component NativeSelectRoot
-  props { className, size = "default", ...props }: NativeSelectProps
+  props { className, placeholder, size = "default", ...props }: NativeSelectProps
   div(
     ~ className={cn("flex items-center justify-between cn-native-select-wrapper group/native-select relative w-fit has-[select:disabled]:opacity-50", className)}
     ~ data-slot="native-select-wrapper"

@@ -2,7 +2,7 @@ module "use client";
 import { Tooltip as T } from "@octanejs/base-ui/tooltip";
 import { cn } from "@/lib/utils";
 import { createContext, createElement, useContext, useLayoutEffect, useMemo, useRef, useState } from "octane";
-import type { RefObject, OctaneNode, CSSProperties, ReactElement, Ref, PointerEventHandler, FocusEventHandler, KeyboardEventHandler } from "octane";
+import type {ClassValue, RefObject, OctaneNode, CSSProperties, ReactElement, Ref, PointerEventHandler, FocusEventHandler, KeyboardEventHandler } from "octane";
 module
   type FluidTooltipOrientation = "horizontal" | "vertical" | "auto";
   type FluidTooltipSide = "top" | "right" | "bottom" | "left";
@@ -91,7 +91,7 @@ module
 // lifted from the T.Root render prop; className came from the component around it
 // its props type is the one thing the conversion cannot infer — annotate it
 component TooltipRootChildren
-  props { payload, className }
+  props { payload, className }: {payload: FluidTooltipPayload, className: ClassValue}
   T.Portal
     if payload
       T.Positioner(
@@ -128,7 +128,7 @@ component FluidTooltipRoot
     }), [align, disabled, id, side, sideOffset]);
   RootContext.Provider(value={context}) #{children}
 component FluidTooltipTrigger
-  props { children, keepOpenOnClick = false, onPointerEnter, onFocus, onKeyDown, ref, ...props }: FluidTooltipTriggerProps & { ref: Ref<HTMLElement> }
+  props { children, keepOpenOnClick = false, ref, ...props }: FluidTooltipTriggerProps & { ref: Ref<HTMLElement|null> }
   setup
     const group = useGroupContext("FluidT.Trigger");
     const root = useRootContext("FluidT.Trigger");
@@ -143,31 +143,14 @@ component FluidTooltipTrigger
       contentClassNameRef: root.contentClassNameRef,
     };
 
-    const handlePointerEnter: PointerEventHandler<HTMLElement> = (event) => {
-      if (event.pointerType !== "touch") {
-        group.registerPointerTarget(event.currentTarget);
-      }
-      onPointerEnter?.(event);
-    };
 
-    const handleFocus: FocusEventHandler<HTMLElement> = (event) => {
-      group.registerKeyboardTarget();
-      onFocus?.(event);
-    };
 
-    const handleKeyDown: KeyboardEventHandler<HTMLElement> = (event) => {
-      group.registerKeyboardTarget();
-      onKeyDown?.(event);
-    };
   T.Trigger(
     ~ {...props}
     ~ ref={ref as Ref<HTMLButtonElement>}
     ~ closeOnClick={!keepOpenOnClick}
     ~ disabled={group.disabled || root.disabled}
     ~ handle={group.handle}
-    ~ onFocus={handleFocus}
-    ~ onKeyDown={handleKeyDown}
-    ~ onPointerEnter={handlePointerEnter}
     ~ payload={payload}
     ~ )
     | #{children}
@@ -233,7 +216,7 @@ setup
     },
   }), [disabled, direction, handle, keyboardNavigation, orientation]);
 
-  const handleOnOpenChange = (open) => {
+  const handleOnOpenChange = (open: boolean) => {
     if (!open) {
       previousCenter.current = null;
       setDirection(0);
@@ -245,5 +228,5 @@ T.Provider(delay={Math.max(0, openDelay)} closeDelay={Math.max(0, closeDelay)} t
     ~ handle={handle}
     ~ disabled={disabled}
     ~ onOpenChange={handleOnOpenChange}
-    ~ children={(state) => createElement(TooltipRootChildren, { ...state, className })}
+    ~ children={(state: any) => createElement(TooltipRootChildren, { ...state, className })}
     ~ )

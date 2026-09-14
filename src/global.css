@@ -1,0 +1,378 @@
+@import 'tailwindcss';
+
+@font-face {
+  font-family: 'IOS';
+  src: url('../public/fonts/IoskeleyMono-Regular.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-mono: swap;
+  font-display: fallback;
+}
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.81 0.1 252);
+  --chart-2: oklch(0.62 0.19 260);
+  --chart-3: oklch(0.55 0.22 263);
+  --chart-4: oklch(0.49 0.22 264);
+  --chart-5: oklch(0.42 0.18 266);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  --font-serif: ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+  --font-mono:
+    'IOS', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  --radius: 0.625rem;
+  --shadow-x: 0;
+  --shadow-y: 1px;
+  --shadow-blur: 3px;
+  --shadow-spread: 0px;
+  --shadow-opacity: 0.1;
+  --shadow-color: oklch(0 0 0);
+  --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+  --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+  --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
+  --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
+  --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 2px 4px -1px hsl(0 0% 0% / 0.1);
+  --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 4px 6px -1px hsl(0 0% 0% / 0.1);
+  --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
+  --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.269 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.852 0.087 64.52);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.275 0 0);
+  --input: oklch(0.325 0 0);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.81 0.1 252);
+  --chart-2: oklch(0.62 0.19 260);
+  --chart-3: oklch(0.55 0.22 263);
+  --chart-4: oklch(0.49 0.22 264);
+  --chart-5: oklch(0.42 0.18 266);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(0.275 0 0);
+  --sidebar-ring: oklch(0.439 0 0);
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  --font-serif: ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+
+  --font-mono:
+    'IOS', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  --radius: 0.625rem;
+  --shadow-x: 0;
+  --shadow-y: 1px;
+  --shadow-blur: 3px;
+  --shadow-spread: 0px;
+  --shadow-opacity: 0.1;
+  --shadow-color: oklch(0 0 0);
+  --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+  --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+  --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
+  --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
+  --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 2px 4px -1px hsl(0 0% 0% / 0.1);
+  --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 4px 6px -1px hsl(0 0% 0% / 0.1);
+  --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
+  --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-serif: var(--font-serif);
+  --text-2xs: 10px;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --shadow-2xs: var(--shadow-2xs);
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow: var(--shadow);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+  --shadow-2xl: var(--shadow-2xl);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Playground palette. Dark is the default; theme.ts stamps data-theme="light" for the light theme.
+   `--brand` and `--dim` keep clear of the shadcn `--accent` and `--muted` tokens above. */
+:root {
+  color-scheme: dark;
+  --canvas: #202020;
+  --panel: oklch(0.31 0 0);
+  --panel-deep: #282828;
+  --inset: #222222;
+  --seam: oklch(0.1638 0 0);
+  --surface-toolbar: #252525;
+  --editor-background: #292929;
+  --surface-recessed: #2b2b2b;
+  --surface-hover: #343434;
+  --control: #393939;
+  --edge: #464646;
+  --edge-strong: #555555;
+  --text: #dedede;
+  --text-secondary: #bdbdbd;
+  --dim: #9a9a9a;
+  --faint: #828282;
+  --brand: #e8a471;
+  --brand-hover: #ff7a39;
+  --warning: #e9b747;
+  --selection: #75503b;
+  --syntax-keyword: #baa6c4;
+  --syntax-string: #b3bb9e;
+  --syntax-type: #d0b18c;
+  --syntax-tag: #a5b6bd;
+  --syntax-comment: #8c8c86;
+  --syntax-number: #ee9b68;
+  --syntax-attribute: #c4a79f;
+  --syntax-function: #9fc2b1;
+  --diff-add: #a8c98a;
+  --diff-add-surface: rgba(122, 168, 90, 0.16);
+  --diff-del: #d99a94;
+  --diff-del-surface: rgba(190, 90, 80, 0.16);
+  --mono: 'IOS', Menlo, Consolas, monospace;
+}
+:root[data-theme='light'] {
+  color-scheme: light;
+  --canvas: #efeee8;
+  --panel: #faf9f5;
+  --panel-deep: #f2f0ea;
+  --inset: #e9e7df;
+  --seam: #d4d1c8;
+  --surface-toolbar: #eeece5;
+  --editor-background: #fdfcf8;
+  --surface-recessed: #f4f2ec;
+  --surface-hover: #eeebe2;
+  --control: #e6e2d8;
+  --edge: #d6d2c7;
+  --edge-strong: #c0baad;
+  --text: #2c3029;
+  --text-secondary: #4e5349;
+  --dim: #64695e;
+  --faint: #73786c;
+  --brand: #c64d18;
+  --brand-hover: #d85920;
+  --warning: #895b10;
+  --selection: #ecd5b9;
+  --syntax-keyword: #805183;
+  --syntax-string: #526c32;
+  --syntax-type: #8e581e;
+  --syntax-tag: #3e6878;
+  --syntax-comment: #79816e;
+  --syntax-number: #a85124;
+  --syntax-attribute: #8a4f47;
+  --syntax-function: #2d6b5a;
+  --diff-add: #3f6b28;
+  --diff-add-surface: rgba(90, 140, 60, 0.16);
+  --diff-del: #9a3428;
+  --diff-del-surface: rgba(180, 70, 55, 0.14);
+  --mono: 'IOS', Menlo, Consolas, monospace;
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-panel: var(--panel);
+  --color-panel-deep: var(--panel-deep);
+  --color-inset: var(--inset);
+  --color-seam: var(--seam);
+  --color-surface-toolbar: var(--surface-toolbar);
+  --color-editor: var(--editor-background);
+  --color-surface-recessed: var(--surface-recessed);
+  --color-surface-hover: var(--surface-hover);
+  --color-control: var(--control);
+  --color-edge: var(--edge);
+  --color-edge-strong: var(--edge-strong);
+  --color-fg: var(--text);
+  --color-fg-secondary: var(--text-secondary);
+  --color-dim: var(--dim);
+  --color-faint: var(--faint);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-warning: var(--warning);
+  --color-diff-add: var(--diff-add);
+  --color-diff-add-surface: var(--diff-add-surface);
+  --color-diff-del: var(--diff-del);
+  --color-diff-del-surface: var(--diff-del-surface);
+  --font-code: var(--mono);
+  --font-mono:
+    'IOS', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  --animate-thinking: thinking 1.2s infinite alternate;
+  @keyframes thinking {
+    to {
+      opacity: 0.25;
+    }
+  }
+}
+
+/* `light:` follows the playground theme toggle. */
+@custom-variant light (&:where([data-theme='light'], [data-theme='light'] *));
+/* `arranging:` applies while the workspace is in pane-arrangement mode. */
+@custom-variant arranging (&:where([data-arranging='true'] *));
+/* Height container queries for the output and chat panes (Tailwind only ships width queries). */
+@custom-variant output-short {
+  @container output-pane (max-height: 180px) {
+    @slot;
+  }
+}
+@custom-variant chat-short {
+  @container chat-pane (max-height: 420px) {
+    @slot;
+  }
+}
+
+@layer base {
+  html,
+  body,
+  #app {
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+  }
+  :root {
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--edge-strong) transparent;
+  }
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+  a,
+  input,
+  textarea,
+  select {
+    -webkit-tap-highlight-color: transparent;
+  }
+  :is(button, a, input, textarea, select):focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: -2px;
+  }
+  ::selection {
+    background: var(--selection);
+    color: var(--text);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      scroll-behavior: auto !important;
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+}
+
+/* Pane moves animate through view transitions; these pseudo-elements live on the document root. */
+::view-transition-group(pane-files),
+::view-transition-group(pane-editor),
+::view-transition-group(pane-preview),
+::view-transition-group(pane-chat) {
+  animation-duration: 520ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+::view-transition-old(pane-files),
+::view-transition-old(pane-editor),
+::view-transition-old(pane-preview),
+::view-transition-old(pane-chat),
+::view-transition-new(pane-files),
+::view-transition-new(pane-editor),
+::view-transition-new(pane-preview),
+::view-transition-new(pane-chat) {
+  mix-blend-mode: normal;
+}

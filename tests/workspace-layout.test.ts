@@ -54,13 +54,22 @@ test('any other visible workbench pane allows a pane to collapse', () => {
   expect(layout.canCollapse('output')).toBe(true);
 });
 
-test('pane reordering is gated by the dragging preference', () => {
+test('arranging previews pane order and only persists it when finished', () => {
   const layout = new WorkspaceLayout(false, query());
-  layout.setDraggingEnabled(false);
-  layout.reorder('chat', 'files');
-  expect(layout.getSnapshot().order).toEqual(['files', 'editor', 'preview', 'chat']);
+  let persisted: PanelQuery | undefined;
+  layout.connectPersistence(value => { persisted = value; });
 
-  layout.setDraggingEnabled(true);
-  layout.reorder('chat', 'files');
+  layout.beginArranging();
+  layout.previewOrder(['chat', 'files', 'editor', 'preview']);
+
+  expect(layout.getSnapshot().arranging).toBe(true);
+  expect(layout.getSnapshot().arrangeOrder).toEqual(['chat', 'files', 'editor', 'preview']);
+  expect(layout.getSnapshot().order).toEqual(['files', 'editor', 'preview', 'chat']);
+  expect(persisted).toBeUndefined();
+
+  layout.finishArranging();
+
+  expect(layout.getSnapshot().arranging).toBe(false);
   expect(layout.getSnapshot().order).toEqual(['chat', 'files', 'editor', 'preview']);
+  expect(persisted?.order).toEqual(['chat', 'files', 'editor', 'preview']);
 });

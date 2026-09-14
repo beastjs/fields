@@ -65,8 +65,6 @@ setup
   }, [session]);
 
 button(type='button' aria-label='Share project' title='Share project' onClick={event => { event.currentTarget.focus(); void share(); }})
-  div.big-icon
-    Icon(name='share' className='size-4')
-  // span.share-label Share
+  Icon(name='share' className='size-4')
 if transfer
   ProjectTransferDialog(transfer={transfer} onClose={close} onCopy={copy} onImport={importProject})

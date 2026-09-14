@@ -7,29 +7,32 @@ import CollapseButton from '../layout/CollapseButton.btsx'
 import ProblemsList from './ProblemsList.btsx'
 import ConsoleList from './ConsoleList.btsx'
 import GeneratedCode from './GeneratedCode.btsx'
+import { cn } from '@/lib/utils'
 
 module
+  const count = 'min-w-3.5 rounded-[3px] bg-control px-[5px] py-px font-code text-[8px] text-fg-secondary';
+  const toolsContent = 'flex-1 overflow-auto px-4 py-3 font-code text-[10px] output-short:px-3 output-short:py-2';
   const tabs: { id: ToolPanel; label: string }[] = [{ id: 'problems', label: 'Problems' }, { id: 'console', label: 'Console' }, { id: 'output', label: 'Generated code' }];
 
 props { session, layout, navigate }: WorkspaceProps & { navigate: NavigateToSource }
 setup const state = useSyncExternalStore(session.subscribe, session.getSnapshot);
 
-PaneSurface(layout={layout} pane='output' label='Developer tools' className='bottom-panel')
-  div.tools-toolbar
-    div.tools-tabs(role='tablist' aria-label='Developer tools' onKeyDown={navigateTabs})
+PaneSurface(layout={layout} pane='output' label='Developer tools' className='flex flex-col bg-surface-recessed [container-type:size] [container-name:output-pane]')
+  div(className='flex h-[39px] min-h-[39px] items-center gap-3 border-b border-edge px-4 max-[760px]:gap-2 max-[760px]:px-2.5')
+    div(className='flex gap-[22px] self-stretch max-[760px]:gap-3.5' role='tablist' aria-label='Developer tools' onKeyDown={navigateTabs})
       each tab in tabs key tab.id
-        button(type='button' id={tab.id + '-tab'} role='tab' className={'tool-tab' + (state.toolPanel === tab.id ? ' active' : '')} data-panel={tab.id} aria-selected={state.toolPanel === tab.id} aria-controls={tab.id + '-panel'} tabIndex={state.toolPanel === tab.id ? 0 : -1} onClick={() => session.selectTool(tab.id)})
+        button(type='button' id={tab.id + '-tab'} role='tab' className={cn('flex items-center gap-[7px] border-0 border-b-2 border-b-transparent bg-transparent px-px text-[10px] text-dim', state.toolPanel === tab.id && 'border-b-brand text-fg')} data-panel={tab.id} aria-selected={state.toolPanel === tab.id} aria-controls={tab.id + '-panel'} tabIndex={state.toolPanel === tab.id ? 0 : -1} onClick={() => session.selectTool(tab.id)})
           | #{tab.label}
           if tab.id === 'problems'
-            span#problem-count.count #{state.diagnostics.length}
+            span#problem-count(className={count}) #{state.diagnostics.length}
           elseif tab.id === 'console'
-            span#console-count.count #{state.console.length}
-    button#clear-console.clear-button(type='button' hidden={state.toolPanel !== 'console'} onClick={session.clearConsole}) Clear console
-    span#build-summary.build-summary #{state.lastResult ? state.lastResult.metadata.transformedFiles + ' components · ' + state.lastResult.metadata.duration.toFixed(0) + 'ms total' : 'Waiting for first build'}
-    CollapseButton(layout={layout} pane='output')
-  div#problems-panel.tools-content(role='tabpanel' aria-labelledby='problems-tab' hidden={state.toolPanel !== 'problems'})
+            span#console-count(className={count}) #{state.console.length}
+    button#clear-console(className='border-none bg-none text-[9px] text-fg-secondary' type='button' hidden={state.toolPanel !== 'console'} onClick={session.clearConsole}) Clear console
+    span#build-summary(className='ml-auto font-code text-[8px] text-faint max-[760px]:hidden') #{state.lastResult ? state.lastResult.metadata.transformedFiles + ' components · ' + state.lastResult.metadata.duration.toFixed(0) + 'ms total' : 'Waiting for first build'}
+    CollapseButton(layout={layout} pane='output' className='max-[760px]:ml-auto')
+  div#problems-panel(className={toolsContent} role='tabpanel' aria-labelledby='problems-tab' hidden={state.toolPanel !== 'problems'})
     ProblemsList(state={state} navigate={navigate})
-  div#console-panel.tools-content(role='tabpanel' aria-labelledby='console-tab' hidden={state.toolPanel !== 'console'})
+  div#console-panel(className={toolsContent} role='tabpanel' aria-labelledby='console-tab' hidden={state.toolPanel !== 'console'})
     ConsoleList(session={session} state={state} navigate={navigate})
-  div#output-panel.tools-content.output-content(role='tabpanel' aria-labelledby='output-tab' hidden={state.toolPanel !== 'output'})
+  div#output-panel(className={cn(toolsContent, 'flex gap-[25px] max-[760px]:gap-3')} role='tabpanel' aria-labelledby='output-tab' hidden={state.toolPanel !== 'output'})
     GeneratedCode(state={state})

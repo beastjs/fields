@@ -4,11 +4,9 @@ import type { Modifiers, UniqueIdentifier } from '@dnd-kit/abstract'
 import { RestrictToHorizontalAxis, RestrictToVerticalAxis } from '@dnd-kit/abstract/modifiers'
 import { Accessibility } from '@dnd-kit/dom'
 import { RestrictToElement } from '@dnd-kit/dom/modifiers'
-import { OptimisticSortingPlugin, SortableKeyboardPlugin } from '@dnd-kit/dom/sortable'
 import { DragDropProvider,
   ~ DragOverlay,
   ~ type DragDropProviderProps,
-  ~ type DragEndEvent,
   ~ type DragOverlayProps } from '@octanejs/dnd-kit'
 import { isSortable, useSortable } from '@octanejs/dnd-kit/sortable'
 import { useRender } from '@octanejs/base-ui/use-render'
@@ -60,8 +58,8 @@ module
     id?: string
     value: T[]
     children?: unknown
+    /** Called while dragging as the active item passes over other items, and again with the original order if the drag is cancelled. */
     onValueChange?: (items: T[]) => void
-    onMove?: (event: DragEndEvent & { activeIndex: number; overIndex: number }) => void
     onDragStart?: DragDropProviderProps['onDragStart']
     onDragMove?: DragDropProviderProps['onDragMove']
     onDragOver?: DragDropProviderProps['onDragOver']
@@ -202,7 +200,6 @@ component SortableItem
       group: context.id,
       disabled,
       collisionDetector: context.collisionDetector,
-      plugins: [SortableKeyboardPlugin, OptimisticSortingPlugin],
     })
     const composedRef = useComposedRefs(ref, (node: HTMLElement | null) => {
       sortable.ref(node)
@@ -229,11 +226,7 @@ component SortableItem
         'data-dragging': sortable.isDragging ? '' : undefined,
         ...referenceProps,
         ...itemProps,
-        style: {
-          ...(itemProps.style ?? {}),
-          opacity: sortable.isDragging ? 0 : itemProps.style?.opacity,
-        },
-        tabIndex: disabled ? undefined : (itemProps.tabIndex ?? 0),
+        tabIndex: itemProps.tabIndex ?? (disabled ? undefined : 0),
         children: childIsRenderElement ? undefined : children,
         className: cn(
           'focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1',
@@ -241,9 +234,8 @@ component SortableItem
             'touch-none select-none': asHandle,
             'cursor-default': context.flatCursor,
             'data-dragging:cursor-grabbing': !context.flatCursor,
-            'cursor-grab': !sortable.isDragging && asHandle && !context.flatCursor,
-            'pointer-events-none opacity-0': sortable.isDragging,
-            'pointer-events-none opacity-50': disabled && asHandle,
+            'cursor-grab': !sortable.isDragging && asHandle && !disabled && !context.flatCursor,
+            'pointer-events-none': sortable.isDragging,
           },
           className,
         ),
@@ -319,7 +311,6 @@ props { id: idProp,
   ~ value,
   ~ children,
   ~ onValueChange,
-  ~ onMove,
   ~ onDragStart,
   ~ onDragMove,
   ~ onDragOver,
@@ -334,7 +325,7 @@ setup
   const generatedId = useId()
   const id = idProp ?? generatedId
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null)
-  const lastOverId = useRef<UniqueIdentifier | null>(null)
+  const initialValue = useRef<unknown[] | null>(null)
   const config = orientationConfig[orientation]
   const getItemValue = useCallback(
     (item: any): UniqueIdentifier => {
@@ -405,12 +396,12 @@ setup
     [accessibilityPlugin],
   )
 
+  // Items are reordered through application state while dragging; dnd-kit animates each sortable to its new index.
   const handleDragStart: ProviderHandler<'onDragStart'> = (event, manager) => {
     onDragStart?.(event, manager)
     if (!wasPrevented(event)) {
-      lastOverId.current = null
-      const nextActiveId = event.operation.source?.id ?? null
-      setActiveId(nextActiveId)
+      initialValue.current = value.slice()
+      setActiveId(event.operation.source?.id ?? null)
     }
   }
   const handleDragMove: ProviderHandler<'onDragMove'> = (event, manager) => {
@@ -418,33 +409,24 @@ setup
   }
   const handleDragOver: ProviderHandler<'onDragOver'> = (event, manager) => {
     onDragOver?.(event, manager)
+    if (wasPrevented(event)) return
+    const sourceId = event.operation.source?.id
     const targetId = event.operation.target?.id
-    if (targetId !== undefined && targetId !== event.operation.source?.id) lastOverId.current = targetId
+    if (sourceId == null || targetId == null || sourceId === targetId) return
+    const activeIndex = value.findIndex((item) => getItemValue(item) === sourceId)
+    const overIndex = value.findIndex((item) => getItemValue(item) === targetId)
+    if (activeIndex >= 0 && overIndex >= 0) onValueChange?.(arrayMove(value, activeIndex, overIndex))
   }
   const handleDragEnd: ProviderHandler<'onDragEnd'> = (event, manager) => {
     onDragEndProp?.(event, manager)
+    const original = initialValue.current
     if (event.canceled) {
       onDragCancel?.(event, manager)
-      lastOverId.current = null
-      setActiveId(null)
-      return
-    }
-    if (!wasPrevented(event)) {
-      const active = event.operation.source
-      const over = event.operation.target
-      if (active) {
-        const activeIndex = value.findIndex((item) => getItemValue(item) === active.id)
-        const targetId = lastOverId.current ?? over?.id
-        const overIndex = targetId == null
-          ? activeIndex
-          : value.findIndex((item) => getItemValue(item) === targetId)
-        if (activeIndex >= 0 && overIndex >= 0) {
-          if (onMove) onMove({ ...event, activeIndex, overIndex })
-          else if (activeIndex !== overIndex) onValueChange?.(arrayMove(value, activeIndex, overIndex))
-        }
+      if (original && original.some((item, index) => getItemValue(item) !== getItemValue(value[index]))) {
+        onValueChange?.(original)
       }
     }
-    lastOverId.current = null
+    initialValue.current = null
     setActiveId(null)
   }
 

@@ -5,6 +5,8 @@ import { fileLabel } from '../../playground/presentation'
 import type { ChatController } from '../../chat/controller'
 import type { PlaygroundSession } from '../../playground/session'
 import NativeSelect, {NativeSelectOption} from "../ui/native-select.btsx";
+import { cn } from '@/lib/utils'
+import {Icon} from "@/lib/icons";
 
 module
   interface ChatComposerProps { chat: ChatController; session: PlaygroundSession, auto: boolean, toggleAuto: VoidFunction }
@@ -36,44 +38,49 @@ setup
     if (file && visible.length < MAX_REFERENCES) setIncluded([...visible, file]);
   };
   const removeFile = (file: string) => setIncluded(files => files.filter(item => item !== file));
+  const roundButton = 'mb-[7px] size-7 shrink-0 rounded-full border border-seam bg-control text-[18px] text-brand shadow-[inset_0_1px_var(--faint)]';
   const submit = (event: SubmitEvent) => { event.preventDefault(); void form.handleSubmit(); };
   const keydown = (event: KeyboardEvent) => {
     if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); if (!state.busy) void form.handleSubmit(); }
   };
 
 
-form.chat-composer(onSubmit={submit})
+form(className='shrink-0 border-t border-edge bg-editor p-3 light:shadow-[inset_0_1px_#fff9,0_1px_2px_#4e473b0d] chat-short:p-2' onSubmit={submit})
   if !state.messages.length
-    div.chat-suggestions
-      button(type='button' onClick={() => prompt.handleChange('Fix errors on active file.')} ) Fix errors ↗
-      button(type='button' onClick={() => prompt.handleChange('Improve active file.')} ) Improve this file ↗
+    div(className='mb-3 flex rounded-[4px] border border-edge-strong bg-surface-hover chat-short:hidden [&>button]:px-[9px] [&>button]:py-2 [&>button]:text-left [&>button]:text-[9px] [&>button]:text-fg-secondary [&>button]:hover:bg-control [&>button]:hover:text-fg')
+      button(type='button' onClick={() => prompt.handleChange('Fix errors on active file.')})
+        Icon(name='fix' className='size-4')
+      button(type='button' onClick={() => prompt.handleChange('Improve active file.')})
+        Icon(name='build' className='size-4')
+      button(type='button' onClick={() => prompt.handleChange('Improve active file.')})
+        Icon(name='plan' className='size-4')
       button(type='button' onClick={() => prompt.handleChange('Optimize this active file for performance.')} ) Optimize for performance ↗
   div(className='w-full flex items-center justify-between')
     div(className='flex items-center gap-1')
-      label.context-toggle
+      label(className='mb-[9px] flex flex-wrap items-center gap-[5px] text-[8px] text-dim [&_input]:m-0 [&_input]:size-[11px] [&_input]:accent-brand')
         input(type='checkbox' checked={includeFile.state.value} onChange={event => includeFile.handleChange(event.currentTarget.checked)})
         span Include
-        code(title={project.activeFile}) #{fileLabel(project.activeFile)}
-      div.context-files
+        code(className='max-w-full overflow-hidden text-ellipsis rounded-[3px] border border-edge bg-surface-hover px-[5px] py-[3px] font-code text-[8px] text-[#c5ac8c] light:text-[#a64b19]' title={project.activeFile}) #{fileLabel(project.activeFile)}
+      div(className='mb-[9px] flex flex-wrap items-center gap-1 empty:hidden')
         each file in visible key file
-          span.context-file(title={file})
-            code #{fileLabel(file)}
-            button(type='button' onClick={() => removeFile(file)} aria-label={'Remove ' + file + ' from chat'}) ×
+          span(className='inline-flex max-w-full items-center rounded-[3px] border border-edge bg-surface-hover' title={file})
+            code(className='truncate py-[3px] pl-[5px] font-code text-[8px] text-[#c5ac8c]') #{fileLabel(file)}
+            button(className='border-0 bg-none px-[5px] text-[10px] leading-none text-dim hover:text-fg' type='button' onClick={() => removeFile(file)} aria-label={'Remove ' + file + ' from chat'}) ×
         if available.length && visible.length < MAX_REFERENCES
-          NativeSelect#chat-add-file.context-add(className='py-0.75!' value='' onChange={addFile} aria-label='Include another file in chat' placeholder='+ Add')
+          NativeSelect#chat-add-file(className='rounded-[3px] border border-dashed border-edge-strong bg-transparent px-1 py-0.75! font-code text-[8px] text-dim hover:text-fg' value='' onChange={addFile} aria-label='Include another file in chat' placeholder='+ Add')
             option(value='add') +Add
             each file in available key file
               NativeSelectOption( value={file}) #{fileLabel(file)}
-    label.context-toggle(htmlFor='auto-apply')
+    label(className='mb-[9px] flex flex-wrap items-center gap-[5px] text-[8px] text-dim [&_input]:m-0 [&_input]:size-[11px] [&_input]:accent-brand' htmlFor='auto-apply')
       input#auto-apply(type='checkbox' checked={auto} onChange={toggleAuto})
       span(className='select-none') Auto-apply
 
-  div.composer-input
-    label.sr-only(for='chat-prompt') Message AI
-    textarea#chat-prompt(value={prompt.state.value} onInput={event => prompt.handleChange(event.currentTarget.value)} onKeyDown={keydown} placeholder='Ask about your code…' rows='3' maxlength='32000' resize='none')
-    div.composer-actions
-      span Enter to send · Shift Enter for a new line
+  div(className='overflow-hidden rounded-md border border-edge-strong bg-inset shadow-[inset_0_1px_3px_#15151515] focus-within:border-[#b67546]')
+    label(className='sr-only' for='chat-prompt') Message AI
+    textarea#chat-prompt(value={prompt.state.value} onInput={event => prompt.handleChange(event.currentTarget.value)} onKeyDown={keydown} placeholder='Ask about your code…' rows={3} maxlength='32000' className='block max-h-[170px] min-h-[70px] w-full resize-none border-0 bg-none p-[11px] text-[11px] leading-[1.7] text-fg decoration-none outline-none placeholder:text-dim focus-visible:outline-none chat-short:min-h-[42px] chat-short:p-[7px]')
+    div(className='flex items-center justify-between gap-2 pr-[7px] pl-2.5 chat-short:justify-end chat-short:pb-[5px]')
+      span(className='font-code text-[8px]/[1.6] text-faint chat-short:hidden') Enter to send · Shift Enter for a new line
       if state.busy
-        button.stop-button(type='button' onClick={chat.stop} aria-label='Stop response') ■
+        button(className={cn(roundButton, 'text-[10px]')} type='button' onClick={chat.stop} aria-label='Stop response') ■
       else
-        button.send-button(type='submit' disabled={!prompt.state.value.trim()} aria-label='Send message') ↑
+        button(className={cn(roundButton, 'disabled:text-faint disabled:opacity-65')} type='submit' disabled={!prompt.state.value.trim()} aria-label='Send message') ↑

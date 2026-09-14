@@ -3,7 +3,6 @@ import { ChatController } from '../../chat/controller'
 import { readChatSettings, saveChatSettings } from '../../chat/settings'
 import PaneSurface from '../layout/PaneSurface.btsx'
 import CollapseButton from '../layout/CollapseButton.btsx'
-import PaneReorderHandle from '../layout/PaneReorderHandle.btsx'
 import ChatSettings from './ChatSettings.btsx'
 import ChatComposer from './ChatComposer.btsx'
 import ChatMessage from './ChatMessage.btsx'
@@ -11,6 +10,9 @@ import { fixUpPrompt } from '../../chat/iterate'
 import type { ChatMessage as Message } from '../../chat/controller'
 import {Icon} from '@/lib/icons'
 import type { WorkspaceProps } from '../types'
+import {ThinkingOrb} from '@beastjs/thinking-orbs'
+import { cn } from '@/lib/utils'
+import { iconButton, secondaryButton } from '../ui/styles'
 
 props { layout, session }: WorkspaceProps
 setup
@@ -23,6 +25,7 @@ setup
   useEffect(() => { void chat.checkConnection(); return () => chat.dispose(); }, [chat]);
   useEffect(() => { if (state.messages.length && follow.current && scroller.current) scroller.current.scrollTop = scroller.current.scrollHeight; }, [state.messages]);
   const scroll = () => { const node = scroller.current!; follow.current = node.scrollHeight - node.scrollTop - node.clientHeight < 80; };
+  const errorButton = cn(secondaryButton, 'px-[7px] py-1 text-[9px]');
   const [isAutoApply, setIsAutoApply] = useState(true)
   const toggleAuto = () => setIsAutoApply(v => !v)
   const autoRef = useRef(isAutoApply)
@@ -47,42 +50,44 @@ setup
   }
 
 
-PaneSurface(layout={layout} pane='chat' label='AI chat' className='chat-pane')
-  div(className='h-9 flex items-center justify-between border-b border-[var(--edge)] px-1 text-xs ')
-    div.panel-title
-      PaneReorderHandle(pane='chat')
-      div(className='flex items-center gap-1 text-[11px]')
-        span(className='opacity-70') ✦
-        span(className='') Assistant
-    div.panel-actions
-      button.icon-button(type='button' title='New chat' aria-label='New chat' onClick={chat.clear})
+PaneSurface(layout={layout} pane='chat' label='AI chat' className='flex flex-col overflow-auto bg-panel [container-type:size] [container-name:chat-pane]')
+  div(className='h-9 flex items-center justify-between border-b border-[var(--edge)] px-2 text-xs ')
+    div(className='flex min-w-0 items-center gap-2')
+      div(className='flex items-center gap-2 text-xs')
+        span(className='text-accent') ✦
+        span(className='font-mono text-muted-foreground') #{state.settings.model.replace(/^cohere\//, '')}
+    div(className='flex items-center gap-0.5')
+      button(className={iconButton} type='button' title='New chat' aria-label='New chat' onClick={chat.clear})
         Icon(name='plus' className='size-3.5')
-      button.icon-button(type='button' title='AI settings' aria-label='AI settings' onClick={() => setSettingsOpen(true)})
+      button(className={iconButton} type='button' title='AI settings' aria-label='AI settings' onClick={() => setSettingsOpen(true)})
         Icon(name='settings' className='size-3.5')
       CollapseButton(layout={layout} pane='chat')
-  button.chat-connection(type='button' onClick={() => setSettingsOpen(true)} aria-label='Configure AI provider and model')
-    span.connection-led(data-connected={connected})
-    span.model-name(title={state.settings.model}) #{state.settings.model.replace(/^cohere\//, '')}
-    span.connection-label #{connected ? 'READY' : 'SETUP'}
-  div.chat-history(ref={scroller} onScroll={scroll} role='log' aria-label='Chat messages' aria-live='polite')
+  button(className='flex w-full min-w-0 items-center gap-2 border-0 border-b border-control bg-editor px-1.5 py-1 text-left' type='button' onClick={() => setSettingsOpen(true)} aria-label='Configure AI provider and model')
+  div(className='min-h-0 flex-1 overflow-auto px-[15px] py-[17px]' ref={scroller} onScroll={scroll} role='log' aria-label='Chat messages' aria-live='polite')
     if !state.messages.length
-      div.chat-welcome
-        div.assistant-dial(aria-hidden={true}) ✦
-        h2 Fast Builder
+      div(className='chat-welcome mt-2.5 mb-3')
+
+        div(className='relative size-16 aspect-square flex items-center justify-center scale-110')
+          span(className='absolute text-2xl scale-105 text-orange-200/80 blur-sm animate-spin') ✦
+          span(className='absolute text-xl text-brand') ✦
+          span(className='absolute text-xl scale-90 text-orange-200 blur-[2px] animate-pulse') ✦
+          ThinkingOrb(state='composing' size={64} speed={0.1515})
+
+        h2(className='mt-[9px] mb-[11px] text-[18px] font-medium leading-[1.3] tracking-[-0.5px] text-fg') Fast Builder
         each idea in ['Explore an idea', 'untangle an error', 'or find the next step'] key idea
-          p(className='space-x-1')
+          p(className='space-x-1 text-[11px] leading-[1.85] text-dim')
             span(className='size-2 aspect-square rounded-full bg-background')
             span #{idea}
-        button.connection-prompt(type='button' hidden={connected} onClick={() => setSettingsOpen(true)}) Set up your connection ↗
+        button(className='border-0 bg-none p-0 text-[10px] text-[#efa571] light:text-[#a64b19]' type='button' hidden={connected} onClick={() => setSettingsOpen(true)}) Set up your connection ↗
     each message in state.messages key message.id
       ChatMessage(message={message} session={session} auto={isAutoApply} onAutoFailure={autoFix})
     if state.error || state.connectionError
-      div.chat-error(role='alert')
-        p #{state.error || state.connectionError}
-        div
-          button.secondary-button(type='button' hidden={!state.connectionError} onClick={() => { void chat.checkConnection(); }}) Reconnect
-          button.secondary-button(type='button' hidden={!state.error || state.busy} onClick={chat.retry}) Retry response
-          button.secondary-button(type='button' onClick={() => setSettingsOpen(true)}) Settings
+      div(className='chat-error rounded-[5px] border border-[#755335] bg-surface-hover p-2.5 text-[10px] leading-[1.7] text-[#deb68a] light:border-[#debf8d] light:bg-[#f8eddb] light:text-[#79521b]' role='alert')
+        p(className='mb-2') #{state.error || state.connectionError}
+        div(className='flex flex-wrap gap-1.5')
+          button(className={errorButton} type='button' hidden={!state.connectionError} onClick={() => { void chat.checkConnection(); }}) Reconnect
+          button(className={errorButton} type='button' hidden={!state.error || state.busy} onClick={chat.retry}) Retry response
+          button(className={errorButton} type='button' onClick={() => setSettingsOpen(true)}) Settings
   ChatComposer(chat={chat} session={session} auto={isAutoApply} toggleAuto={toggleAuto})
   if settingsOpen
     ChatSettings(chat={chat} onClose={() => setSettingsOpen(false)})

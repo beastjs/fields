@@ -15,7 +15,8 @@ const dragBetween = async (page: Page, source: Locator, target: Locator) => {
   const targetBox = (await target.boundingBox())!;
   await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
   await page.mouse.down();
-  await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 20 });
+  const targetX = sourceBox.x > targetBox.x ? targetBox.x + 8 : targetBox.x + targetBox.width - 8;
+  await page.mouse.move(targetX, targetBox.y + targetBox.height / 2, { steps: 2 });
   await page.mouse.up();
 };
 
@@ -42,28 +43,42 @@ test('panel URLs restore proportions, collapsed views, back navigation, and rese
   await expect(page.locator('#pane-chat')).toBeHidden();
 });
 
-test('workbench panes reorder without losing state and restore from the URL', async ({ page }) => {
+test('workbench panes reorder without losing state and restore from the URL', async ({ page, browserName }) => {
   await page.route('**/api/ai/chat', route => route.fulfill({
     contentType: 'text/event-stream',
     body: answer('This message stays put.'),
   }));
   await ready(page, '/?dock=14,68,18');
-  await page.getByRole('button', { name: 'Disable pane dragging', exact: true }).click();
-  await expect(page.locator('[data-reorder-handle="chat"]')).toBeDisabled();
-  await page.reload();
-  await expect(page.locator('#preview-status')).toHaveText('Live', { timeout: 20000 });
-  await expect(page.getByRole('button', { name: 'Enable pane dragging', exact: true })).toBeVisible();
-  await expect(page.locator('[data-reorder-handle="chat"]')).toBeDisabled();
-  await page.getByRole('button', { name: 'Enable pane dragging', exact: true }).click();
-  await expect(page.locator('[data-reorder-handle="chat"]')).toBeEnabled();
-
-  await page.getByRole('textbox', { name: 'Message AI' }).fill('Keep this message');
+  const composer = page.getByRole('textbox', { name: 'Message AI' });
+  await expect(composer).toBeEnabled({ timeout: 20000 });
+  await composer.fill('Keep this message');
   await page.getByRole('button', { name: 'Send message', exact: true }).click();
   await expect(page.locator('.chat-markdown')).toContainText('This message stays put.');
 
-  const chatHandle = page.locator('[data-reorder-handle="chat"]');
-  const filesHandle = page.locator('[data-reorder-handle="files"]');
-  await dragBetween(page, chatHandle, filesHandle);
+  await page.getByRole('button', { name: 'Arrange panes', exact: true }).click();
+  await expect(page.locator('.workspace')).toHaveAttribute('data-arranging', 'true');
+  await expect.poll(() => page.evaluate(() => document.getAnimations().filter(animation => animation.playState === 'running').length)).toBe(0);
+  await expect(page.locator('[data-reorder-handle]')).toHaveCount(0);
+  const chatPane = page.locator('[data-slot="sortable-item"][aria-label="Move Assistant pane"]');
+  const filesPane = page.locator('[data-slot="sortable-item"][aria-label="Move Files pane"]');
+  if (browserName === 'webkit') {
+    await chatPane.press('Space');
+    await chatPane.press('ArrowLeft');
+    await chatPane.press('ArrowLeft');
+    await chatPane.press('ArrowLeft');
+    await chatPane.press('Space');
+  } else {
+    await dragBetween(page, chatPane, filesPane);
+  }
+  await expect.poll(() => page.locator('.view-toolbar [data-view]').evaluateAll(nodes =>
+    nodes.map(node => node.getAttribute('data-view'))
+  )).toEqual(['chat', 'files', 'editor', 'preview', 'output']);
+  await expect.poll(() => new URL(page.url()).searchParams.get('order')).toBeNull();
+  await page.getByRole('button', { name: 'Finish arranging panes', exact: true }).click();
+  await expect(page.locator('.view-toolbar [data-view]')).toHaveCount(5);
+  expect(await page.locator('.view-toolbar [data-view]').evaluateAll(nodes =>
+    nodes.map(node => node.getAttribute('data-view'))
+  )).toEqual(['chat', 'files', 'editor', 'preview', 'output']);
   await expect.poll(() => new URL(page.url()).searchParams.get('order')).toBe('chat,files,editor,preview');
   await expect.poll(async () => {
     const chatBox = (await page.locator('#pane-chat').boundingBox())!;
@@ -75,9 +90,12 @@ test('workbench panes reorder without losing state and restore from the URL', as
   await page.reload();
   await expect(page.locator('#preview-status')).toHaveText('Live', { timeout: 20000 });
   expect((await page.locator('#pane-chat').boundingBox())!.x).toBeLessThan((await page.locator('#pane-files').boundingBox())!.x);
-  await page.locator('[data-reorder-handle="chat"]').press('Space');
-  await page.locator('[data-reorder-handle="chat"]').press('ArrowRight');
-  await page.locator('[data-reorder-handle="chat"]').press('Space');
+  await page.getByRole('button', { name: 'Arrange panes', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => document.getAnimations().filter(animation => animation.playState === 'running').length)).toBe(0);
+  await page.locator('[data-slot="sortable-item"][aria-label="Move Assistant pane"]').press('Space');
+  await page.locator('[data-slot="sortable-item"][aria-label="Move Assistant pane"]').press('ArrowRight');
+  await page.locator('[data-slot="sortable-item"][aria-label="Move Assistant pane"]').press('Space');
+  await page.getByRole('button', { name: 'Finish arranging panes', exact: true }).click();
   await expect.poll(() => new URL(page.url()).searchParams.get('order')).toBe('files,chat,editor,preview');
   await page.getByRole('button', { name: 'Reset layout', exact: true }).click();
   await expect.poll(() => new URL(page.url()).searchParams.get('order')).toBeNull();
@@ -96,6 +114,38 @@ test('collapsed panes keep a boundary handle and any remaining workbench pane pe
   await expect(page.locator('#pane-preview')).toBeHidden();
   await expect(page.locator('#pane-chat')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Collapse assistant', exact: true })).toBeDisabled();
+});
+
+test('preview fit mode stays flush while the pane narrows', async ({ page }) => {
+  await ready(page);
+  await expect(page.getByLabel('Preview zoom', { exact: true })).toHaveValue('1');
+
+  const separator = page.getByRole('separator', { name: 'Resize editor and preview', exact: true });
+  const box = (await separator.boundingBox())!;
+  const samples = page.locator('.preview-stage').evaluate(async stage => {
+    const measurements: Array<{ overflowX: number; overflowY: number; canvasDelta: number }> = [];
+    for (let frame = 0; frame < 50; frame++) {
+      const canvas = stage.querySelector<HTMLElement>('.preview-canvas')!;
+      measurements.push({
+        overflowX: stage.scrollWidth - stage.clientWidth,
+        overflowY: stage.scrollHeight - stage.clientHeight,
+        canvasDelta: Math.abs(canvas.getBoundingClientRect().width - stage.getBoundingClientRect().width),
+      });
+      await new Promise(requestAnimationFrame);
+    }
+    return measurements;
+  });
+
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 300, box.y + box.height / 2, { steps: 30 });
+  await page.mouse.up();
+
+  for (const measurement of await samples) {
+    expect(measurement.overflowX).toBeLessThanOrEqual(1);
+    expect(measurement.overflowY).toBeLessThanOrEqual(1);
+    expect(measurement.canvasDelta).toBeLessThanOrEqual(1);
+  }
 });
 
 test('invalid layout parameters recover and file search filters the explorer', async ({ page }) => {

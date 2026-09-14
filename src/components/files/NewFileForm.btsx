@@ -11,12 +11,13 @@ setup
     onSubmit: ({ value }) => session.validateNewFile(value),
   } });
   const errors = field.state.meta.errors;
+  const formButton = 'mr-1 rounded-[3px] border border-edge-strong bg-edge px-2 py-1';
   useEffect(() => { input.current?.focus(); }, []);
   const submit = (event: SubmitEvent) => { event.preventDefault(); void form.handleSubmit(); };
 
-form#new-file-form.new-file-form(onSubmit={submit})
-  label(for='new-file-name') New file path
-  input#new-file-name(ref={input} type='text' placeholder='src/Component.btsx' autocomplete='off' value={field.state.value} onInput={(event) => field.handleChange(event.currentTarget.value)} onBlur={field.handleBlur} aria-invalid={errors.length > 0} aria-describedby={errors.length ? 'file-error' : undefined})
-  button(type='submit') Add
-  button#cancel-file(type='button' onClick={onCancel}) Cancel
-  p#file-error.file-error(role='alert' hidden={!errors.length}) #{errors.join(' ')}
+form#new-file-form(className='mx-3 mt-0.5 mb-2.5 text-[10px]' onSubmit={submit})
+  label(className='mb-1.5 block text-dim' for='new-file-name') New file path
+  input#new-file-name(className='mb-[7px] w-full rounded-[4px] border border-edge-strong bg-inset p-2 text-fg' ref={input} type='text' placeholder='src/Component.btsx' autocomplete='off' value={field.state.value} onInput={(event) => field.handleChange(event.currentTarget.value)} onBlur={field.handleBlur} aria-invalid={errors.length > 0} aria-describedby={errors.length ? 'file-error' : undefined})
+  button(className={formButton} type='submit') Add
+  button#cancel-file(className={formButton} type='button' onClick={onCancel}) Cancel
+  p#file-error(className='text-[10px] leading-[1.6] text-[#e9b747] light:text-[#8c5623]' role='alert' hidden={!errors.length}) #{errors.join(' ')}

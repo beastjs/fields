@@ -7,6 +7,6 @@ setup
   const state = useSyncExternalStore(session.subscribe, session.getSnapshot);
   const example = examples.find(item => item.project.entry === state.project.entry && Object.keys(item.project.files).length === Object.keys(state.project.files).length && Object.entries(item.project.files).every(([path, source]) => state.project.files[path] === source));
 
-div.project-title
-  span.project-symbol ◈
-  span.project-name(title={example?.title ?? 'Your project'}) #{example?.title ?? 'Your project'}
+div(className='flex min-w-0 items-center gap-2.5 text-[12px]')
+  span(className='text-[12px] text-brand') ◈
+  span(className='truncate capitalize' title={example?.title ?? 'Your project'}) #{example?.title ?? 'Your project'}

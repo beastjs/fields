@@ -50,15 +50,17 @@ button(className='bg-muted/50 hover:bg-muted py-1.5 px-3 rounded-2xl' type='butt
   div(className='flex items-center justify-center rounded-full text-sm gap-1.5 text-muted-foreground')
     Icon(name='build' className='size-4.5')
     if !compact
-      span(className='truncate capitalize' title={'Builder'}) Designer
+      span(className='truncate capitalize' title={'Builder'}) Design Studio
 dialog(className={cn(dialogPanel, 'w-[min(960px,calc(100vw-24px))]')} ref={dialog} aria-labelledby='layout-builder-title')
   div(className={dialogHeading})
     div
-      span(className={eyebrowLabel}) DESIGN TOOLS
-      h2#layout-builder-title(className={dialogTitle}) App Layout Builder
+      span(className={eyebrowLabel}) WEB APPS
+      div(className='flex items-center gap-2')
+        h2#layout-builder-title(className={dialogTitle}) Design Studio
+        ol(className='flex gap-1.5 p-0 list-none text-[10px]' aria-label='Layout sections')
+          li(className='px-2 py-0.5 border border-edge-strong rounded-full text-dim aria-[current=step]:border-brand aria-[current=step]:text-brand' aria-current='step') Topbar
     button(className={iconButton} type='button' aria-label='Close layout builder' onClick={close}) ×
-  ol(className='flex gap-1.5 mb-3 p-0 list-none text-[10px]' aria-label='Layout sections')
-    li(className='px-2.5 py-1 border border-edge-strong rounded-full text-dim aria-[current=step]:border-brand aria-[current=step]:text-brand' aria-current='step') Topbar
+
   p(className={transferDescription}) Pick a topbar to start your layout. Each template is a Beast component styled with Tailwind — preview it live or read its source.
   div(className='grid grid-cols-[minmax(180px,240px)_minmax(0,1fr)] gap-3.5 mb-4 max-[700px]:grid-cols-[minmax(0,1fr)]')
     div(className='grid content-start gap-1.5 max-h-[400px] overflow-auto max-[700px]:max-h-[180px]' role='radiogroup' aria-label='Topbar templates')

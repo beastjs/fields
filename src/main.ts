@@ -1,6 +1,6 @@
 import { createRoot } from 'octane'
 import App from './App.btsx'
-import './style.css'
+import './global.css'
 import '@fontsource/ibm-plex-mono/latin-400.css'
 
 const container = document.getElementById('app')

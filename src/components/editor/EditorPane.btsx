@@ -3,30 +3,42 @@ import { connectEditor } from '../../playground/editor-connection'
 import { fileLabel, fileLanguage, navigateTabs } from '../../playground/presentation'
 import PaneSurface from '../layout/PaneSurface.btsx'
 import CollapseButton from '../layout/CollapseButton.btsx'
-import PaneReorderHandle from '../layout/PaneReorderHandle.btsx'
 import type { WorkspaceProps } from '../types'
+import { cn } from '@/lib/utils'
+import { editorThemes, type EditorThemeId } from '../../playground/editor-themes'
+import NativeSelect, { NativeSelectOption } from '../ui/native-select.btsx'
 
 props { session, layout }: WorkspaceProps
 setup
   const state = useSyncExternalStore(session.subscribe, session.getSnapshot);
   const mount = useRef<HTMLDivElement | null>(null);
   useEffect(() => connectEditor(mount.current!, session), [session]);
-
-PaneSurface(layout={layout} pane='editor' label='Code editor' className='editor-pane')
-  div.editor-toolbar
-    PaneReorderHandle(pane='editor')
-    div#editor-tabs.editor-tabs(role='tablist' aria-label='Open files' onKeyDown={navigateTabs})
+PaneSurface(layout={layout} pane='editor' label='Code editor' className='flex flex-col overflow-hidden rounded-[1.15rem] _bg-[radial-gradient(circle_at_88%_10%,rgba(255,255,255,0.07),transparent_28rem),linear-gradient(145deg,#2E2E2E,#0E0E0E_72%)] dark:bg-panel p-4')
+  div(id='header' className='group/header relative flex min-h-14 min-w-0 items-center gap-1 pr-[7px]')
+    // COVER: hidden while the header is hovered or holds focus, so the tabs beneath stay usable.
+    div(id='cover' className='pointer-events-none absolute inset-0 z-50 flex items-center justify-between bg-panel px-4 transition-opacity duration-150 group-hover/header:opacity-0 group-focus-within/header:opacity-0' aria-hidden='true')
+      div(className='min-w-0')
+        p(className='text-[0.72rem] font-bold uppercase tracking-[0.11em] text-[#858681]') #{fileLanguage(state.activeFile)}
+        div(className='flex flex-wrap items-baseline gap-x-3')
+          h2(className='truncate text-[clamp(1.2rem,2.8vw,1.5rem)] font-medium leading-[1.16] tracking-[-0.035em]') #{fileLabel(state.activeFile)}
+    // FILE TABS
+    div#editor-tabs(className='relative flex flex-1 h-[38px] min-h-9 min-w-0 overflow-auto [scrollbar-width:none]' role='tablist' aria-label='Open files' onKeyDown={navigateTabs})
       each path in Object.keys(state.project.files) key path
-        button(type='button' className={'editor-tab' + (state.activeFile === path ? ' active' : '')} role='tab' aria-selected={state.activeFile === path} aria-controls='editor' tabIndex={state.activeFile === path ? 0 : -1} onClick={() => session.openFile(path)}) #{fileLabel(path)}
+        button(type='button' className={cn('flex shrink-0 items-center gap-[9px] px-4 text-[11px] text-dim', state.activeFile === path && 'border-t-brand text-fg')} role='tab' aria-selected={state.activeFile === path} aria-controls='editor' tabIndex={state.activeFile === path ? 0 : -1} onClick={() => session.openFile(path)}) #{fileLabel(path)}
+    // CLOSE PANE
     CollapseButton(layout={layout} pane='editor')
-  div.editor-breadcrumb
-    span src
-    span ›
-    span#active-filename #{fileLabel(state.activeFile)}
-    span#language-label.language-label #{fileLanguage(state.activeFile)}
-  div#editor.editor-mount(ref={mount} data-keymap={state.keymap})
-  div(className='editor-footer whitespace-nowrap')
-    span#editor-file-info #{state.activeFile.split('.').at(-1)!.toUpperCase()}
-    span UTF-8
-    button#vim-toggle.editor-vim-toggle(type='button' aria-label='Vim mode' aria-pressed={state.keymap === 'vim'} title={state.keymap === 'vim' ? 'Disable Vim keybindings' : 'Enable Vim keybindings'} onClick={session.toggleKeymap}) VIM
-    span.editor-hint #{state.keymap === 'vim' ? 'i to insert · Esc for normal · :w to run' : '⌘ ↵ to run · edits compile automatically'}
+
+  div#editor(className='min-h-0 flex-1 overflow-hidden' ref={mount} data-keymap={state.keymap})
+
+  div(className='flex items-center justify-between h-6 gap-2.5 px-6 text-[10px] text-faint')
+    span(className='space-x-1')
+      span src
+      span ›
+      span#active-filename(className='text-fg-secondary') #{fileLabel(state.activeFile)}
+    span#editor-file-info(className='flex items-center gap-2 whitespace-nowrap') #{state.activeFile.split('.').at(-1)!.toUpperCase()}
+      span UTF-8
+      NativeSelect#editor-theme(className='text-[10px] text-fg-secondary [&_select]:pr-4 [&_select]:bg-transparent' size='sm' aria-label='Editor theme' title='Editor theme' value={state.editorTheme} onChange={(event: Event) => session.setEditorTheme((event.currentTarget as HTMLSelectElement).value as EditorThemeId)})
+        each option in editorThemes key option.id
+          NativeSelectOption(value={option.id}) #{option.label}
+      button#line-numbers-toggle(className='rounded-[3px] px-[5px] py-0.5 text-[8px] leading-[1.25] text-fg-secondary aria-pressed:border-[#875638] aria-pressed:bg-control aria-pressed:text-[#ff945b] light:aria-pressed:text-[#a64b19]' type='button' aria-label='Line numbers' aria-pressed={state.lineNumbers} title={state.lineNumbers ? 'Hide line numbers' : 'Show line numbers'} onClick={session.toggleLineNumbers}) LN
+      button#vim-toggle(className='rounded-[3px] px-[5px] py-0.5 text-[8px] leading-[1.25] text-fg-secondary aria-pressed:border-[#875638] aria-pressed:bg-control aria-pressed:text-[#ff945b] light:aria-pressed:text-[#a64b19]' type='button' aria-label='Vim mode' aria-pressed={state.keymap === 'vim'} title={state.keymap === 'vim' ? 'Disable Vim keybindings' : 'Enable Vim keybindings'} onClick={session.toggleKeymap}) VIM

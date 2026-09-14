@@ -1,5 +1,6 @@
 import { useState } from 'octane'
 import type { SessionSnapshot } from '../../playground/session'
+import { cn } from '@/lib/utils'
 
 props { state }: { state: SessionSnapshot }
 setup
@@ -8,7 +9,7 @@ setup
     ? state.lastResult?.intermediate[state.activeFile] ?? 'No Beast transform for this file. Select a .btsx component.'
     : state.lastResult?.modules.find(module => module.source === state.activeFile)?.code ?? 'No generated JavaScript for this file.';
 
-div.output-stage-buttons
-  button(type='button' className={'output-stage' + (stage === 'octane' ? ' active' : '')} data-stage='octane' aria-pressed={stage === 'octane'} onClick={() => setStage('octane')}) Octane / TSRX
-  button(type='button' className={'output-stage' + (stage === 'web' ? ' active' : '')} data-stage='web' aria-pressed={stage === 'web'} onClick={() => setStage('web')}) Web / JavaScript
-pre#generated-code #{code}
+div(className='flex shrink-0 flex-col items-start gap-1')
+  button(type='button' className={cn('rounded-[3px] border border-transparent bg-transparent px-2 py-[5px] text-[9px] text-dim', stage === 'octane' && 'border-edge-strong bg-surface-hover text-[#e3ae7e] light:text-[#a64b19]')} data-stage='octane' aria-pressed={stage === 'octane'} onClick={() => setStage('octane')}) Octane / TSRX
+  button(type='button' className={cn('rounded-[3px] border border-transparent bg-transparent px-2 py-[5px] text-[9px] text-dim', stage === 'web' && 'border-edge-strong bg-surface-hover text-[#e3ae7e] light:text-[#a64b19]')} data-stage='web' aria-pressed={stage === 'web'} onClick={() => setStage('web')}) Web / JavaScript
+pre#generated-code(className='m-0 whitespace-pre font-code text-[10px]/[1.7] text-fg-secondary') #{code}

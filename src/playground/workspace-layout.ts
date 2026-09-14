@@ -7,7 +7,11 @@ export { paneDefinitions }
 export type { PaneId, WorkbenchPaneId }
 
 type Visibility = Record<PaneId, boolean>
-type LayoutSnapshot = Visibility & { order: readonly WorkbenchPaneId[]; draggingEnabled: boolean }
+type LayoutSnapshot = Visibility & {
+  order: readonly WorkbenchPaneId[]
+  arrangeOrder: readonly WorkbenchPaneId[]
+  arranging: boolean
+}
 type Geometry = { panes: number[]; rows: number[] }
 type PaneSizes = Record<WorkbenchPaneId, number>
 
@@ -21,18 +25,6 @@ const defaultSizes = (narrow: boolean): PaneSizes => ({
   preview: narrow ? 50 : 43,
   chat: 0,
 })
-const draggingPreferenceKey = 'beast-playground.pane-dragging.v1'
-const readDraggingPreference = () => {
-  if (typeof localStorage === 'undefined') return true
-  try { return localStorage.getItem(draggingPreferenceKey) !== 'disabled' }
-  catch { return true }
-}
-const saveDraggingPreference = (enabled: boolean) => {
-  if (typeof localStorage === 'undefined') return
-  try { localStorage.setItem(draggingPreferenceKey, enabled ? 'enabled' : 'disabled') }
-  catch { /* The toggle still works for this tab. */ }
-}
-
 /** Layout owns pane geometry and ordering only. Project and runtime lifetimes are independent. */
 export class WorkspaceLayout {
   readonly panels = {
@@ -53,7 +45,7 @@ export class WorkspaceLayout {
   private persist?: (query: PanelQuery) => void
   private snapshot: LayoutSnapshot
   private viewportNarrow: boolean
-  private draggingEnabled = readDraggingPreference()
+  private arrangeOrder: WorkbenchPaneId[] | null = null
   private expandedPaneSizes: Partial<Record<WorkbenchPaneId, number>> = {}
   private listeners = new Set<() => void>()
 
@@ -79,13 +71,24 @@ export class WorkspaceLayout {
     }
   }
   currentDockLayout = () => this.layouts(this.geometry, this.order).dock
-  setDraggingEnabled = (enabled: boolean) => {
-    if (enabled === this.draggingEnabled) return
-    this.draggingEnabled = enabled
-    saveDraggingPreference(enabled)
+
+  beginArranging = () => {
+    if (this.arrangeOrder) return
+    this.arrangeOrder = [...this.order]
     this.publish(this.createSnapshot(this.geometry, this.order))
   }
-  toggleDragging = () => this.setDraggingEnabled(!this.draggingEnabled)
+  previewOrder = (nextOrder: readonly WorkbenchPaneId[]) => {
+    if (!this.arrangeOrder || !this.validOrder(nextOrder) || sameOrder(nextOrder, this.arrangeOrder)) return
+    this.arrangeOrder = [...nextOrder]
+    this.publish(this.createSnapshot(this.geometry, this.order))
+  }
+  finishArranging = () => {
+    if (!this.arrangeOrder) return
+    const nextOrder = this.arrangeOrder
+    this.arrangeOrder = null
+    this.setOrder(nextOrder)
+  }
+  toggleArranging = () => this.arrangeOrder ? this.finishArranging() : this.beginArranging()
 
   sync = (sizes: Layout) => {
     const round = (values: number[]) => {
@@ -132,8 +135,11 @@ export class WorkspaceLayout {
     this.setOrder(next)
   }
   setOrder = (nextOrder: readonly WorkbenchPaneId[]) => {
-    if (!this.draggingEnabled || sameOrder(nextOrder, this.order)) return
-    if (nextOrder.length !== workbenchPaneIds.length || new Set(nextOrder).size !== workbenchPaneIds.length) return
+    if (!this.validOrder(nextOrder)) return
+    if (sameOrder(nextOrder, this.order)) {
+      this.publish(this.createSnapshot(this.geometry, this.order))
+      return
+    }
     const sizes = this.sizesByPane()
     this.order = [...nextOrder]
     this.geometry.panes = this.order.map((pane) => sizes[pane])
@@ -199,6 +205,7 @@ export class WorkspaceLayout {
   reset = () => {
     const nextOrder = copyDefaultOrder()
     const orderChanged = !sameOrder(this.order, nextOrder)
+    this.arrangeOrder = null
     this.order = nextOrder
     this.expandedPaneSizes = {}
     this.geometry = {
@@ -257,6 +264,11 @@ export class WorkspaceLayout {
   private sizesForOrder(sizes: PaneSizes, order: readonly WorkbenchPaneId[]) {
     return order.map((id) => sizes[id])
   }
+  private validOrder(order: readonly WorkbenchPaneId[]) {
+    return order.length === workbenchPaneIds.length
+      && new Set(order).size === workbenchPaneIds.length
+      && order.every(isWorkbenchPaneId)
+  }
   private layouts(geometry: Geometry, order: readonly WorkbenchPaneId[]) {
     const dock: Layout = {}
     order.forEach((id, index) => { dock['view-' + id] = geometry.panes[index] })
@@ -274,6 +286,11 @@ export class WorkspaceLayout {
       chat: false
     }
     order.forEach((id, index) => { visible[id] = geometry.panes[index] > 0 })
-    return { ...visible, order, draggingEnabled: this.draggingEnabled }
+    return {
+      ...visible,
+      order,
+      arrangeOrder: this.arrangeOrder ?? order,
+      arranging: this.arrangeOrder !== null
+    }
   }
 }

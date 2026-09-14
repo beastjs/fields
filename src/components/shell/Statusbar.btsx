@@ -1,6 +1,9 @@
 import { useState, useSyncExternalStore } from 'octane'
 import { signInWithGoogle, signOutUser, useFirebaseUser } from '../../lib/firebase/auth'
 import type { SessionProps } from '../types'
+import { statusDot } from '../ui/styles'
+import { cn } from '@/lib/utils';
+import { Icon } from "@/lib/icons";
 
 props { session }: SessionProps
 setup
@@ -16,23 +19,24 @@ setup
     finally { setIsPending(false); }
   };
 
-footer.statusbar
-  div.statusbar-left
+footer(className='statusbar flex items-center justify-between px-4 font-code text-[8px] uppercase tracking-[0.12em] text-dim md:px-3')
+  div(className='flex items-center gap-2')
     div(className='flex items-center space-x-6')
       if isLoading
         span(className='font-sans font-medium opacity-60') Checking…
       else
         if user
-          button(onClick={() => runAuth(signOutUser)} disabled={isPending} title={authError ?? user.email ?? undefined})
-            span(className='font-sans font-medium text-accent!') #{user.displayName ?? user.email ?? 'Signed in'} · Sign out
+          button(className='flex items-center gap-1' onClick={() => runAuth(signOutUser)} disabled={isPending} title={authError ?? user.email ?? undefined})
+            span(className='font-mono font-light text-accent/60 uppercase') #{user.displayName?.split(' ').shift() ?? user.email?.split('@').shift() ?? 'Signed in'}
+            Icon(name='signout' className='size-3')
         else
           button(onClick={() => runAuth(signInWithGoogle)} disabled={isPending} title={authError ?? undefined})
-            span(className='font-sans font-medium text-accent!') #{isPending ? 'Signing in…' : 'Sign in'}
-      span(className='space-x-1')
-        span#build-dot.status-dot(style={{ background: state.buildError ? '#e7b54a' : '#e8a471' }})
+            span(className='font-mono font-medium text-brand!') #{isPending ? 'Signing in…' : 'Sign in'}
+      span(className='flex items-center space-x-1')
+        span(className={cn('text-accent/80 text-[8px]')}) ❱❱
         span#build-status(aria-live='polite') #{state.buildStatus}
-  div#stage-timings.stage-timings
+  div#stage-timings(className='flex gap-5 text-faint max-[760px]:gap-[7px] max-[760px]:text-[7px]')
     span Beast #{state.lastResult ? state.lastResult.metadata.timings.beast.toFixed(1) + 'ms' : '—'}
     span Octane #{state.lastResult ? state.lastResult.metadata.timings.octane.toFixed(1) + 'ms' : '—'}
     span Web #{state.lastResult ? state.lastResult.metadata.timings.web.toFixed(1) + 'ms' : '—'}
-  span.toolchain Beast 0.2.60 · Octane 0.2.6
+  span(className='text-faint max-[1050px]:hidden') Beast 0.2.60 · Octane 0.2.6

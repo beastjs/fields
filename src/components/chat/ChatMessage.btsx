@@ -4,10 +4,18 @@ import type { PlaygroundSession } from '../../playground/session'
 import { useEffect, useRef, useState } from 'octane'
 import { renderChatMarkdown } from '../../chat/markdown'
 import type { ChatMessage } from '../../chat/controller'
-import Accordion, {AccordionItem, AccordionTrigger, AccordionPanel} from "../ui/accordion.btsx";
-
+import { cn } from '@/lib/utils'
+import { secondaryButton } from '../ui/styles'
 
 module
+  // Styles the sanitized markdown HTML, including the diff rows from chat/diff.ts.
+  const markdown = [
+    'chat-markdown text-[11px] leading-[1.85] text-fg [overflow-wrap:anywhere] [&_p]:mb-2.5 [&_:is(h1,h2,h3,h4)]:mt-3.5 [&_:is(h1,h2,h3,h4)]:mb-1.5 [&_:is(h1,h2,h3,h4)]:text-[12px] [&_:is(h1,h2,h3,h4)]:font-semibold [&_:is(h1,h2,h3,h4)]:text-fg [&_:is(ul,ol)]:mt-2 [&_:is(ul,ol)]:mb-3 [&_:is(ul,ol)]:pl-[19px] [&_:is(ul,ol)]:[list-style:revert] [&_pre]:my-3 [&_pre]:max-w-full [&_pre]:overflow-auto [&_pre]:rounded-[4px] [&_pre]:border [&_pre]:border-edge [&_pre]:bg-inset [&_pre]:p-3 [&_code]:font-code [&_code]:text-[10px]/[1.8] [&_code]:text-[#e5bc93] light:[&_code]:text-[#a64b19] [&_:not(pre)>code]:rounded-[3px] [&_:not(pre)>code]:bg-surface-hover [&_:not(pre)>code]:px-1 [&_:not(pre)>code]:py-px [&_pre_code]:text-fg-secondary [&_blockquote]:my-2.5 [&_blockquote]:border-l-2 [&_blockquote]:border-[#9c663f] [&_blockquote]:pl-3 [&_blockquote]:text-dim [&_a]:text-[#eda573] [&_a]:underline light:[&_a]:text-[#a64b19] [&_table]:block [&_table]:overflow-auto [&_table]:border-collapse [&_:is(td,th)]:border [&_:is(td,th)]:border-edge-strong [&_:is(td,th)]:p-[5px]',
+    '[&_pre.chat-diff]:p-0 [&_.chat-diff_code]:inline-block [&_.chat-diff_code]:min-w-full [&_.chat-diff_code]:py-2 [&_.diff-row]:flex [&_.diff-row]:w-max [&_.diff-row]:min-w-full [&_.diff-row]:pr-2.5 [&_.diff-num]:sticky [&_.diff-num]:left-0 [&_.diff-num]:z-1 [&_.diff-num]:w-[3ch] [&_.diff-num]:flex-none [&_.diff-num]:select-none [&_.diff-num]:bg-inset [&_.diff-num]:bg-[linear-gradient(var(--diff-tint),var(--diff-tint))] [&_.diff-num]:pr-2.5 [&_.diff-num]:pl-2 [&_.diff-num]:text-right [&_.diff-num]:text-faint [&_.diff-text]:whitespace-pre [&_.diff-gap]:text-faint [&_.diff-del]:[--diff-tint:var(--diff-del-surface)] [&_.diff-del]:bg-(--diff-tint) [&_.diff-del]:text-diff-del [&_.diff-add]:[--diff-tint:var(--diff-add-surface)] [&_.diff-add]:bg-(--diff-tint) [&_.diff-add]:text-diff-add',
+  ].join(' ');
+  const applyScope = 'rounded-full border border-edge px-1.5 py-px font-code text-fg-secondary';
+  const messageState = 'ml-auto font-code text-[6px] tracking-[0.5px] text-faint';
+  const applyErrorClass = 'chat-apply-error text-warning';
   interface ChatMessageProps { message: ChatMessage; session: PlaygroundSession, auto: boolean, onAutoFailure?: (message: ChatMessage, error: string) => void }
 props { message, session, auto, onAutoFailure }: ChatMessageProps
 setup
@@ -58,49 +66,49 @@ setup
   const [copied, setCopied] = useState(false);
   const copy = async () => { try { await navigator.clipboard.writeText(message.content); setCopied(true); } catch { setCopied(false); } };
 
-article(className={'chat-message ' + message.role} data-message-state={message.state})
-  div.message-heading
+article(className={'chat-message mb-6 ' + message.role} data-message-state={message.state})
+  div(className='mb-[9px] flex items-center gap-[7px]')
 
-    span.message-avatar #{message.role === 'user' ? '↗' : '✦'}
-    strong #{message.role === 'user' ? (message.attempt ? 'Auto-fix' : 'You') : 'Assistant'}
+    span(className={cn('grid size-5 place-items-center rounded-full border border-edge-strong bg-surface-hover text-[11px] text-dim', message.role === 'assistant' && 'border-[#70503a] text-brand')}) #{message.role === 'user' ? '↗' : '✦'}
+    strong(className='text-[10px] font-medium text-fg') #{message.role === 'user' ? (message.attempt ? 'Auto-fix' : 'You') : 'Assistant'}
     if message.attempt && message.attempt > 1
-      span.message-state #{'ATTEMPT ' + message.attempt + '/' + MAX_ATTEMPTS}
+      span(className={messageState}) #{'ATTEMPT ' + message.attempt + '/' + MAX_ATTEMPTS}
     if message.role === 'assistant'
-      span.message-state #{message.state === 'streaming' ? 'WORKING' : message.state === 'stopped' ? 'STOPPED' : message.state === 'error' ? 'INTERRUPTED' : 'DONE'}
+      span(className={messageState}) #{message.state === 'streaming' ? 'WORKING' : message.state === 'stopped' ? 'STOPPED' : message.state === 'error' ? 'INTERRUPTED' : 'DONE'}
   if message.role === 'user'
-    p.user-message #{message.content}
+    p(className='m-0 whitespace-pre-wrap text-[11px] leading-[1.8] text-fg-secondary [overflow-wrap:anywhere]') #{message.content}
     if message.attachments
-      div.message-attachments
+      div(className='mt-1.5 flex flex-wrap gap-1 [&>code]:rounded-[3px] [&>code]:border [&>code]:border-edge [&>code]:px-1 [&>code]:py-0.5 [&>code]:font-code [&>code]:text-[8px] [&>code]:text-dim')
         each file in message.attachments key file
           code(title={file}) #{file.replace(/^\/src\//, '')}
   elseif message.content
-    div.chat-markdown(dangerouslySetInnerHTML={{ __html: renderChatMarkdown(message.content, message.context?.source) }})
+    div(className={markdown} dangerouslySetInnerHTML={{ __html: renderChatMarkdown(message.content, message.context?.source) }})
   elseif message.state === 'streaming'
-    div.thinking-indicator(role='status')
-      span
-      span
-      span
+    div(className='flex items-center gap-1 text-[9px] text-dim' role='status')
+      span(className='size-[3px] animate-thinking rounded-full bg-brand')
+      span(className='size-[3px] animate-thinking rounded-full bg-brand [animation-delay:0.2s]')
+      span(className='mr-1 size-[3px] animate-thinking rounded-full bg-brand [animation-delay:0.4s]')
       | Working on it…
   if message.content && message.role === 'assistant' && message.state !== 'streaming'
-    div.message-actions
-      button(type='button' onClick={copy} aria-label='Copy response') #{copied ? 'Copied' : 'Copy response'}
+    div(className='mt-2')
+      button(className='border-0 bg-none p-0 text-[8px] text-dim' type='button' onClick={copy} aria-label='Copy response') #{copied ? 'Copied' : 'Copy response'}
 
   if recommendation && message.projectGeneration !== undefined
-    div.chat-apply
-      span.apply-target #{recommendation.file}
+    div(className='chat-apply mt-2.5 flex flex-wrap items-center gap-2 text-[10px] [&_p]:m-0 [&_p]:basis-full [&_p]:whitespace-pre-wrap [&_p]:[overflow-wrap:anywhere]')
+      span(className='font-code text-fg-secondary [overflow-wrap:anywhere]') #{recommendation.file}
       if recommendation.hunks
-        span.apply-scope #{recommendation.hunks}
+        span(className={applyScope}) #{recommendation.hunks}
       if recommendation.error
-        p.chat-apply-error(role='alert') #{recommendation.error}
+        p(className={applyErrorClass} role='alert') #{recommendation.error}
       else
         if !applyState
-          button.secondary-button(type='button' onClick={() => apply()} disabled={!!applyState}) #{applyState === 'Checking compilation…' ? (autoOnArrival.current ? 'Auto-applying…' : 'Checking compilation…') : applyState ? 'Applied' : 'Apply & verify'}
+          button(className={cn(secondaryButton, 'disabled:cursor-default disabled:opacity-65')} type='button' onClick={() => apply()} disabled={!!applyState}) #{applyState === 'Checking compilation…' ? (autoOnArrival.current ? 'Auto-applying…' : 'Checking compilation…') : applyState ? 'Applied' : 'Apply & verify'}
             p(role='status') #{applyState}
         else
           span(className='space-x-1')
-            span.apply-scope(className='text-accent') applied
-            span.apply-scope(className='text-accent') compiled
+            span(className={cn(applyScope, 'text-brand')}) applied
+            span(className={cn(applyScope, 'text-brand')}) compiled
         if applyError
-          p.chat-apply-error(role='alert') #{applyError}
+          p(className={applyErrorClass} role='alert') #{applyError}
       if exhausted
-        p.chat-apply-error(role='status') #{'Stopped auto-fixing after ' + MAX_ATTEMPTS + ' attempts. Adjust the request and try again.'}
+        p(className={applyErrorClass} role='status') #{'Stopped auto-fixing after ' + MAX_ATTEMPTS + ' attempts. Adjust the request and try again.'}

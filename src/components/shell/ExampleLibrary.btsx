@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'octane'
 import { examples } from '../../playground/examples'
 import type { SessionProps } from '../types'
 import {Icon} from '@/lib/icons'
+import { dialogActions, dialogHeading, dialogPanel, dialogTitle, eyebrowLabel, iconButton, primaryButton, secondaryButton, sharedFile, sharedFiles, transferDescription, transferLabel, transferNote } from '../ui/styles'
 
 props { session, compact = false }: SessionProps & { compact?: boolean }
 setup
@@ -16,33 +17,33 @@ setup
   const example = examples.find(item => item.project.entry === state.project.entry && Object.keys(item.project.files).length === Object.keys(state.project.files).length && Object.entries(item.project.files).every(([path, source]) => state.project.files[path] === source));
 
 
-button.examples-button(className='hover:bg-background' type='button' title={compact ? 'Browse example projects' : undefined} onClick={event => { event.currentTarget.focus(); dialog.current?.showModal(); }})
+button(className='px-2 py-[5px] rounded-lg bg-canvas text-[10px] text-fg-secondary whitespace-nowrap hover:bg-background' type='button' title={compact ? 'Browse example projects' : undefined} onClick={event => { event.currentTarget.focus(); dialog.current?.showModal(); }})
   if compact
-    div.project-title
+    div(className='flex min-w-0 items-center gap-2.5 text-[12px]')
       Icon(name='editor' className='size-3')
-      span.project-name Examples
+      span(className='truncate capitalize') Examples
   else
-    div.project-title
-      span.project-symbol(className='text-xs opacity-80') ◈
-      span.project-name(title={example?.title ?? 'Your project'}) #{example?.title ?? 'Your project'}
+    div(className='flex min-w-0 items-center gap-2.5 text-[12px]')
+      span(className='text-xs text-brand opacity-80') ◈
+      span(className='truncate capitalize' title={example?.title ?? 'Your project'}) #{example?.title ?? 'Your project'}
       Icon(name='chevron-down-tiny' className='size-3')
-dialog.project-transfer(ref={dialog} aria-labelledby='examples-title')
-  div.settings-heading
+dialog(className={dialogPanel} ref={dialog} aria-labelledby='examples-title')
+  div(className={dialogHeading})
     div
-      span.eyebrow-label LEARN BEAST
-      h2#examples-title Example library
-    button.icon-button(type='button' aria-label='Close examples' onClick={close}) ×
-  label.transfer-label(for='example-choice') Choose an example
-  select#example-choice.example-choice(value={selectedId} onChange={event => setSelectedId(event.currentTarget.value)})
+      span(className={eyebrowLabel}) LEARN BEAST
+      h2#examples-title(className={dialogTitle}) Example library
+    button(className={iconButton} type='button' aria-label='Close examples' onClick={close}) ×
+  label(className={transferLabel} for='example-choice') Choose an example
+  select#example-choice(className='w-full min-w-0 mb-4 p-2.5 border border-edge-strong rounded-[4px] bg-inset text-fg font-code text-[12px]' value={selectedId} onChange={event => setSelectedId(event.currentTarget.value)})
     each example in examples key example.id
       option(value={example.id}) #{example.title}
-  p.transfer-description #{selected.description}
-  div.shared-files
+  p(className={transferDescription}) #{selected.description}
+  div(className={sharedFiles})
     each file in Object.entries(selected.project.files) key file[0]
-      details.shared-file
+      details(className={sharedFile})
         summary #{file[0]}
         pre #{file[1]}
-  p.transfer-note Loading an example replaces your current files and the saved project in this browser. Use Share to keep a link to your work first.
-  div.settings-actions
-    button.secondary-button(type='button' onClick={close}) Keep current project
-    button.primary-button(type='button' onClick={load}) Load example
+  p(className={transferNote}) Loading an example replaces your current files and the saved project in this browser. Use Share to keep a link to your work first.
+  div(className={dialogActions})
+    button(className={secondaryButton} type='button' onClick={close}) Keep current project
+    button(className={primaryButton} type='button' onClick={load}) Load example

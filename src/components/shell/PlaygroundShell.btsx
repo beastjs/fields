@@ -18,7 +18,7 @@ setup
   useEffect(() => layout.restore(query), [layout, query.dock, query.split, query.rows, query.panes, query.order]);
 
 ThemeProvider(session={session})
-  main.playground
+  main(className='playground grid h-dvh w-full min-h-0 overflow-hidden grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_27px] px-[3px] bg-seam *:min-w-0')
     Topbar(session={session} layout={layout} cloud={cloud})
     Workspace(session={session} layout={layout})
     Statusbar(session={session})

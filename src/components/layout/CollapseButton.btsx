@@ -2,8 +2,9 @@ import { useSyncExternalStore } from 'octane'
 import { paneDefinitions } from '../../playground/panes'
 import type { PaneId } from '../../playground/panes'
 import type { WorkspaceLayout } from '../../playground/workspace-layout'
+import { cn } from '@/lib/utils'
 
-props { layout, pane }: { layout: WorkspaceLayout; pane: PaneId }
+props { layout, pane, className }: { layout: WorkspaceLayout; pane: PaneId; className?: string }
 setup
   const visible = useSyncExternalStore(layout.subscribe, layout.getSnapshot);
   const label = paneDefinitions.find(item => item.id === pane)!.label.toLowerCase();
@@ -14,4 +15,4 @@ setup
     shell?.querySelector<HTMLButtonElement>('[data-view="' + pane + '"]')?.focus();
   };
 
-button.collapse-button(type='button' disabled={disabled} onClick={collapse} aria-label={'Collapse ' + label} title={disabled ? 'Keep one workbench pane open' : 'Collapse ' + label}) −
+button(className={cn('size-[23px] shrink-0 rounded-[4px] border border-transparent bg-transparent text-[16px] leading-none text-dim hover:bg-edge hover:text-fg disabled:cursor-default disabled:opacity-30', className)} type='button' disabled={disabled} onClick={collapse} aria-label={'Collapse ' + label} title={disabled ? 'Keep one workbench pane open' : 'Collapse ' + label}) −

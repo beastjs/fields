@@ -1,62 +1,39 @@
 import { useSyncExternalStore } from 'octane'
-import type { KeyboardEvent } from 'octane'
-import { paneDefinitions } from '../../playground/panes'
-import type { WorkbenchPaneId } from '../../playground/panes'
+import { paneDefinitions } from '../../playground/workspace-layout'
 import type { WorkspaceLayout } from '../../playground/workspace-layout'
 import ButtonGroup from '../ui/button-group.btsx'
 import FluidTooltip, { FluidTooltipRoot, FluidTooltipTrigger, FluidTooltipContent } from '../ui/fluid-tooltip.btsx'
 import { Icon } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 
-props { layout }: { layout: WorkspaceLayout }
-setup
-  const view = useSyncExternalStore(layout.subscribe, layout.getSnapshot);
-  const orderedPanes = view.order.map(id => paneDefinitions.find(pane => pane.id === id)!);
-  const output = paneDefinitions.find(pane => pane.id === 'output')!;
-  const toggle = (id: WorkbenchPaneId) => {
-    layout.toggle(id);
-  };
-  const moveWithKeyboard = (event: KeyboardEvent<HTMLButtonElement>, id: WorkbenchPaneId) => {
-    if (!view.draggingEnabled || !event.altKey || (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight')) return;
-    event.preventDefault();
-    layout.move(id, event.key === 'ArrowLeft' ? -1 : 1);
-  };
+component Arrange
+  props { arranging, onToggle }: { arranging: boolean; onToggle: VoidFunction }
+  button(
+    ~ className='inline-flex shrink-0 items-center justify-center rounded-sm text-muted-foreground/70 text-[10px] transition-[color,background-color,border-color,scale] duration-160 ease-[ease] hover:bg-surface-hover/50 hover:text-accent focus-visible:bg-surface-hover focus-visible:text-fg active:scale-[0.97] aria-pressed:border-brand aria-pressed:bg-brand aria-pressed:text-[#1b1b1b] aria-pressed:shadow-none max-[760px]:w-8 max-[760px]:p-0'
+    ~ type='button'
+    ~ aria-label={arranging ? 'Finish arranging panes' : 'Arrange panes'}
+    ~ aria-pressed={arranging}
+    ~ title={arranging ? 'Keep this pane order' : 'Arrange panes'}
+    ~ onClick={onToggle}
+    ~ )
+    Icon(name={arranging ? 'check' : 'draggable'} className='size-4')
 
-div.view-toolbar(role='group' aria-label='Workspace pane visibility and order')
-  span.view-caption PANES
+props { layout, toggleArrangement }: { layout: WorkspaceLayout, toggleArrangement: VoidFunction }
+setup
+  const visible = useSyncExternalStore(layout.subscribe, layout.getSnapshot);
+  const toolbarPanes = [
+    ...(visible.arranging ? visible.arrangeOrder : visible.order).map(id => paneDefinitions.find(pane => pane.id === id)!),
+    paneDefinitions.find(pane => pane.id === 'output')!,
+  ];
+
+div(className='view-toolbar flex min-w-0 items-center gap-3 overflow-x-auto bg-seam p-0 max-[1200px]:col-span-full max-[1200px]:row-start-2 max-[1200px]:min-h-[35px] max-[1200px]:max-w-full max-[1200px]:justify-self-center max-[760px]:gap-0.5 max-[760px]:px-1.5' role='group' aria-label='Workspace views')
   FluidTooltip
     ButtonGroup(className='bg-background')
-      each pane in orderedPanes key pane.id
-        FluidTooltipRoot(id={pane.id})
-          FluidTooltipTrigger(className='min-h-8 h-full w-9 whitespace-nowrap' asChild)
-            button(
-              ~ type='button'
-              ~ className='pane-order-toggle'
-              ~ data-view={pane.id}
-              ~ aria-controls={'pane-' + pane.id}
-              ~ aria-pressed={view[pane.id]}
-              ~ aria-keyshortcuts='Alt+ArrowLeft Alt+ArrowRight'
-              ~ onClick={() => toggle(pane.id)}
-              ~ onKeyDown={event => moveWithKeyboard(event, pane.id)}
-              ~ title={(view[pane.id] ? 'Collapse ' : 'Expand ') + pane.label + (view.draggingEnabled ? ' · Alt+←/→ to reorder' : '')}
-              ~ disabled={view[pane.id] && !layout.canCollapse(pane.id)}
-              ~ )
-              Icon(name={pane.icon} className={cn('size-3.5 opacity-60', { 'opacity-100': view[pane.id] })})
-          FluidTooltipContent(className='font-mono text-[10px]')
-            | #{pane.label}#{view.draggingEnabled ? ' · Alt+←/→ to reorder' : ''}
-      FluidTooltipRoot(id={output.id})
-        FluidTooltipTrigger(className='min-h-8 h-full w-9 whitespace-nowrap' asChild)
-          button(type='button' data-view={output.id} aria-controls={'pane-' + output.id} aria-pressed={view[output.id]} onClick={() => layout.toggle(output.id)} title={(view[output.id] ? 'Collapse ' : 'Expand ') + output.label})
-            Icon(name={output.icon} className={cn('size-3 opacity-60', { 'opacity-100': view[output.id] })})
-        FluidTooltipContent(className='font-mono text-[10px]') #{output.label}
-  button.drag-mode-toggle(
-    ~ type='button'
-    ~ aria-label={view.draggingEnabled ? 'Disable pane dragging' : 'Enable pane dragging'}
-    ~ aria-pressed={view.draggingEnabled}
-    ~ title={view.draggingEnabled ? 'Disable pane dragging' : 'Enable pane dragging'}
-    ~ onClick={layout.toggleDragging}
-    ~ )
-    Icon(name='draggable' className='size-3')
-    span DRAG
-    span.drag-mode-state #{view.draggingEnabled ? 'ON' : 'OFF'}
-  button.reset-layout(type='button' aria-label='Reset layout' onClick={layout.reset} title='Restore the default pane sizes, order, and views') Reset
+      each pane in toolbarPanes key pane.id
+        FluidTooltipRoot(id={pane.id} sideOffset={16})
+          FluidTooltipTrigger(ref={null})
+            button(className='flex justify-center items-center min-h-8 h-full w-9 whitespace-nowrap' type='button' data-view={pane.id} aria-controls={'pane-' + pane.id} aria-pressed={visible[pane.id]} onClick={() => layout.toggle(pane.id)} title={(visible[pane.id] ? 'Collapse ' : 'Expand ') + pane.label} disabled={visible[pane.id] && !layout.canCollapse(pane.id)})
+              Icon(name={pane.icon} className={cn('size-3.5 opacity-60', { 'opacity-100': visible[pane.id] })})
+          FluidTooltipContent(className='font-mono text-[10px] capitalize') #{pane.label}
+  Arrange(arranging={visible.arranging} onToggle={toggleArrangement})
+  // button(className='ml-1 shrink-0 border-0 bg-transparent p-[5px] font-code text-[8px] uppercase text-dim hover:text-fg' type='button' aria-label='Reset layout' onClick={layout.reset} title='Restore the default pane sizes, order, and views') Reset

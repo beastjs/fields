@@ -1,5 +1,5 @@
 import { helloWorld } from './examples';
-import { readEditorKeymap, writeEditorKeymap } from './editor-preferences';
+import { readEditorKeymap, readEditorLineNumbers, readEditorTheme, writeEditorKeymap, writeEditorLineNumbers, writeEditorTheme } from './editor-preferences';
 import { PlaygroundSession } from './session';
 import { WorkspaceStore } from './project-storage';
 import { connectProjectPersistence } from './project-persistence';
@@ -37,6 +37,8 @@ export function createPlaygroundApp() {
     keymap: readEditorKeymap(),
     theme, persistTheme: saveTheme,
     persistKeymap: writeEditorKeymap,
+    editorTheme: readEditorTheme(), persistEditorTheme: writeEditorTheme,
+    lineNumbers: readEditorLineNumbers(), persistLineNumbers: writeEditorLineNumbers,
     createWorker: () => new Worker(new URL('./compiler.worker.ts', import.meta.url), { type: 'module' }),
   });
   return { session, cloud };

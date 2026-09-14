@@ -2,6 +2,7 @@ import { verifyProject } from './verify-project';
 import type { CompilationProject, CompilationResult, Diagnostic, Position } from './contracts';
 import { CompilationCoordinator, type CompilerWorker } from './coordinator';
 import type { EditorKeymap } from './editor-preferences';
+import { DEFAULT_EDITOR_THEME, type EditorThemeId } from './editor-themes';
 import { PlaygroundProject } from './project';
 import type { ResolvedPreviewEvent } from './preview';
 import { canNavigateRuntimeLocation, type RuntimeStackFrame } from './runtime-diagnostics';
@@ -26,6 +27,8 @@ export interface SessionSnapshot {
   console: ConsoleEntry[];
   keymap: EditorKeymap;
   theme: Theme;
+  editorTheme: EditorThemeId;
+  lineNumbers: boolean;
   toolPanel: ToolPanel;
   buildStatus: string;
   buildError: boolean;
@@ -63,6 +66,10 @@ export class PlaygroundSession {
     theme?: Theme;
     persistTheme?: (theme: Theme) => void;
     persistKeymap?: (keymap: EditorKeymap) => void;
+    editorTheme?: EditorThemeId;
+    persistEditorTheme?: (theme: EditorThemeId) => void;
+    lineNumbers?: boolean;
+    persistLineNumbers?: (visible: boolean) => void;
     debounce?: number;
   }) {
     this.project = new PlaygroundProject(options.project);
@@ -72,7 +79,8 @@ export class PlaygroundSession {
       projectGeneration: 0, previewWidth: options.previewWidth ?? '100%',
       saveStatus: options.saveStatus ?? { label: 'Not saved yet' },
       diagnostics: [], console: [], keymap: options.keymap ?? 'default', toolPanel: 'problems',
-      theme: options.theme ?? 'dark',
+      theme: options.theme ?? 'dark', editorTheme: options.editorTheme ?? DEFAULT_EDITOR_THEME,
+      lineNumbers: options.lineNumbers ?? true,
       buildStatus: 'Initializing compiler', buildError: false, previewMode: 'local', previewStatus: 'Starting',
       previewError: '', hasPreview: false, compileFailed: false, previewFailed: false,
     };
@@ -190,6 +198,16 @@ export class PlaygroundSession {
     if (theme === this.state.theme) return;
     this.options.persistTheme?.(theme);
     this.patch({ theme });
+  };
+  toggleLineNumbers = () => {
+    const lineNumbers = !this.state.lineNumbers;
+    this.options.persistLineNumbers?.(lineNumbers);
+    this.patch({ lineNumbers });
+  };
+  setEditorTheme = (editorTheme: EditorThemeId) => {
+    if (editorTheme === this.state.editorTheme) return;
+    this.options.persistEditorTheme?.(editorTheme);
+    this.patch({ editorTheme });
   };
   toggleTheme = () => this.setTheme(this.state.theme === 'dark' ? 'light' : 'dark');
   selectTool = (toolPanel: ToolPanel) => this.patch({ toolPanel });
