@@ -1,5 +1,6 @@
 import type { CompilationProject } from './contracts'
 import { helloWorld } from './examples'
+import { usesTailwind } from './tailwind-import'
 
 export type LayoutSection = 'topbar'
 
@@ -143,8 +144,14 @@ div(className='min-h-screen bg-zinc-100 text-zinc-900 dark:bg-zinc-950 dark:text
 `
 
 /** Tailwind's `dark:` variant follows the preview's data-theme instead of the OS setting. */
+const DARK_VARIANT = '@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));'
 const PREVIEW_STYLE = `@import "tailwindcss";
-@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+${DARK_VARIANT}
+`
+/** Utilities without Preflight, matching the starter project, so existing element styles keep working. */
+const TAILWIND_UTILITIES = `@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
 `
 
 /** A minimal, self-contained project that renders one template over placeholder page content. */
@@ -158,4 +165,94 @@ export function templatePreviewProject(template: LayoutTemplate): CompilationPro
       [template.file]: template.source
     }
   }
+}
+
+export interface TemplateInstall {
+  /** New or changed files only; empty when the project already contains the template as-is. */
+  files: Record<string, string>
+  /** The template overwrites a different file at the same path. */
+  replaces: boolean
+  /** App.btsx renders the template; false when it could not be updated automatically. */
+  rendered: boolean
+}
+
+const APP_FILE = '/src/App.btsx'
+const STYLE_FILE = '/src/style.css'
+const IMPORT_END = /\bfrom\s*['"]|^import\s*['"]/
+const COMPONENT_BLOCK = /^(?:export\s+)?(?:default\s+)?component\b/
+const HEADER_LINE = /^(?:import|export|module|props|setup)(?=[\s(]|$)/
+
+/**
+ * The project changes that add a template: its component file, an import and usage above the
+ * existing markup in App.btsx, and Tailwind utilities with a `dark:` variant that follows the preview theme.
+ */
+export function installLayoutTemplate(project: CompilationProject, template: LayoutTemplate): TemplateInstall {
+  const files: Record<string, string> = {}
+  const write = (path: string, source: string) => { if (project.files[path] !== source) files[path] = source }
+  const existing = project.files[template.file]
+  write(template.file, template.source)
+
+  const app = project.files[APP_FILE]
+  const rendered = app === undefined ? undefined : renderComponent(app, componentName(template.file), importPath(APP_FILE, template.file))
+  if (rendered !== undefined) write(APP_FILE, rendered)
+
+  const stylesheet = Object.keys(project.files).find(path => path.endsWith('.css') && usesTailwind(project.files[path])) ?? STYLE_FILE
+  const css = project.files[stylesheet]
+  if (css !== undefined) write(stylesheet, withTemplateStyles(css))
+  else {
+    write(stylesheet, PREVIEW_STYLE)
+    const entry = project.files[project.entry]
+    if (!entry.includes(importPath(project.entry, stylesheet))) {
+      write(project.entry, addImport(entry, `import '${importPath(project.entry, stylesheet)}';`))
+    }
+  }
+  return { files, replaces: existing !== undefined && existing !== template.source, rendered: rendered !== undefined }
+}
+
+const componentName = (file: string) => file.slice(file.lastIndexOf('/') + 1).replace(/\.\w+$/, '')
+
+/** A relative import from the importer's directory, or a root-absolute one the virtual filesystem also resolves. */
+function importPath(importer: string, file: string) {
+  const directory = importer.slice(0, importer.lastIndexOf('/') + 1)
+  return file.startsWith(directory) ? `./${file.slice(directory.length)}` : file
+}
+
+/** The line just past the last import statement, and the first top-level template line (-1 when there is none). */
+function sourceLayout(lines: string[]) {
+  let imports = 0
+  let root = -1
+  for (let i = 0; i < lines.length; i++) {
+    if (/^import\b/.test(lines[i])) {
+      while (!IMPORT_END.test(lines[i]) && i < lines.length - 1) i++
+      imports = i + 1
+    } else if (root < 0 && /^[^\s~/]/.test(lines[i]) && !HEADER_LINE.test(lines[i])) root = i
+  }
+  return { imports, root }
+}
+
+function addImport(source: string, statement: string) {
+  const lines = source.split('\n')
+  lines.splice(sourceLayout(lines).imports, 0, statement)
+  return lines.join('\n')
+}
+
+/** Renders `name` above the file's first top-level element; undefined for layouts that need a person to decide. */
+function renderComponent(source: string, name: string, path: string) {
+  if (new RegExp(`^import\\s+${name}\\b`, 'm').test(source)) return source
+  const lines = source.split('\n')
+  if (lines.some(line => COMPONENT_BLOCK.test(line))) return undefined
+  const { imports, root } = sourceLayout(lines)
+  if (root < 0 || root < imports) return undefined
+  lines.splice(root, 0, name)
+  lines.splice(imports, 0, `import ${name} from '${path}'`, ...(imports === 0 ? [''] : []))
+  return lines.join('\n')
+}
+
+function withTemplateStyles(css: string) {
+  const styled = usesTailwind(css) ? css : TAILWIND_UTILITIES + css
+  if (/@custom-variant\s+dark\b/.test(styled)) return styled
+  const imports = [...styled.matchAll(/^@import\b[^;]*;[^\n]*\n?/gm)]
+  const last = imports[imports.length - 1]
+  const at = last ? last.index! + last[0].length : 0
+  return `${styled.slice(0, at)}${at && styled[at - 1] !== '\n' ? '\n' : ''}${DARK_VARIANT}\n${styled.slice(at)}`
 }

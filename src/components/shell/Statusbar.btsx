@@ -27,13 +27,13 @@ footer(className='statusbar flex items-center justify-between px-4 font-code tex
       else
         if user
           button(className='flex items-center gap-1' onClick={() => runAuth(signOutUser)} disabled={isPending} title={authError ?? user.email ?? undefined})
-            span(className='font-mono font-light text-accent/60 uppercase') #{user.displayName?.split(' ').shift() ?? user.email?.split('@').shift() ?? 'Signed in'}
+            span(className='font-mono font-light text-accent/60 uppercase light:text-dim') #{user.displayName?.split(' ').shift() ?? user.email?.split('@').shift() ?? 'Signed in'}
             Icon(name='signout' className='size-3')
         else
           button(onClick={() => runAuth(signInWithGoogle)} disabled={isPending} title={authError ?? undefined})
             span(className='font-mono font-medium text-brand!') #{isPending ? 'Signing in…' : 'Sign in'}
       span(className='flex items-center space-x-1')
-        span(className={cn('text-accent/80 text-[8px]')}) ❱❱
+        span(className={cn('text-accent/80 text-[8px] light:text-brand')}) ❱❱
         span#build-status(aria-live='polite') #{state.buildStatus}
   div#stage-timings(className='flex gap-5 text-faint max-[760px]:gap-[7px] max-[760px]:text-[7px]')
     span Beast #{state.lastResult ? state.lastResult.metadata.timings.beast.toFixed(1) + 'ms' : '—'}

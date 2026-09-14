@@ -8,6 +8,24 @@ import type { WorkspaceProps, NavigateToSource } from '../types'
 import {Icon} from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { iconButton, statusDot } from '../ui/styles'
+import type { Diagnostic } from '../../playground/contracts'
+
+module
+  interface FileAttention { severity: 'error' | 'warning'; count: number }
+  // Worst severity and issue count per file; info diagnostics don't need attention.
+  const attentionByFile = (diagnostics: Diagnostic[]) => {
+    const attention = new Map<string, FileAttention>();
+    for (const diagnostic of diagnostics) {
+      if (diagnostic.severity === 'info') continue;
+      const current = attention.get(diagnostic.file);
+      attention.set(diagnostic.file, {
+        severity: current?.severity === 'error' ? 'error' : diagnostic.severity,
+        count: (current?.count ?? 0) + 1,
+      });
+    }
+    return attention;
+  };
+  const attentionLabel = ({ severity, count }: FileAttention) => count + ' ' + (severity === 'error' ? 'error' : 'warning') + (count === 1 ? '' : 's');
 
 props { session, layout, navigate }: WorkspaceProps & { navigate: NavigateToSource }
 setup
@@ -24,9 +42,10 @@ setup
     setAdding(false);
   };
   const cancel = () => { setAdding(false); addButton.current?.focus(); };
+  const attention = attentionByFile(state.diagnostics);
 
 PaneSurface(layout={layout} pane='files' label='File explorer' className='flex flex-col bg-panel-deep')
-  div(className='mb-1.5 flex h-9 shrink-0 items-center gap-2 rounded-[4px] bg-inset px-[11px] text-dim shadow-[inset_0_1px_3px_#18181855] light:shadow-[inset_0_1px_#fff9,0_1px_2px_#4e473b0d]')
+  div(className='mb-1.5 flex h-9 shrink-0 items-center gap-2 rounded-[4px] bg-inset px-[11px] text-dim shadow-[inset_0_1px_3px_#18181855] light:rounded-lg light:bg-control light:shadow-none')
     svg(width='17' height='17' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.7' aria-hidden={true})
       circle(cx='10.5' cy='10.5' r='6.5')
       path(d='m16 16 4.5 4.5')
@@ -45,10 +64,12 @@ PaneSurface(layout={layout} pane='files' label='File explorer' className='flex f
     | src
   div#file-list
     each path in files key path
-      div(className={cn('file-row group/row relative mx-2 mb-[3px] flex min-h-[35px] w-[calc(100%-16px)] items-center rounded-[5px] border border-transparent hover:bg-surface-hover', state.activeFile === path && 'border-edge-strong bg-[linear-gradient(var(--edge),var(--edge))] shadow-[inset_0_1px_#61615744] light:shadow-[inset_0_1px_#fff9,0_1px_2px_#4e473b0d]')})
-        button(className={cn('flex w-full items-center gap-[11px] overflow-hidden border-0 bg-none py-[9px] pr-6 pl-3.5 text-left text-[11px] text-fg-secondary max-[1050px]:pl-2.5', state.activeFile === path && 'text-fg')} type='button' title={path} aria-label={'Open ' + fileLabel(path)} onClick={() => navigate(path)})
+      div(className={cn('file-row group/row relative mx-2 mb-[3px] flex min-h-[35px] w-[calc(100%-16px)] items-center rounded-[5px] border border-transparent hover:bg-surface-hover', state.activeFile === path && 'border-edge-strong bg-[linear-gradient(var(--edge),var(--edge))] shadow-[inset_0_1px_#61615744] light:border-transparent light:bg-panel light:bg-none light:shadow-elevation')})
+        button(className={cn('flex w-full items-center gap-[11px] overflow-hidden border-0 bg-none py-[9px] pr-6 pl-3.5 text-left text-[11px] text-fg-secondary max-[1050px]:pl-2.5', state.activeFile === path && 'text-fg')} type='button' title={attention.has(path) ? path + ' · ' + attentionLabel(attention.get(path)!) : path} aria-label={'Open ' + fileLabel(path) + (attention.has(path) ? ', ' + attentionLabel(attention.get(path)!) : '')} onClick={() => navigate(path)})
           span(className={cn('font-code text-[10px] text-dim', state.activeFile === path && 'text-brand')}) #{fileIcon(path)}
           span(className='truncate') #{fileLabel(path)}
+          if attention.has(path)
+            span.file-attention-badge(className={cn('ml-auto size-1.5 shrink-0 rounded-full', attention.get(path)!.severity === 'error' ? 'bg-destructive shadow-[0_0_0_3px_color-mix(in_srgb,var(--destructive)_18%,transparent)]' : 'bg-warning shadow-[0_0_0_3px_color-mix(in_srgb,var(--warning)_18%,transparent)]')} data-severity={attention.get(path)!.severity} aria-hidden='true')
         if path !== state.project.entry
           button(className='invisible absolute top-2 right-[5px] border-0 bg-control px-1 text-fg-secondary group-focus-within/row:visible group-hover/row:visible' type='button' aria-label={'Delete ' + fileLabel(path)} onClick={() => session.deleteFile(path)}) ×
     if !files.length

@@ -19,11 +19,11 @@ div#console-list
       span(className='text-faint') #{new Date(entry.timestamp).toLocaleTimeString('en-GB')}
       span(className='w-[35px] shrink-0 text-fg-secondary') #{entry.level}
       div(className='min-w-0 flex-1')
-        div(className={cn('console-message whitespace-pre-wrap text-fg-secondary [overflow-wrap:anywhere]', entry.level === 'error' && 'text-[#e9b98f] light:text-[#8c5623]', entry.level === 'warn' && 'text-[#e2c278] light:text-[#8c5623]')}) #{entry.message}
+        div(className={cn('console-message whitespace-pre-wrap text-fg-secondary [overflow-wrap:anywhere]', entry.level === 'error' && 'text-[#e9b98f] light:text-destructive', entry.level === 'warn' && 'text-[#e2c278] light:text-notice')}) #{entry.message}
         if entry.frames?.length
           div(className='mt-1.5 flex flex-col items-start gap-[3px]')
             each frame, index in entry.frames key index
               if frame.location
-                button(className='runtime-source-link border-0 bg-none py-0.5 text-left text-[#f2a06c] underline underline-offset-3 [overflow-wrap:anywhere] light:text-[#a64b19] disabled:cursor-default disabled:text-faint disabled:no-underline' type='button' disabled={!canNavigateRuntimeLocation(frame.location, state.project.files[frame.location.file])} onClick={() => open(frame.location!)} title={canNavigateRuntimeLocation(frame.location, state.project.files[frame.location.file]) ? 'Open source location' : 'This stack frame belongs to an older version of the file.'}) #{fileLabel(frame.location.file)}:#{frame.location.position.line}:#{frame.location.position.column}#{canNavigateRuntimeLocation(frame.location, state.project.files[frame.location.file]) ? '' : ' (source changed)'}
+                button(className='runtime-source-link border-0 bg-none py-0.5 text-left text-[#f2a06c] underline underline-offset-3 [overflow-wrap:anywhere] light:text-brand disabled:cursor-default disabled:text-faint disabled:no-underline' type='button' disabled={!canNavigateRuntimeLocation(frame.location, state.project.files[frame.location.file])} onClick={() => open(frame.location!)} title={canNavigateRuntimeLocation(frame.location, state.project.files[frame.location.file]) ? 'Open source location' : 'This stack frame belongs to an older version of the file.'}) #{fileLabel(frame.location.file)}:#{frame.location.position.line}:#{frame.location.position.column}#{canNavigateRuntimeLocation(frame.location, state.project.files[frame.location.file]) ? '' : ' (source changed)'}
               else
                 div(className='max-w-full whitespace-pre-wrap text-[9px] text-faint [overflow-wrap:anywhere]') #{frame.raw}

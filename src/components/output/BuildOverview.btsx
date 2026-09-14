@@ -3,7 +3,7 @@ import type { CompilationResult } from '../../playground/contracts'
 props { result }: { result?: CompilationResult }
 setup
   const timings = result?.metadata.timings;
-  const card = 'min-w-0 rounded-[4px] border border-edge bg-surface-hover px-[15px] py-[11px] shadow-[inset_0_1px_#5b5b5122] light:shadow-[inset_0_1px_#fff9,0_1px_2px_#4e473b0d] max-[760px]:px-3 max-[760px]:py-[9px] output-short:px-3 output-short:py-[7px]';
+  const card = 'min-w-0 rounded-[4px] border border-edge bg-surface-hover px-[15px] py-[11px] shadow-[inset_0_1px_#5b5b5122] light:rounded-lg light:bg-panel-deep light:shadow-none max-[760px]:px-3 max-[760px]:py-[9px] output-short:px-3 output-short:py-[7px]';
   const label = 'font-sans text-[10px] text-fg-secondary output-short:text-[9px]';
   const value = 'mt-[9px] mb-[7px] font-code text-[28px] leading-none tracking-[-1px] text-fg tabular-nums max-[760px]:text-[22px] output-short:mt-1.5 output-short:mb-1 output-short:text-[22px]';
 

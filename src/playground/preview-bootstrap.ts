@@ -184,7 +184,7 @@ export function previewDocument(channel: string, build: number, theme: Theme = '
 }
 
 function documentWithScript(script: string, theme: Theme): string {
-  return `<!doctype html><html data-theme="${theme}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' blob:; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'"><style>html{color:#deded8;background:#303030;color-scheme:dark}html[data-theme="light"]{color:#262822;background:#faf9f5;color-scheme:light}body{margin:0;font-family:system-ui,sans-serif;color:inherit}*{box-sizing:border-box}</style></head><body><div id="app"></div><script>${script.replaceAll('</script', '<\\/script')}</script></body></html>`;
+  return `<!doctype html><html data-theme="${theme}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' blob:; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'"><style>html{color:#deded8;background:#303030;color-scheme:dark}html[data-theme="light"]{color:#111113;background:#ffffff;color-scheme:light}body{margin:0;font-family:system-ui,sans-serif;color:inherit}*{box-sizing:border-box}</style></head><body><div id="app"></div><script>${script.replaceAll('</script', '<\\/script')}</script></body></html>`;
 }
 
 

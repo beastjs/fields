@@ -28,8 +28,8 @@ component SwitcherRoot
     const label = busy ? 'Loading…' : activeItem?.label ?? emptyLabel;
 
   DropdownMenu
-    DropdownMenuTrigger(render={trigger} className='bg-background/80 text-fg hover:bg-background/90 data-pressed:bg-background ps-0 pe-1 rounded-lg gap-0.5' disabled={busy})
-      div(className="flex aspect-square size-8 items-center justify-center rounded-lg text-sidebar-primary-foreground")
+    DropdownMenuTrigger(render={trigger} className='bg-background/80 text-fg hover:bg-background/90 data-pressed:bg-background ps-0 pe-1 rounded-lg gap-0.5 light:bg-panel light:shadow-elevation' disabled={busy})
+      div(className="flex aspect-square size-8 items-center justify-center rounded-lg text-sidebar-primary-foreground light:text-dim")
         Icon(name={activeItem?.icon ?? 'folder'} className='size-4')
       div(className='flex min-w-0 items-center gap-2.5 text-[12px] max-[760px]:hidden')
         span(className='truncate capitalize' title={label}) #{label}

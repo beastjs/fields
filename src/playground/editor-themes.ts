@@ -48,7 +48,7 @@ export const editorThemes = [
     light: {
       keyword: '#805183', string: '#526c32', type: '#8e581e', tag: '#3e6878', comment: '#79816e',
       number: '#a85124', attribute: '#8a4f47', function: '#2d6b5a',
-      selection: '#ecd5b9', cursor: '#c64d18', activeLine: '#eeebe2'
+      selection: '#dfdefc', cursor: '#5650e6', activeLine: '#f4f4f5'
     }
   },
   {

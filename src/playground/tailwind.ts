@@ -1,13 +1,11 @@
 import { compile } from 'tailwindcss';
 import { tailwindStylesheets } from '../generated/tailwind';
+import { normalizePath } from './virtual-fs';
 
-const TAILWIND_IMPORT = /@import\s+(?:url\(\s*)?["']tailwindcss(?:\/[\w.-]+)?["']/;
+// Kept dependency-free so the main bundle can check stylesheets without loading the compiler.
+export { usesTailwind } from './tailwind-import';
+
 const SCANNED_SOURCE = /\.(btsx|tsrx|ts|js|json)$/;
-
-/** Only stylesheets that opt in with `@import "tailwindcss"` (or a subpath) are compiled by Tailwind. */
-export function usesTailwind(css: string) {
-  return TAILWIND_IMPORT.test(css);
-}
 
 /**
  * A permissive stand-in for Tailwind's native scanner. Tailwind ignores tokens that are not
@@ -27,13 +25,24 @@ export function extractCandidates(files: Record<string, string>) {
   return [...candidates];
 }
 
-async function loadStylesheet(id: string, base: string) {
-  const content = tailwindStylesheets[id];
-  if (content === undefined) throw new Error(`Cannot resolve stylesheet "${id}". Only "tailwindcss" imports are supported.`);
-  return { path: id, base, content };
-}
+const directory = (path: string) => path.slice(0, path.lastIndexOf('/')) || '/';
 
-export async function compileTailwind(css: string, candidates: string[]) {
-  const compiler = await compile(css, { base: '/', loadStylesheet });
+/**
+ * Compiles the stylesheet at `file`. Tailwind inlines every `@import` it does not skip (URLs), so
+ * bundled `tailwindcss` sheets and project `.css` files, relative to the importing sheet, both resolve.
+ */
+export async function compileTailwind(css: string, candidates: string[], file: string, read: (path: string) => string | undefined) {
+  const loadStylesheet = async (id: string, base: string) => {
+    const bundled = tailwindStylesheets[id];
+    if (bundled !== undefined) return { path: id, base, content: bundled };
+    if (!id.startsWith('.') && !id.startsWith('/')) {
+      throw new Error(`Cannot resolve stylesheet "${id}". Only "tailwindcss" and project .css imports are supported.`);
+    }
+    const path = normalizePath(id.startsWith('/') ? id : `${base}/${id}`);
+    const content = path.endsWith('.css') ? read(path) : undefined;
+    if (content === undefined) throw new Error(`Cannot resolve stylesheet "${id}": ${path} is not a .css file in this project.`);
+    return { path, base: directory(path), content };
+  };
+  const compiler = await compile(css, { base: directory(file), loadStylesheet });
   return compiler.build(candidates);
 }

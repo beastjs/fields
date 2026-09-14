@@ -89,7 +89,7 @@ export async function compileProject(project: CompilationProject): Promise<Compi
     const start = performance.now();
     const candidates = extractCandidates(Object.fromEntries(fs.list().map(path => [path, fs.read(path)!])));
     await Promise.all(tailwindFiles.map(async path => {
-      try { tailwind.set(path, { css: await compileTailwind(fs.read(path)!, candidates) }); }
+      try { tailwind.set(path, { css: await compileTailwind(fs.read(path)!, candidates, path, file => fs.read(file)) }); }
       catch (error) { tailwind.set(path, { error }); }
     }));
     result.metadata.timings.web += performance.now() - start;

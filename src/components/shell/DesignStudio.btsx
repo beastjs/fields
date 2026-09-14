@@ -1,13 +1,15 @@
-import { useEffect, useRef, useState } from 'octane'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'octane'
 import { Icon } from '@/lib/icons'
 import { useTheme } from '../theme/theme-context'
-import { topbarTemplates, templatePreviewProject } from '../../playground/layout-templates'
+import type { SessionProps } from '../types'
+import { installLayoutTemplate, topbarTemplates, templatePreviewProject } from '../../playground/layout-templates'
 import { TemplatePreview, type TemplatePreviewStatus } from '../../playground/template-preview'
 import { cn } from '@/lib/utils'
-import { dialogActions, dialogHeading, dialogPanel, dialogTitle, eyebrowLabel, iconButton, primaryButton, secondaryButton, transferDescription } from '../ui/styles'
+import { dialogActions, dialogHeading, dialogPanel, dialogTitle, eyebrowLabel, iconButton, primaryButton, secondaryButton, transferDescription, transferNote } from '../ui/styles'
 
-props { compact = false }: { compact?: boolean }
+props { session, compact = false }: SessionProps & { compact?: boolean }
 setup
+  const state = useSyncExternalStore(session.subscribe, session.getSnapshot);
   const dialog = useRef<HTMLDialogElement | null>(null);
   const frame = useRef<HTMLIFrameElement | null>(null);
   const preview = useRef<TemplatePreview | null>(null);
@@ -19,10 +21,24 @@ setup
   const { theme } = useTheme();
   const selected = topbarTemplates.find(template => template.id === selectedId) ?? topbarTemplates[0];
   const templateTab = 'px-2.5 py-1 rounded-[4px] text-[10px] text-dim aria-selected:bg-control aria-selected:text-fg';
-  const statusText = status.state === 'compiling' ? 'Compiling…' : status.state === 'error' ? status.message : selected.file.replace('/src/', '');
+  const fileName = selected.file.replace('/src/', '');
+  const statusText = status.state === 'compiling' ? 'Compiling…' : status.state === 'error' ? status.message : fileName;
+  // Only diff against the project while the dialog is open; the session changes on every keystroke.
+  const install = open ? installLayoutTemplate(state.project, selected) : undefined;
+  const installed = install !== undefined && Object.keys(install.files).length === 0;
+  const installLabel = installed ? 'Added to project' : install?.replaces ? `Replace ${fileName}` : 'Add to project';
+  const installNote = installed ? `Your project already uses this ${selected.section}.`
+    : install?.replaces ? `Replaces your current ${fileName} — edits you made to it will be lost.`
+    : install?.rendered === false ? `Adds ${fileName}. App.btsx could not be updated automatically, so import it and render ${fileName.replace('.btsx', '')} where it belongs.`
+    : `Adds ${fileName} and renders it at the top of App.btsx.`;
 
   const show = () => { setOpen(true); dialog.current?.showModal(); };
   const close = () => dialog.current?.close();
+  const addToProject = () => {
+    if (!install || installed) return;
+    session.writeFiles(install.files, selected.file);
+    close();
+  };
   const copySource = async () => {
     try { await navigator.clipboard.writeText(selected.source); setCopied(true); }
     catch { setCopied(false); }
@@ -77,6 +93,7 @@ dialog(className={cn(dialogPanel, 'w-[min(960px,calc(100vw-24px))]')} ref={dialo
       iframe(className='m-0 h-[360px] w-full border-0' ref={frame} title={`${selected.title} topbar preview`} hidden={view !== 'preview'})
       if view === 'source'
         pre(className='m-0 h-[360px] w-full overflow-auto p-3 font-code text-[10px]/[1.7] text-fg-secondary') #{selected.source}
+  p(className={cn(transferNote, 'data-[replaces=true]:text-warning')} data-replaces={install?.replaces === true}) #{installNote}
   div(className={dialogActions})
     button(className={secondaryButton} type='button' onClick={copySource}) #{copied ? 'Copied' : 'Copy source'}
-    button(className={primaryButton} type='button' onClick={close}) Done
+    button(className={cn(primaryButton, 'disabled:cursor-default disabled:opacity-60')} type='button' disabled={installed} onClick={addToProject}) #{installLabel}

@@ -124,14 +124,14 @@ div
         ~   onCreate={auth.isAuthenticated && cloudState.activeTeamId ? createProject : undefined}
         ~ )
       // ExampleLibrary(session={session} compact)
-    ViewToolbar(layout={layout} toggleArrangement={toggleArrangement})
+    ViewToolbar(session={session} layout={layout} toggleArrangement={toggleArrangement})
     div(className='flex shrink-0 items-center justify-self-end gap-4 max-[760px]:gap-0.5')
-      DesignStudio(compact={false})
+      DesignStudio(session={session})
       // ProjectSharing(session={session})
       button(className='text-muted-foreground hover:text-foreground' type='button' aria-label='Light mode' aria-pressed={theme === 'light'} title={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'} onClick={toggleTheme})
         Icon(name='share' className='size-5')
-      button(className='text-muted-foreground hover:text-accent' type='button' aria-label='Light mode' aria-pressed={theme === 'light'} title={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'} onClick={toggleTheme})
+      button(className='text-muted-foreground hover:text-accent light:hover:text-brand' type='button' aria-label='Light mode' aria-pressed={theme === 'light'} title={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'} onClick={toggleTheme})
         Icon(name='theme' className='size-5')
       button#run-build(className='text-muted-foreground hover:text-foreground' type='button' aria-label='Run project' onClick={session.run} title='Run project (⌘/Ctrl + Enter)')
         Icon(name='play' className='size-5')
-  p#save-notice(className='m-0 px-[22px] py-[9px] text-[11px] leading-[1.5] text-warning bg-[#30291e] border-b border-[#605031] [overflow-wrap:anywhere] light:bg-[#f8eddb] light:text-[#79521b] light:border-[#debf8d]' role='status' hidden={!state.saveStatus.issue && !cloudState.error}) #{cloudState.error || state.saveStatus.issue}
+  p#save-notice(className='m-0 px-[22px] py-[9px] text-[11px] leading-[1.5] text-warning bg-[#30291e] border-b border-[#605031] [overflow-wrap:anywhere] light:bg-notice-surface light:text-notice light:border-notice-edge' role='status' hidden={!state.saveStatus.issue && !cloudState.error}) #{cloudState.error || state.saveStatus.issue}

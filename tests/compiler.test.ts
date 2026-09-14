@@ -54,6 +54,23 @@ describe('production compiler boundaries', () => {
     const broken = await compileProject({ entry: '/main.ts', files: { '/main.ts': "import './style.css';", '/style.css': '@import "tailwindcss"; @apply nope;' } });
     expect(broken.entry).toBeUndefined();
   });
+  test('Tailwind stylesheets inline project CSS imports relative to the importing sheet', async () => {
+    const result = await compileProject({ entry: '/src/main.ts', files: {
+      '/src/main.ts': "import './style.css';",
+      '/src/style.css': '@import "tailwindcss";\n@import "./components/button.css";\n@import "https://example.com/font.css";',
+      '/src/components/button.css': '@import "../tokens.css";\n.button { @apply rounded-md; }',
+      '/src/tokens.css': ':root { --brand: orange; }',
+    } });
+    expect(result.diagnostics).toEqual([]);
+    const css = result.assets.find(asset => asset.id === '/src/style.css')!.content;
+    for (const rule of ['.button', 'border-radius', '--brand: orange', '@import "https://example.com/font.css"']) expect(css).toContain(rule);
+    const missing = await compileProject({ entry: '/src/main.ts', files: {
+      '/src/main.ts': "import './style.css';", '/src/style.css': '@import "tailwindcss";\n@import "./button.css";',
+    } });
+    expect(missing.diagnostics.map(d => [d.file, d.message])).toEqual([
+      ['/src/style.css', 'Cannot resolve stylesheet "./button.css": /src/button.css is not a .css file in this project.'],
+    ]);
+  });
   test('the starter project exposes Tailwind utilities without Preflight', async () => {
     const result = await compileProject({ ...helloWorld, files: { ...helloWorld.files,
       '/src/App.btsx': helloWorld.files['/src/App.btsx'].replace('main.page', 'main.page.italic') } });

@@ -10,6 +10,6 @@ setup
     : state.lastResult?.modules.find(module => module.source === state.activeFile)?.code ?? 'No generated JavaScript for this file.';
 
 div(className='flex shrink-0 flex-col items-start gap-1')
-  button(type='button' className={cn('rounded-[3px] border border-transparent bg-transparent px-2 py-[5px] text-[9px] text-dim', stage === 'octane' && 'border-edge-strong bg-surface-hover text-[#e3ae7e] light:text-[#a64b19]')} data-stage='octane' aria-pressed={stage === 'octane'} onClick={() => setStage('octane')}) Octane / TSRX
-  button(type='button' className={cn('rounded-[3px] border border-transparent bg-transparent px-2 py-[5px] text-[9px] text-dim', stage === 'web' && 'border-edge-strong bg-surface-hover text-[#e3ae7e] light:text-[#a64b19]')} data-stage='web' aria-pressed={stage === 'web'} onClick={() => setStage('web')}) Web / JavaScript
+  button(type='button' className={cn('rounded-[3px] border border-transparent bg-transparent px-2 py-[5px] text-[9px] text-dim', stage === 'octane' && 'border-edge-strong bg-surface-hover text-[#e3ae7e] light:text-brand')} data-stage='octane' aria-pressed={stage === 'octane'} onClick={() => setStage('octane')}) Octane / TSRX
+  button(type='button' className={cn('rounded-[3px] border border-transparent bg-transparent px-2 py-[5px] text-[9px] text-dim', stage === 'web' && 'border-edge-strong bg-surface-hover text-[#e3ae7e] light:text-brand')} data-stage='web' aria-pressed={stage === 'web'} onClick={() => setStage('web')}) Web / JavaScript
 pre#generated-code(className='m-0 whitespace-pre font-code text-[10px]/[1.7] text-fg-secondary') #{code}

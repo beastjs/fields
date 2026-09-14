@@ -46,12 +46,12 @@ dialog(className={cn(dialogPanel, 'w-[min(430px,calc(100vw-32px))] max-h-[calc(1
         NativeSelectOption(value={option.id}) #{option.label}
     label(for='ai-model') Model ID
     input#ai-model(type='text' value={model.state.value} onInput={event => model.handleChange(event.currentTarget.value)} onBlur={model.handleBlur} maxlength='200' autocomplete='off' aria-describedby='ai-model-error' aria-invalid={model.state.meta.errors.length > 0})
-    p#ai-model-error(className='my-[5px] text-[10px] text-[#e8b66e] light:text-[#8c5623]' role='alert' hidden={!model.state.meta.errors.length}) #{model.state.meta.errors.join(' ')}
+    p#ai-model-error(className='my-[5px] text-[10px] text-[#e8b66e] light:text-destructive' role='alert' hidden={!model.state.meta.errors.length}) #{model.state.meta.errors.join(' ')}
     if provider.state.value === 'custom'
       div
         label(for='ai-base-url') API base URL
         input#ai-base-url(type='url' value={baseURL.state.value} onInput={event => baseURL.handleChange(event.currentTarget.value)} onBlur={baseURL.handleBlur} autocomplete='off' placeholder='http://127.0.0.1:11434/v1' aria-describedby='ai-base-error')
-        p#ai-base-error(className='my-[5px] text-[10px] text-[#e8b66e] light:text-[#8c5623]' role='alert' hidden={!baseURL.state.meta.errors.length}) #{baseURL.state.meta.errors.join(' ')}
+        p#ai-base-error(className='my-[5px] text-[10px] text-[#e8b66e] light:text-destructive' role='alert' hidden={!baseURL.state.meta.errors.length}) #{baseURL.state.meta.errors.join(' ')}
     label(for='ai-key') API key
     input#ai-key(type='password' value={apiKey.state.value} onInput={event => apiKey.handleChange(event.currentTarget.value)} autocomplete='new-password' placeholder={initial.status?.configured[provider.state.value] ? 'Server key configured · optional override' : 'Paste your provider API key'} aria-describedby='ai-key-help')
     p#ai-key-help(className='text-[10px] leading-[1.7] text-dim') Keys entered here stay in memory for this tab. Leave blank to use the server connection.

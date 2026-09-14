@@ -11,6 +11,6 @@ div#problems-list
       div(className='mb-2.5 font-sans text-[10px] text-dim output-short:mb-[7px] output-short:text-[9px]') #{state.lastResult ? '✓  Looking good. No compiler problems.' : 'Preparing the first build…'}
       BuildOverview(result={state.lastResult})
   each diagnostic, index in state.diagnostics key index
-    button(className='flex w-full gap-3 border-0 bg-none py-[7px] text-left text-[11px] text-[#d8b58b] light:text-[#8c5623] max-[760px]:flex-wrap max-[760px]:gap-1' type='button' onClick={() => navigate(diagnostic.file, diagnostic.start)})
+    button(className='flex w-full gap-3 border-0 bg-none py-[7px] text-left text-[11px] text-[#d8b58b] light:text-notice max-[760px]:flex-wrap max-[760px]:gap-1' type='button' onClick={() => navigate(diagnostic.file, diagnostic.start)})
       span(className='shrink-0 text-dim') #{fileLabel(diagnostic.file)}:#{diagnostic.start.line}:#{diagnostic.start.column}
       span #{diagnostic.severity.toUpperCase()} · #{diagnostic.source} · #{diagnostic.message}

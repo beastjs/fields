@@ -42,7 +42,14 @@ const theme = EditorView.theme({
     border: 'none',
     padding: '0 0px 0 0px'
   },
-  '.cm-tooltip': { background: 'transparent', border: '1px solid transparent' },
+  // Lint hovers and completions float over code, so they need an opaque surface to stay legible.
+  '.cm-tooltip': {
+    backgroundColor: 'var(--panel)',
+    color: 'var(--text)',
+    border: '1px solid var(--edge-strong)',
+    borderRadius: '5px',
+    boxShadow: '0 8px 24px #0006'
+  },
   '.cm-panels': { background: 'transparent', color: 'var(--text)' },
   '.cm-vim-panel': { font: '10px/1.8 var(--mono)', color: 'var(--brand)', padding: '2px 12px !important' }
 })

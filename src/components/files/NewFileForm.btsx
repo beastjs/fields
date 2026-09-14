@@ -20,4 +20,4 @@ form#new-file-form(className='mx-3 mt-0.5 mb-2.5 text-[10px]' onSubmit={submit})
   input#new-file-name(className='mb-[7px] w-full rounded-[4px] border border-edge-strong bg-inset p-2 text-fg' ref={input} type='text' placeholder='src/Component.btsx' autocomplete='off' value={field.state.value} onInput={(event) => field.handleChange(event.currentTarget.value)} onBlur={field.handleBlur} aria-invalid={errors.length > 0} aria-describedby={errors.length ? 'file-error' : undefined})
   button(className={formButton} type='submit') Add
   button#cancel-file(className={formButton} type='button' onClick={onCancel}) Cancel
-  p#file-error(className='text-[10px] leading-[1.6] text-[#e9b747] light:text-[#8c5623]' role='alert' hidden={!errors.length}) #{errors.join(' ')}
+  p#file-error(className='text-[10px] leading-[1.6] text-[#e9b747] light:text-destructive' role='alert' hidden={!errors.length}) #{errors.join(' ')}

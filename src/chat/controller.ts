@@ -1,5 +1,5 @@
 import type { FetchLike } from './contracts';
-import { MAX_REFERENCE_CHARS, MAX_REFERENCES, type AIStatus, type ChatRequest, type ChatSettings, type ChatTurn, type FileContext } from './contracts';
+import { MAX_PROJECT_PATHS, MAX_REFERENCE_CHARS, MAX_REFERENCES, type AIStatus, type ChatRequest, type ChatSettings, type ChatTurn, type FileContext } from './contracts';
 import { streamChat } from './transport';
 
 export interface ChatMessage extends ChatTurn { context?: FileContext; attachments?: string[]; projectGeneration?: number; id: number; attempt?: number; model?: string; state?: 'complete' | 'streaming' | 'stopped' | 'error' }
@@ -45,8 +45,11 @@ export class ChatController {
     this.persist(settings);
     this.patch({ settings: { ...settings }, error: '' });
   };
-  /** `attempt` counts automatic fix-up rounds for one request: 1 for the user's own message. */
-  async submit(prompt: string, context?: FileContext, projectGeneration?: number, references: FileContext[] = [], attempt = 1) {
+  /**
+   * `attempt` counts automatic fix-up rounds for one request: 1 for the user's own message.
+   * `files` lists every current project path, so the model knows what exists beyond the attached sources.
+   */
+  async submit(prompt: string, context?: FileContext, projectGeneration?: number, references: FileContext[] = [], attempt = 1, files: string[] = []) {
     if (this.state.busy || !prompt.trim()) return;
     if (prompt.length > 32000) { this.patch({ error: 'Keep your message under 32,000 characters.' }); return; }
     if (context && context.source.length > 60000) { this.patch({ error: 'This file is too large to attach. Turn off active-file context or select a smaller file.' }); return; }
@@ -57,7 +60,7 @@ export class ChatController {
     const messages = [...this.state.messages, user];
     this.patch({ messages });
     const settings = this.state.settings;
-    const request: ChatRequest = { ...settings, messages: messages.filter(message => message.state !== 'error' && message.state !== 'stopped').slice(-30).map(({ role, content }) => ({ role, content })), context, references: references.length ? references : undefined };
+    const request: ChatRequest = { ...settings, messages: messages.filter(message => message.state !== 'error' && message.state !== 'stopped').slice(-30).map(({ role, content }) => ({ role, content })), context, references: references.length ? references : undefined, files: files.length ? files.slice(0, MAX_PROJECT_PATHS) : undefined };
     this.lastRequest = request;
     this.lastGeneration = projectGeneration;
     this.lastAttempt = attempt;

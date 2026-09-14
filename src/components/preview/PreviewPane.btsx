@@ -56,7 +56,7 @@ setup
     };
   }, []);
   useEffect(() => connectPreview(iframe.current!, session, hostedURL), [session]);
-  const zoomSelect = 'min-w-[50px] bg-panel py-1 pr-0 pl-1.5 font-code text-[10px] text-fg-secondary';
+  const zoomSelect = 'min-w-[50px] bg-panel light:bg-transparent py-1 pr-0 pl-1.5 font-code text-[10px] text-fg-secondary';
   const zoomOptions = [
     {id: '0.5', label: '50%'},
     {id: '0.75', label: '75%'},
@@ -77,14 +77,14 @@ PaneSurface(layout={layout} pane='preview' label='Application preview' className
         else
           span(className='opacity-80') local : preview :
         span#preview-status(className='uppercase text-xs') #{state.previewStatus}
-      ButtonGroup(className='ml-auto flex overflow-hidden border border-edge shadow-[inset_0_1px_var(--edge-strong)] light:shadow-[inset_0_1px_#fff9,0_1px_2px_#4e473b0d]' role='group' aria-label='Preview size')
+      ButtonGroup(className='ml-auto flex overflow-hidden border border-edge shadow-[inset_0_1px_var(--edge-strong)] light:gap-0.5 light:rounded-lg light:border-transparent light:divide-transparent light:bg-black/[0.045] light:p-0.5 light:shadow-none' role='group' aria-label='Preview size')
         each viewport in viewports key viewport.width
-          button(type='button' className={cn('flex h-[26px] w-[30px] items-center justify-center bg-panel text-[14px] text-faint light:shadow-[inset_0_1px_#fff9,0_1px_2px_#4e473b0d]', state.previewWidth === viewport.width && 'bg-[linear-gradient(var(--canvas),var(--panel))] text-brand')} data-width={viewport.width} aria-label={viewport.label + ' preview'} aria-pressed={state.previewWidth === viewport.width} title={viewport.label} onClick={() => session.setPreviewWidth(viewport.width)})
+          button(type='button' className={cn('flex h-[26px] w-[30px] items-center justify-center bg-panel text-[14px] text-faint light:h-[24px] light:rounded-md light:bg-transparent light:hover:text-fg', state.previewWidth === viewport.width && 'bg-[linear-gradient(var(--canvas),var(--panel))] text-brand light:bg-panel light:bg-none light:text-fg light:shadow-elevation')} data-width={viewport.width} aria-label={viewport.label + ' preview'} aria-pressed={state.previewWidth === viewport.width} title={viewport.label} onClick={() => session.setPreviewWidth(viewport.width)})
             Icon(name={viewport.symbol} className='size-3')
         NativeSelect(className={zoomSelect} aria-label='Preview zoom' value={String(zoom)} onChange={event => setZoom(Number(event.currentTarget.value))})
           each option in zoomOptions key option.id
             NativeSelectOption(value={option.id}) #{option.label}
-        button#reload-preview(className='flex h-[26px] w-[30px] items-center justify-center bg-panel text-[14px] text-faint light:shadow-[inset_0_1px_#fff9,0_1px_2px_#4e473b0d]' type='button' aria-label='Reload preview' title='Reload preview' onClick={session.reloadPreview})
+        button#reload-preview(className='flex h-[26px] w-[30px] items-center justify-center bg-panel text-[14px] text-faint light:h-[24px] light:rounded-md light:bg-transparent light:hover:text-fg' type='button' aria-label='Reload preview' title='Reload preview' onClick={session.reloadPreview})
           Icon(name='refresh' className='size-3.5')
       button(className={iconButton} ref={fullscreenButton} type='button' aria-label={fullscreen ? 'Exit fullscreen preview' : 'Enter fullscreen preview'} aria-pressed={fullscreen} title={fullscreenSupported ? (fullscreen ? 'Exit fullscreen (Esc)' : 'Fullscreen preview') : 'Fullscreen is unavailable in this browser'} disabled={!fullscreenSupported || fullscreenPending} onClick={toggleFullscreen}) #{fullscreen ? '⊡' : '⛶'}
 
@@ -101,4 +101,4 @@ PaneSurface(layout={layout} pane='preview' label='Application preview' className
         span(className='mb-3.5 text-[40px] text-brand') ◈
         strong(className='text-[14px] font-medium') #{state.compileFailed ? 'Your code needs a small fix' : 'Preparing your preview'}
         p(className='max-w-[300px] text-[11px] leading-[1.8]') #{state.compileFailed ? 'Open a problem below to jump to its source. The preview will recover when you fix it.' : 'The first build starts automatically.'}
-    div#preview-error(className='max-h-[100px] overflow-auto whitespace-pre-wrap border-t border-[#73503a] bg-surface-hover px-4 py-[11px] text-[11px] text-[#edb583] light:border-[#debf8d] light:bg-[#f8eddb] light:text-[#79521b]' role='alert' hidden={!state.previewError}) #{state.previewError}
+    div#preview-error(className='max-h-[100px] overflow-auto whitespace-pre-wrap border-t border-[#73503a] bg-surface-hover px-4 py-[11px] text-[11px] text-[#edb583] light:border-notice-edge light:bg-notice-surface light:text-notice' role='alert' hidden={!state.previewError}) #{state.previewError}

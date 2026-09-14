@@ -169,3 +169,18 @@ test('verification also compiles an unimported recommended file and aborts on se
   expect((await pending)?.message).toContain('cancelled');
   expect(worker.terminated).toBe(true);
 });
+
+test('writing several files is one project change that opens the requested file', () => {
+  const session = new PlaygroundSession({ project, createWorker: () => new FakeWorker() });
+  const states: ReturnType<typeof session.getSnapshot>[] = [];
+  const unsubscribe = session.subscribe(() => states.push(session.getSnapshot()));
+  session.writeFiles({ '/src/Topbar.btsx': 'header Top\n', '/src/App.btsx': "import Topbar from './Topbar.btsx'\n\nTopbar\nh1 Hello\n" }, '/src/Topbar.btsx');
+  expect(states).toHaveLength(1);
+  expect(states[0].activeFile).toBe('/src/Topbar.btsx');
+  expect(states[0].project.files['/src/Topbar.btsx']).toBe('header Top\n');
+  expect(states[0].projectGeneration).toBe(0);
+  session.writeFiles({ '/src/Topbar.btsx': 'header Top\n' });
+  expect(states).toHaveLength(1);
+  unsubscribe();
+  session.dispose();
+});

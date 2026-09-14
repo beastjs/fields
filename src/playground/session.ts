@@ -181,6 +181,14 @@ export class PlaygroundSession {
     this.projectChanged({ editorFocus: { revision: ++this.sequence } });
     return path;
   }
+  /** Creates or overwrites several files as one change, then opens `open` in the editor. */
+  writeFiles(files: Record<string, string>, open?: string) {
+    const changed = Object.entries(files).filter(([path, source]) => this.project.fs.read(path) !== source);
+    if (!changed.length) { if (open) this.openFile(open, undefined, true); return; }
+    for (const [path, source] of changed) this.project.fs.write(path, source);
+    if (open) this.project.open(open);
+    this.projectChanged({ editorFocus: { revision: ++this.sequence } });
+  }
   deleteFile(path: string) {
     if (this.project.remove(path)) this.projectChanged();
   }

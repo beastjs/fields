@@ -1,9 +1,10 @@
 import { useField, useForm } from '@octanejs/tanstack-form'
 import { useState, useSyncExternalStore } from 'octane'
 import { MAX_REFERENCES } from '../../chat/contracts'
+import { chatReferences, relatedFiles } from '../../chat/project-context'
 import { fileLabel } from '../../playground/presentation'
 import type { ChatController } from '../../chat/controller'
-import type { PlaygroundSession } from '../../playground/session'
+import type { PlaygroundSession, SessionSnapshot } from '../../playground/session'
 import NativeSelect, {NativeSelectOption} from "../ui/native-select.btsx";
 import { cn } from '@/lib/utils'
 import {Icon} from "@/lib/icons";
@@ -15,37 +16,47 @@ setup
   const state = useSyncExternalStore(chat.subscribe, chat.getSnapshot);
   const project = useSyncExternalStore(session.subscribe, session.getSnapshot);
   const [included, setIncluded] = useState<string[]>([]);
+  const [excluded, setExcluded] = useState<string[]>([]);
+  // Files deleted since they were picked, or duplicating the attached active file, are skipped.
+  const pickedFiles = (snapshot: SessionSnapshot, withActive: boolean) =>
+    included.filter(file => snapshot.project.files[file] !== undefined && !(withActive && file === snapshot.activeFile));
+  // The active file's imports and importers ride along automatically, so new components are never invisible to chat.
+  const attachments = (snapshot: SessionSnapshot, withActive: boolean) => {
+    const picked = pickedFiles(snapshot, withActive);
+    const related = withActive ? relatedFiles(snapshot.project, snapshot.activeFile).filter(file => !excluded.includes(file)) : [];
+    return { picked, ...chatReferences(snapshot.project, picked, related) };
+  };
   const form = useForm({ defaultValues: { prompt: '', includeFile: true }, onSubmit: ({ value }) => {
     if (chat.getSnapshot().busy) return;
-    const active = session.getSnapshot().activeFile;
+    const snapshot = session.getSnapshot();
+    const active = snapshot.activeFile;
     const context = value.includeFile ? { file: active, source: session.read(active)! } : undefined;
-    // Files deleted since they were picked, or duplicating the attached active file, are skipped.
-    const references = included.filter(file => !(context && file === active)).flatMap(file => {
-      const source = session.read(file);
-      return source === undefined ? [] : [{ file, source }];
-    });
-    void chat.submit(value.prompt, context, session.getSnapshot().projectGeneration, references);
+    const { references } = attachments(snapshot, value.includeFile);
+    void chat.submit(value.prompt, context, snapshot.projectGeneration, references, 1, Object.keys(snapshot.project.files));
     if (!context || context.source.length <= 60000) form.setFieldValue('prompt', '');
   } });
   const prompt = useField({ form, name: 'prompt', validators: { onSubmit: ({ value }) => value.trim() ? undefined : 'Write a message first.' } });
   const includeFile = useField({ form, name: 'includeFile' });
-  const visible = included.filter(file => project.project.files[file] !== undefined && !(includeFile.state.value && file === project.activeFile));
-  const available = Object.keys(project.project.files).filter(file => !included.includes(file) && !(includeFile.state.value && file === project.activeFile)).sort();
+  const current = attachments(project, includeFile.state.value);
+  const visible = current.picked;
+  const linked = current.references.map(reference => reference.file).filter(file => !visible.includes(file));
+  const available = Object.keys(project.project.files).filter(file => !included.includes(file) && !linked.includes(file) && !(includeFile.state.value && file === project.activeFile)).sort();
+  const unlinkFile = (file: string) => setExcluded(files => [...files, file]);
   const addFile = (event: Event) => {
     const select = event.currentTarget as HTMLSelectElement;
     const file = select.value;
     select.value = '';
-    if (file && visible.length < MAX_REFERENCES) setIncluded([...visible, file]);
+    if (file && visible.length < MAX_REFERENCES) { setIncluded([...visible, file]); setExcluded(files => files.filter(item => item !== file)); }
   };
   const removeFile = (file: string) => setIncluded(files => files.filter(item => item !== file));
-  const roundButton = 'mb-[7px] size-7 shrink-0 rounded-full border border-seam bg-control text-[18px] text-brand shadow-[inset_0_1px_var(--faint)]';
+  const roundButton = 'mb-[7px] size-7 shrink-0 rounded-full border border-seam bg-control text-[18px] text-brand shadow-[inset_0_1px_var(--faint)] light:border-transparent light:bg-fg light:text-panel light:shadow-none light:disabled:bg-control';
   const submit = (event: SubmitEvent) => { event.preventDefault(); void form.handleSubmit(); };
   const keydown = (event: KeyboardEvent) => {
     if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); if (!state.busy) void form.handleSubmit(); }
   };
 
 
-form(className='shrink-0 border-t border-edge bg-editor p-3 light:shadow-[inset_0_1px_#fff9,0_1px_2px_#4e473b0d] chat-short:p-2' onSubmit={submit})
+form(className='shrink-0 border-t border-edge bg-editor p-3 chat-short:p-2' onSubmit={submit})
   if !state.messages.length
     div(className='mb-3 flex rounded-[4px] border border-edge-strong bg-surface-hover chat-short:hidden [&>button]:px-[9px] [&>button]:py-2 [&>button]:text-left [&>button]:text-[9px] [&>button]:text-fg-secondary [&>button]:hover:bg-control [&>button]:hover:text-fg')
       button(type='button' onClick={() => prompt.handleChange('Fix errors on active file.')})
@@ -60,12 +71,16 @@ form(className='shrink-0 border-t border-edge bg-editor p-3 light:shadow-[inset_
       label(className='mb-[9px] flex flex-wrap items-center gap-[5px] text-[8px] text-dim [&_input]:m-0 [&_input]:size-[11px] [&_input]:accent-brand')
         input(type='checkbox' checked={includeFile.state.value} onChange={event => includeFile.handleChange(event.currentTarget.checked)})
         span Include
-        code(className='max-w-full overflow-hidden text-ellipsis rounded-[3px] border border-edge bg-surface-hover px-[5px] py-[3px] font-code text-[8px] text-[#c5ac8c] light:text-[#a64b19]' title={project.activeFile}) #{fileLabel(project.activeFile)}
+        code(className='max-w-full overflow-hidden text-ellipsis rounded-[3px] border border-edge bg-surface-hover px-[5px] py-[3px] font-code text-[8px] text-[#c5ac8c] light:text-brand' title={project.activeFile}) #{fileLabel(project.activeFile)}
       div(className='mb-[9px] flex flex-wrap items-center gap-1 empty:hidden')
         each file in visible key file
           span(className='inline-flex max-w-full items-center rounded-[3px] border border-edge bg-surface-hover' title={file})
             code(className='truncate py-[3px] pl-[5px] font-code text-[8px] text-[#c5ac8c]') #{fileLabel(file)}
             button(className='border-0 bg-none px-[5px] text-[10px] leading-none text-dim hover:text-fg' type='button' onClick={() => removeFile(file)} aria-label={'Remove ' + file + ' from chat'}) ×
+        each file in linked key file
+          span.chat-linked-file(className='inline-flex max-w-full items-center rounded-[3px] border border-dashed border-edge bg-surface-hover' title={file + ' is included automatically because it imports or is imported by ' + fileLabel(project.activeFile)})
+            code(className='truncate py-[3px] pl-[5px] font-code text-[8px] text-dim') ↔ #{fileLabel(file)}
+            button(className='border-0 bg-none px-[5px] text-[10px] leading-none text-dim hover:text-fg' type='button' onClick={() => unlinkFile(file)} aria-label={'Stop including ' + file + ' automatically'}) ×
         if available.length && visible.length < MAX_REFERENCES
           NativeSelect#chat-add-file(className='rounded-[3px] border border-dashed border-edge-strong bg-transparent px-1 py-0.75! font-code text-[8px] text-dim hover:text-fg' value='' onChange={addFile} aria-label='Include another file in chat' placeholder='+ Add')
             option(value='add') +Add
@@ -75,7 +90,7 @@ form(className='shrink-0 border-t border-edge bg-editor p-3 light:shadow-[inset_
       input#auto-apply(type='checkbox' checked={auto} onChange={toggleAuto})
       span(className='select-none') Auto-apply
 
-  div(className='overflow-hidden rounded-md border border-edge-strong bg-inset shadow-[inset_0_1px_3px_#15151515] focus-within:border-[#b67546]')
+  div(className='overflow-hidden rounded-md border border-edge-strong bg-inset shadow-[inset_0_1px_3px_#15151515] focus-within:border-[#b67546] light:rounded-xl light:border-edge light:bg-panel light:shadow-elevation light:focus-within:border-brand/50')
     label(className='sr-only' for='chat-prompt') Message AI
     textarea#chat-prompt(value={prompt.state.value} onInput={event => prompt.handleChange(event.currentTarget.value)} onKeyDown={keydown} placeholder='Ask about your code…' rows={3} maxlength='32000' className='block max-h-[170px] min-h-[70px] w-full resize-none border-0 bg-none p-[11px] text-[11px] leading-[1.7] text-fg decoration-none outline-none placeholder:text-dim focus-visible:outline-none chat-short:min-h-[42px] chat-short:p-[7px]')
     div(className='flex items-center justify-between gap-2 pr-[7px] pl-2.5 chat-short:justify-end chat-short:pb-[5px]')

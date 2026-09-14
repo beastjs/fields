@@ -11,6 +11,8 @@ export interface FileContext { file: string; source: string }
 /** Other project files sent as read-only context; edits still target only `context`. */
 export const MAX_REFERENCES = 8;
 export const MAX_REFERENCE_CHARS = 60000;
+/** Every project path is listed so the model knows which files exist, including ones added since the chat began. */
+export const MAX_PROJECT_PATHS = 200;
 export interface ChatRequest {
   provider: AIProvider;
   model: string;
@@ -19,6 +21,7 @@ export interface ChatRequest {
   messages: ChatTurn[];
   context?: FileContext;
   references?: FileContext[];
+  files?: string[];
 }
 export interface AIStatus { configured: Record<AIProvider, boolean>; customBaseURL?: string }
 export const defaultSettings: ChatSettings = { provider: 'cohere', model: DEFAULT_MODEL, baseURL: '', apiKey: '' };

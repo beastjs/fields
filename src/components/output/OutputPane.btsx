@@ -21,7 +21,7 @@ PaneSurface(layout={layout} pane='output' label='Developer tools' className='fle
   div(className='flex h-[39px] min-h-[39px] items-center gap-3 border-b border-edge px-4 max-[760px]:gap-2 max-[760px]:px-2.5')
     div(className='flex gap-[22px] self-stretch max-[760px]:gap-3.5' role='tablist' aria-label='Developer tools' onKeyDown={navigateTabs})
       each tab in tabs key tab.id
-        button(type='button' id={tab.id + '-tab'} role='tab' className={cn('flex items-center gap-[7px] border-0 border-b-2 border-b-transparent bg-transparent px-px text-[10px] text-dim', state.toolPanel === tab.id && 'border-b-brand text-fg')} data-panel={tab.id} aria-selected={state.toolPanel === tab.id} aria-controls={tab.id + '-panel'} tabIndex={state.toolPanel === tab.id ? 0 : -1} onClick={() => session.selectTool(tab.id)})
+        button(type='button' id={tab.id + '-tab'} role='tab' className={cn('flex items-center gap-[7px] border-0 border-b-2 border-b-transparent bg-transparent px-px text-[10px] text-dim', state.toolPanel === tab.id && 'border-b-brand text-fg light:border-b-fg')} data-panel={tab.id} aria-selected={state.toolPanel === tab.id} aria-controls={tab.id + '-panel'} tabIndex={state.toolPanel === tab.id ? 0 : -1} onClick={() => session.selectTool(tab.id)})
           | #{tab.label}
           if tab.id === 'problems'
             span#problem-count(className={count}) #{state.diagnostics.length}

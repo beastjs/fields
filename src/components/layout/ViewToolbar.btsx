@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'octane'
 import { paneDefinitions } from '../../playground/workspace-layout'
-import type { WorkspaceLayout } from '../../playground/workspace-layout'
+import type { WorkspaceProps } from '../types'
 import ButtonGroup from '../ui/button-group.btsx'
 import FluidTooltip, { FluidTooltipRoot, FluidTooltipTrigger, FluidTooltipContent } from '../ui/fluid-tooltip.btsx'
 import { Icon } from '@/lib/icons'
@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils'
 component Arrange
   props { arranging, onToggle }: { arranging: boolean; onToggle: VoidFunction }
   button(
-    ~ className='inline-flex shrink-0 items-center justify-center rounded-sm text-muted-foreground/70 text-[10px] transition-[color,background-color,border-color,scale] duration-160 ease-[ease] hover:bg-surface-hover/50 hover:text-accent focus-visible:bg-surface-hover focus-visible:text-fg active:scale-[0.97] aria-pressed:border-brand aria-pressed:bg-brand aria-pressed:text-[#1b1b1b] aria-pressed:shadow-none max-[760px]:w-8 max-[760px]:p-0'
+    ~ className='inline-flex shrink-0 items-center justify-center rounded-sm text-muted-foreground/70 text-[10px] transition-[color,background-color,border-color,scale] duration-160 ease-[ease] hover:bg-surface-hover/50 hover:text-accent focus-visible:bg-surface-hover focus-visible:text-fg active:scale-[0.97] aria-pressed:border-brand aria-pressed:bg-brand aria-pressed:text-[#1b1b1b] aria-pressed:shadow-none light:size-8 light:rounded-lg light:text-dim light:hover:bg-black/[0.045] light:hover:text-fg light:aria-pressed:text-white max-[760px]:w-8 max-[760px]:p-0'
     ~ type='button'
     ~ aria-label={arranging ? 'Finish arranging panes' : 'Arrange panes'}
     ~ aria-pressed={arranging}
@@ -18,22 +18,28 @@ component Arrange
     ~ )
     Icon(name={arranging ? 'check' : 'draggable'} className='size-4')
 
-props { layout, toggleArrangement }: { layout: WorkspaceLayout, toggleArrangement: VoidFunction }
+props { session, layout, toggleArrangement }: WorkspaceProps & { toggleArrangement: VoidFunction }
 setup
   const visible = useSyncExternalStore(layout.subscribe, layout.getSnapshot);
+  const { diagnostics } = useSyncExternalStore(session.subscribe, session.getSnapshot);
+  const errorCount = diagnostics.filter(diagnostic => diagnostic.severity === 'error').length;
   const toolbarPanes = [
     ...(visible.arranging ? visible.arrangeOrder : visible.order).map(id => paneDefinitions.find(pane => pane.id === id)!),
     paneDefinitions.find(pane => pane.id === 'output')!,
   ];
+  const paneTitle = (pane: typeof toolbarPanes[number]) => (visible[pane.id] ? 'Collapse ' : 'Expand ') + pane.label
+    + (pane.id === 'editor' && errorCount ? ` · ${errorCount} ${errorCount === 1 ? 'error needs' : 'errors need'} attention` : '');
 
 div(className='view-toolbar flex min-w-0 items-center gap-3 overflow-x-auto bg-seam p-0 max-[1200px]:col-span-full max-[1200px]:row-start-2 max-[1200px]:min-h-[35px] max-[1200px]:max-w-full max-[1200px]:justify-self-center max-[760px]:gap-0.5 max-[760px]:px-1.5' role='group' aria-label='Workspace views')
   FluidTooltip
-    ButtonGroup(className='bg-background')
+    ButtonGroup(className='bg-background light:gap-0.5 light:rounded-[10px] light:border-transparent light:divide-transparent light:bg-black/[0.045] light:p-0.5')
       each pane in toolbarPanes key pane.id
         FluidTooltipRoot(id={pane.id} sideOffset={16})
           FluidTooltipTrigger(ref={null})
-            button(className='flex justify-center items-center min-h-8 h-full w-9 whitespace-nowrap' type='button' data-view={pane.id} aria-controls={'pane-' + pane.id} aria-pressed={visible[pane.id]} onClick={() => layout.toggle(pane.id)} title={(visible[pane.id] ? 'Collapse ' : 'Expand ') + pane.label} disabled={visible[pane.id] && !layout.canCollapse(pane.id)})
+            button(className='relative flex justify-center items-center min-h-8 h-full w-9 whitespace-nowrap light:min-h-7 light:rounded-lg light:text-dim light:hover:text-fg light:aria-pressed:bg-panel light:aria-pressed:text-fg light:aria-pressed:shadow-elevation' type='button' data-view={pane.id} aria-controls={'pane-' + pane.id} aria-pressed={visible[pane.id]} onClick={() => layout.toggle(pane.id)} title={paneTitle(pane)} disabled={visible[pane.id] && !layout.canCollapse(pane.id)})
               Icon(name={pane.icon} className={cn('size-3.5 opacity-60', { 'opacity-100': visible[pane.id] })})
+              if pane.id === 'editor' && errorCount > 0
+                span#editor-error-badge(className='pointer-events-none absolute top-1.5 right-2 size-1.5 rounded-full bg-destructive ring-2 ring-background' aria-hidden='true')
           FluidTooltipContent(className='font-mono text-[10px] capitalize') #{pane.label}
   Arrange(arranging={visible.arranging} onToggle={toggleArrangement})
   // button(className='ml-1 shrink-0 border-0 bg-transparent p-[5px] font-code text-[8px] uppercase text-dim hover:text-fg' type='button' aria-label='Reset layout' onClick={layout.reset} title='Restore the default pane sizes, order, and views') Reset
