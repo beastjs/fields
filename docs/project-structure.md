@@ -33,6 +33,11 @@ src/App.btsx
     GeneratedCode.btsx       Per-file TSRX and JavaScript output
   components/chat/
     ChatPane.btsx            Streaming chat, composer, and provider settings
+  components/studio/
+    DesignStudio.btsx        Page composer dialog: draft state, live preview, code view, install
+    SectionLibrary.btsx      Searchable section catalog grouped by page stage
+    PageOutline.btsx         Sortable page outline and starter recipes
+    Wireframe.btsx           Schematic thumbnails drawn from template wireframe tokens
 ```
 
 `src/styles/` mirrors these concerns. `src/style.css` contains the shared reset
@@ -43,6 +48,7 @@ and imports; pane geometry and responsive rules live in `styles/workspace.css`.
 | Owner | Responsibility |
 | --- | --- |
 | `playground/examples.ts` | Typed example catalog and complete virtual projects, independent of UI |
+| `playground/studio/` | Design Studio section catalog, page model, preview project, and install plan, independent of UI |
 | `playground/resource-limits.ts` | Shared compiler input bounds, checked before worker transfer and parsing |
 | `playground/project.ts` | Virtual files, path validation, active file, creation/deletion, protected entry |
 | `playground/session.ts` | Compilation requests/results, diagnostics, console, source navigation, keymap/viewport, project reset generation |
@@ -68,6 +74,28 @@ The compiler, worker coordinator, VFS resolver, source maps, and sandbox retain
 their existing contracts. Persistence is a separate adapter around project/session
 snapshots. `chat/` owns conversation/settings/transport state; `server/` owns the
 provider proxy. Neither belongs to the persisted project snapshot.
+
+## Design Studio sections
+
+The studio composes a page from section templates. Each template is a Beast
+component with one root element carrying `data-section`, and colors derived only
+from `currentColor`, so it inherits whatever palette hosts it. Installing a page
+writes one component per section to `src/sections/`, a `src/Page.btsx` that
+renders them in order, and Tailwind plus a small block of element defaults to
+the project stylesheet. Reopening the studio reads `Page.btsx` back; sections
+edited by hand are kept and shown as *Edited in code*.
+
+To add a section kind:
+
+1. Create `playground/studio/sections/<kind>.ts` exporting its templates.
+2. Add the id to `SectionKindId` in `playground/studio/types.ts`.
+3. Register the kind (label, component, stage, keywords) and spread its templates
+   in `playground/studio/catalog.ts`.
+
+Adding a template to an existing kind only needs step 1. Describe its thumbnail
+with wireframe tokens from `components/studio/Wireframe.btsx`. `tests/studio.test.ts`
+compiles every template and rejects fixed palette colors, `dark:` variants, and
+remote URLs.
 
 ## Resizable workspace
 

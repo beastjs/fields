@@ -49,6 +49,17 @@ replaces the current files, saved copy, undo history, and running preview. Cance
 or Escape keeps your work. Save a Share link first if you want to return to it.
 The async example uses a local simulated request and works without network access.
 
+Open **Design Studio** in the top bar to compose a page from 40 ready-made
+sections across 14 kinds: topbar, hero, partners marquee, stats, features, guides,
+products, testimonials, pricing, FAQ, team, call to action, newsletter, and footer.
+Start from a recipe or pick sections one by one, drag them into order, and swap
+designs while a live preview follows along at desktop, tablet, or mobile width.
+Nothing changes until **Add page to project**, which writes each section to
+`src/sections/`, composes them in `src/Page.btsx`, and renders the page from
+`App.btsx` (replacing the untouched starter). Sections are monochrome and follow
+the surrounding theme. Reopen the studio to update the page; sections you edited
+by hand are kept, and the studio warns before replacing edits.
+
 Use **Share** to create and copy a snapshot link. It includes project files, the
 active tab, and preview size; chat, connection credentials, and personal settings
 are excluded. The project travels in a compressed URL fragment without a project

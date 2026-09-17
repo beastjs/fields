@@ -120,6 +120,18 @@ function bootstrap(channel: string, build: number) {
       document.documentElement.dataset.theme = message.theme;
       return;
     }
+    if (message.type === 'reveal' && typeof message.selector === 'string') {
+      let target: Element | null = null;
+      try { target = document.querySelector(message.selector); } catch { return; }
+      if (!target) return;
+      const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      // scrollIntoView would also scroll the host page's containers; only this document should move.
+      scrollTo({ top: target.getBoundingClientRect().top + scrollY, behavior: still || message.instant === true ? 'auto' : 'smooth' });
+      if (message.highlight === true && !still) {
+        target.animate([{ boxShadow: 'inset 0 0 0 2px color-mix(in oklab, currentColor 40%, transparent)' }, { boxShadow: 'inset 0 0 0 2px transparent' }], { duration: 1600, easing: 'ease-out' });
+      }
+      return;
+    }
     if (message.type === 'load') {
       if (loaded || message.build !== build || !Array.isArray(message.modules) || typeof message.entry !== 'string' ||
         !message.modules.every((module: { id?: unknown; code?: unknown }) => module && typeof module.id === 'string' && typeof module.code === 'string')) return;

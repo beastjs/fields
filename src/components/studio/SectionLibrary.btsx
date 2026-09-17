@@ -1,0 +1,116 @@
+import { useState } from 'octane'
+import { Icon } from '@/lib/icons'
+import { cn } from '@/lib/utils'
+import { searchTemplates, sectionKind, sectionKinds, sectionStages, templatesOf } from '../../playground/studio/catalog'
+import type { SectionKindId, SectionTemplate } from '../../playground/studio/catalog'
+import type { PageBlock } from '../../playground/studio/page'
+import Wireframe from './Wireframe.btsx'
+
+module
+  type CardState = 'current' | 'swap' | 'add'
+
+  interface LibraryProps {
+    blocks: PageBlock[]
+    /** The block a same-kind template would replace: the selected block when it matches, else the first of that kind. */
+    targetOf: (kind: SectionKindId) => PageBlock | undefined
+    openKind?: SectionKindId
+    onOpenKind: (kind: SectionKindId | undefined) => void
+    onUse: (templateId: string) => void
+    onAdd: (templateId: string) => void
+  }
+
+  interface CardProps {
+    template: SectionTemplate
+    state: CardState
+    showKind: boolean
+    onUse: (templateId: string) => void
+    onAdd: (templateId: string) => void
+  }
+
+  const actionLabel: Record<CardState, string> = { current: 'On page', swap: 'Swap in', add: 'Add' }
+
+component TemplateCard
+  props { template, state, showKind, onUse, onAdd }: CardProps
+
+  div(className='group/card relative')
+    button(
+      ~ type='button'
+      ~ aria-pressed={state === 'current'}
+      ~ className='grid w-full gap-2 rounded-[6px] border border-edge bg-surface-recessed p-2 text-left transition-colors hover:border-edge-strong hover:bg-surface-hover aria-pressed:border-brand aria-pressed:shadow-[inset_0_0_0_1px_var(--brand)]'
+      ~ onClick={() => onUse(template.id)}
+      ~ )
+      Wireframe(rows={template.wireframe} className='h-[72px] rounded-[4px] bg-inset px-3 text-fg-secondary')
+      span(className='flex items-center justify-between gap-2 px-0.5')
+        span(className='min-w-0 truncate text-[12px] text-fg')
+          if showKind
+            span(className='text-dim') #{sectionKind(template.kind).label + ' · '}
+          | #{template.title}
+        span(className={cn('flex shrink-0 items-center gap-1 rounded-full px-1.5 py-px text-[9px] tracking-wide uppercase', state === 'current' ? 'bg-brand/15 text-brand' : 'text-dim group-hover/card:text-fg')})
+          if state === 'current'
+            Icon(name='check' className='size-2.5')
+          span #{actionLabel[state]}
+      span(className='px-0.5 text-[10px] leading-[1.55] text-dim') #{template.description}
+    if state !== 'add'
+      button(
+        ~ type='button'
+        ~ title='Add as another section'
+        ~ aria-label={'Add another ' + sectionKind(template.kind).label + ': ' + template.title}
+        ~ className='absolute top-3.5 right-3.5 flex size-6 items-center justify-center rounded-full border border-edge-strong bg-panel text-fg-secondary opacity-0 shadow-elevation transition-opacity group-hover/card:opacity-100 hover:text-fg focus-visible:opacity-100'
+        ~ onClick={() => onAdd(template.id)}
+        ~ )
+        Icon(name='plus' className='size-3')
+
+props { blocks, targetOf, openKind, onOpenKind, onUse, onAdd }: LibraryProps
+setup
+  const [query, setQuery] = useState('');
+  const results = query.trim() ? searchTemplates(query) : [];
+  const stateOf = (template: SectionTemplate): CardState => {
+    const target = targetOf(template.kind);
+    return !target ? 'add' : target.templateId === template.id ? 'current' : 'swap';
+  };
+  const usage = (kind: SectionKindId) => blocks.filter(block => block.kind === kind).length;
+
+div(className='flex min-h-0 flex-col')
+  div(className='border-b border-edge p-3')
+    label(className='flex items-center gap-2 rounded-[6px] border border-edge bg-inset px-2.5 py-1.5 text-dim focus-within:border-brand')
+      Icon(name='search' className='size-3.5 shrink-0')
+      span(className='sr-only') Search sections
+      input(
+        ~ type='search'
+        ~ value={query}
+        ~ placeholder='Search sections — pricing, logos, waitlist…'
+        ~ className='min-w-0 flex-1 bg-transparent text-[12px] text-fg outline-none placeholder:text-faint focus-visible:outline-none'
+        ~ onInput={event => setQuery(event.currentTarget.value)}
+        ~ )
+  div(className='min-h-0 flex-1 overflow-auto p-2')
+    if query.trim()
+      div
+        p(className='px-1.5 pt-1 pb-2 text-[10px] text-dim' role='status') #{results.length} #{results.length === 1 ? 'design' : 'designs'} for “#{query.trim()}”
+        div(className='grid gap-2')
+          each template in results key template.id
+            TemplateCard(template={template} state={stateOf(template)} showKind={true} onUse={onUse} onAdd={onAdd})
+          empty
+            p(className='px-1.5 py-6 text-center text-[11px] text-dim') No sections match. Try “hero”, “reviews”, or “signup”.
+    else
+      each stage in sectionStages key stage.id
+        section(className='mb-2')
+          h3(className='px-1.5 pt-2 pb-1 font-code text-[9px] tracking-[0.15em] text-faint uppercase') #{stage.label}
+          each kind in sectionKinds.filter(candidate => candidate.stage === stage.id) key kind.id
+            div(className='mb-0.5')
+              button(
+                ~ type='button'
+                ~ aria-expanded={openKind === kind.id}
+                ~ className='group/kind flex w-full items-center gap-2 rounded-[6px] px-1.5 py-1.5 text-left hover:bg-surface-hover aria-expanded:bg-surface-hover'
+                ~ onClick={() => onOpenKind(openKind === kind.id ? undefined : kind.id)}
+                ~ )
+                Icon(name='chevron-down-tiny' className='size-3 shrink-0 -rotate-90 text-dim transition-transform group-aria-expanded/kind:rotate-0')
+                span(className='min-w-0 flex-1')
+                  span(className='block truncate text-[12px] text-fg') #{kind.label}
+                  span(className='block truncate text-[10px] text-dim') #{kind.summary}
+                if usage(kind.id)
+                  span(className='size-1.5 shrink-0 rounded-full bg-brand' title='On your page')
+                span(className='shrink-0 font-code text-[10px] text-faint') #{templatesOf(kind.id).length}
+              if openKind === kind.id
+                div(className='grid gap-2 py-1.5 pl-1.5')
+                  each template in templatesOf(kind.id) key template.id
+                    TemplateCard(template={template} state={stateOf(template)} showKind={false} onUse={onUse} onAdd={onAdd})

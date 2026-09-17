@@ -125,7 +125,24 @@ export class Preview {
     this.theme = theme;
     this.iframe.contentWindow?.postMessage({ version: 1, channel: this.channel, type: 'theme', theme }, '*');
   }
+  /** Scrolls the running app to the first element matching `selector`, optionally flashing an outline on it. */
+  reveal(selector: string, highlight = false, instant = false) {
+    this.iframe.contentWindow?.postMessage({ version: 1, channel: this.channel, type: 'reveal', selector, highlight, instant }, '*');
+  }
+  /** Whether loading `result` would update the running app in place rather than reload it. */
+  canUpdate(result: CompilationResult) {
+    return Boolean(this.live && this.result && this.updates < 40 && planHotUpdate(this.result, result));
+  }
   reload() { if (this.result) this.load(this.result, true); }
+  /** Stops the running app and releases its document; the next load starts fresh. */
+  clear() {
+    this.accepting = false;
+    this.live = false;
+    this.result = undefined;
+    clearTimeout(this.timeout);
+    this.iframe.removeAttribute('src');
+    this.iframe.srcdoc = '';
+  }
   dispose() {
     this.accepting = false;
     clearTimeout(this.timeout);

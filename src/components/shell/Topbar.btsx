@@ -10,7 +10,7 @@ import ViewToolbar from '../layout/ViewToolbar.btsx'
 import { Icon, IconName } from '@/lib/icons'
 import { useTheme } from '../theme/theme-context'
 import Switcher from '../ui/switcher.btsx'
-import DesignStudio from "./DesignStudio.btsx";
+import DesignStudio from "../studio/DesignStudio.btsx";
 
 module
   interface TopbarProps extends WorkspaceProps {

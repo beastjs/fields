@@ -1,0 +1,37 @@
+import { cn } from '@/lib/utils'
+
+module
+  // Wireframe vocabulary for SectionTemplate.wireframe. Everything is drawn in currentColor.
+  const tokens: Record<string, string> = {
+    logo: 'size-2 rounded-[2px] bg-current/60',
+    dot: 'size-1.5 rounded-full bg-current/50',
+    avatar: 'size-3 rounded-full border border-current/40 bg-current/15',
+    xs: 'h-[3px] w-2 rounded-full bg-current/40',
+    line: 'h-[3px] w-5 rounded-full bg-current/40',
+    long: 'h-[3px] w-14 rounded-full bg-current/35',
+    wide: 'h-[3px] min-w-0 flex-1 rounded-full bg-current/25',
+    title: 'h-1.5 w-12 rounded-full bg-current/60',
+    head: 'h-2.5 w-24 max-w-full rounded-[2px] bg-current/70',
+    huge: 'h-3.5 min-w-0 flex-1 rounded-[2px] bg-current/70',
+    num: 'h-2.5 w-6 rounded-[2px] bg-current/60',
+    pill: 'h-2 w-5 rounded-full border border-current/50',
+    btn: 'h-2.5 w-7 rounded-[2px] bg-current/60',
+    ghost: 'h-2.5 w-7 rounded-[2px] border border-current/50',
+    field: 'h-2.5 w-14 rounded-[2px] border border-current/40',
+    row: 'h-2 min-w-0 flex-1 rounded-[2px] border border-current/30',
+    card: 'h-6 min-w-0 flex-1 rounded-[3px] border border-current/30',
+    tall: 'h-10 min-w-0 flex-1 rounded-[3px] border border-current/30',
+    feature: 'h-11 min-w-0 flex-1 rounded-[3px] border border-current/60 bg-current/15',
+    media: 'h-10 min-w-0 flex-1 rounded-[3px] bg-current/20',
+    text: 'h-10 min-w-0 flex-1 bg-[repeating-linear-gradient(to_bottom,color-mix(in_oklab,currentColor_45%,transparent)_0_3px,transparent_3px_9px)] [mask-image:linear-gradient(to_right,black_65%,transparent)]',
+    gap: 'min-w-0 flex-1'
+  }
+  const cells = (row: string) => row.replace(/^\^\s*/, '').split(/\s+/).filter(Boolean)
+
+props { rows, className }: { rows: string[]; className?: string }
+
+div(className={cn('flex flex-col justify-center gap-1.5 overflow-hidden', className)} aria-hidden='true')
+  each row, index in rows key index
+    div(className={cn('flex items-center gap-1', row.startsWith('^') && 'justify-center')})
+      each token, position in cells(row) key position
+        span(className={tokens[token] ?? tokens.line})

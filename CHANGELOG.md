@@ -6,6 +6,15 @@ All notable changes to `play` will be recorded here.
 
 ### Added
 
+- Design Studio page composer: 40 monochrome, theme-agnostic section templates
+  across 14 kinds (topbar, hero, partners marquee, stats, features, guides,
+  products, testimonials, pricing, FAQ, team, call to action, newsletter, footer),
+  starter recipes, search, drag-to-reorder outline, live device-scaled preview that
+  scrolls to the chosen section and swaps in rebuilt pages without flashing, code
+  view, and an install plan that writes `src/sections/*`, `src/Page.btsx`, and
+  studio styles while protecting hand edits.
+  Replaces the topbar-only layout builder.
+
 - Chat Apply & verify for explicit complete-file recommendations, with local
   compiler verification, stale-project protection, diagnostics in chat, and
   undoable editor synchronization. Failed checks leave source and preview intact.

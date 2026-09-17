@@ -2,14 +2,15 @@ import { expect, test } from 'bun:test';
 import { MAX_REFERENCE_CHARS, MAX_REFERENCES } from '../src/chat/contracts';
 import { chatReferences, relatedFiles } from '../src/chat/project-context';
 import { helloWorld } from '../src/playground/examples';
-import { installLayoutTemplate, topbarTemplates } from '../src/playground/layout-templates';
+import { addSection, planPageInstall } from '../src/playground/studio/page';
 
-const withTopbar = { ...helloWorld, files: { ...helloWorld.files, ...installLayoutTemplate(helloWorld, topbarTemplates[0]).files } };
+const withPage = { ...helloWorld, files: { ...helloWorld.files, ...planPageInstall(helloWorld, addSection([], 'topbar-marketing').blocks).files } };
 
 test('related files are the active file imports and importers, including newly added components', () => {
-  expect(relatedFiles(withTopbar, '/src/App.btsx').sort()).toEqual(['/src/Counter.btsx', '/src/Topbar.btsx', '/src/main.ts']);
-  expect(relatedFiles(withTopbar, '/src/Topbar.btsx')).toEqual(['/src/App.btsx']);
-  expect(relatedFiles(withTopbar, '/src/main.ts').sort()).toEqual(['/src/App.btsx', '/src/style.css']);
+  expect(relatedFiles(withPage, '/src/App.btsx').sort()).toEqual(['/src/Page.btsx', '/src/main.ts']);
+  expect(relatedFiles(withPage, '/src/Page.btsx').sort()).toEqual(['/src/App.btsx', '/src/sections/Topbar.btsx']);
+  expect(relatedFiles(withPage, '/src/sections/Topbar.btsx')).toEqual(['/src/Page.btsx']);
+  expect(relatedFiles(withPage, '/src/main.ts').sort()).toEqual(['/src/App.btsx', '/src/style.css']);
   const multiline = { entry: '/src/main.ts', files: {
     '/src/main.ts': "import {\n  thing,\n} from './lib';\nimport 'octane';\nimport './missing';\n",
     '/src/lib.ts': 'export const thing = 1;\n',
