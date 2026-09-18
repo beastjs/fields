@@ -1,5 +1,5 @@
 module "use client";
-import DropdownMenu, { DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import DropdownMenu, { DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu.btsx";
 import Button from '@/components/ui/button.btsx'
 import { Icon, type IconName } from "@/lib/icons";
 
@@ -28,11 +28,11 @@ component SwitcherRoot
     const label = busy ? 'Loading…' : activeItem?.label ?? emptyLabel;
 
   DropdownMenu
-    DropdownMenuTrigger(render={trigger} className='bg-background/80 text-fg hover:bg-background/90 data-pressed:bg-background ps-0 pe-1 rounded-lg gap-0.5 light:bg-panel light:shadow-elevation' disabled={busy})
-      div(className="flex aspect-square size-8 items-center justify-center rounded-lg text-sidebar-primary-foreground light:text-dim")
-        Icon(name={activeItem?.icon ?? 'folder'} className='size-4')
-      div(className='flex min-w-0 items-center gap-2.5 text-[12px] max-[760px]:hidden')
-        span(className='truncate capitalize' title={label}) #{label}
+    DropdownMenuTrigger(render={trigger} className='bg-background/80 dark:bg-muted/50 hover:dark:bg-muted text-fg hover:bg-background/90 data-pressed:bg-background px-1 gap-0 light:border-0 rounded-lg light:bg-panel shadow-xs light:shadow-elevation' disabled={busy})
+      div(className="flex aspect-square size-6 items-center justify-center")
+        Icon(name={activeItem?.icon ?? 'folder'} className='size-3.5 text-accent')
+      div(className=' min-w-0 h-6 flex items-center max-[760px]:hidden')
+        span(className='font-sans font-normal text-muted-foreground text-sm -tracking-[0.02em] truncate capitalize' title={label}) #{label}
       Icon(name='select-caret' className='size-3 ml-1 opacity-70')
     DropdownMenuContent(className="min-w-44 max-w-72 bg-background" align="start" side="bottom" sideOffset={4})
       DropdownMenuGroup

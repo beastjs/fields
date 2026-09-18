@@ -234,7 +234,7 @@
 /* Light: neutral grey ground, white cards with hairline edges and soft lift, near-black type, one indigo accent. */
 :root[data-theme='light'] {
   color-scheme: light;
-  --canvas: #f4f4f5;
+  --canvas: #f0f0f0;
   --panel: #ffffff;
   --panel-deep: #f8f8f9;
   --inset: #f2f2f3;

@@ -64,10 +64,10 @@ PaneSurface(layout={layout} pane='files' label='File explorer' className='flex f
     | src
   div#file-list
     each path in files key path
-      div(className={cn('file-row group/row relative mx-2 mb-[3px] flex min-h-[35px] w-[calc(100%-16px)] items-center rounded-[5px] border border-transparent hover:bg-surface-hover', state.activeFile === path && 'border-edge-strong bg-[linear-gradient(var(--edge),var(--edge))] shadow-[inset_0_1px_#61615744] light:border-transparent light:bg-panel light:bg-none light:shadow-elevation')})
-        button(className={cn('flex w-full items-center gap-[11px] overflow-hidden border-0 bg-none py-[9px] pr-6 pl-3.5 text-left text-[11px] text-fg-secondary max-[1050px]:pl-2.5', state.activeFile === path && 'text-fg')} type='button' title={attention.has(path) ? path + ' · ' + attentionLabel(attention.get(path)!) : path} aria-label={'Open ' + fileLabel(path) + (attention.has(path) ? ', ' + attentionLabel(attention.get(path)!) : '')} onClick={() => navigate(path)})
-          span(className={cn('font-code text-[10px] text-dim', state.activeFile === path && 'text-brand')}) #{fileIcon(path)}
-          span(className='truncate') #{fileLabel(path)}
+      div(className={cn('file-row group/row relative mx-1 flex min-h-6 w-[calc(100%-16px)] items-center rounded-[5px] border border-transparent hover:bg-surface-hover', state.activeFile === path && 'border-edge-strong bg-[linear-gradient(var(--edge),var(--edge))] shadow-[inset_0_1px_#61615744] light:border-transparent light:bg-panel light:bg-none light:shadow-elevation')})
+        button(className={cn('flex w-full items-center gap-2 overflow-hidden border-0 bg-none p-2 text-left text-fg-secondary max-[1050px]:pl-2.5', state.activeFile === path && 'text-fg')} type='button' title={attention.has(path) ? path + ' · ' + attentionLabel(attention.get(path)!) : path} aria-label={'Open ' + fileLabel(path) + (attention.has(path) ? ', ' + attentionLabel(attention.get(path)!) : '')} onClick={() => navigate(path)})
+          span(className={cn('font-sans text-sm text-dim', state.activeFile === path && 'text-brand')}) #{fileIcon(path)}
+          span(className='truncate font-sans text-sm') #{fileLabel(path)}
           if attention.has(path)
             span.file-attention-badge(className={cn('ml-auto size-1.5 shrink-0 rounded-full', attention.get(path)!.severity === 'error' ? 'bg-destructive shadow-[0_0_0_3px_color-mix(in_srgb,var(--destructive)_18%,transparent)]' : 'bg-warning shadow-[0_0_0_3px_color-mix(in_srgb,var(--warning)_18%,transparent)]')} data-severity={attention.get(path)!.severity} aria-hidden='true')
         if path !== state.project.entry

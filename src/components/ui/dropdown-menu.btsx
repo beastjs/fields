@@ -3,8 +3,6 @@ import { Menu as MenuPrimitive } from "@octanejs/base-ui/menu";
 import { cn } from "@/lib/utils";
 import type { ComponentProps } from "octane";
 
-module
-  export { DropdownMenuPortal, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuItem, DropdownMenuCheckboxItem, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuShortcut, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent}
 component DropdownMenuRoot
   props { ...props }: MenuPrimitive.Root.Props
   MenuPrimitive.Root(data-slot="dropdown-menu" {...props})
@@ -125,6 +123,9 @@ component DropdownMenuShortcut
     ~ className={cn("ml-auto text-xs tracking-widest text-muted-foreground group-focus/dropdown-menu-item:text-accent-foreground", className)}
     ~ {...props}
     ~ )
+module
+  export { DropdownMenuPortal, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuItem, DropdownMenuCheckboxItem, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuShortcut, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent}
+
 
 props {...props}: MenuPrimitive.Root.Props
 DropdownMenuRoot({...props})

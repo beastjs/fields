@@ -177,11 +177,11 @@ setup
   useEffect(() => { preview.current?.setTheme(theme); }, [theme]);
   useEffect(() => { setCopied(false); }, [code]);
 
-button(className='bg-background dark:bg-muted/50 hover:bg-muted py-1.5 px-3 rounded-2xl transition-colors duration-180 ease-out' type='button' title={compact ? 'Open Design Studio' : undefined} onClick={event => { event.currentTarget.focus(); show(); }})
-  div(className='flex items-center justify-center rounded-full text-sm gap-1.5 text-muted-foreground')
+button(className='bg-background dark:bg-muted/50 hover:dark:bg-muted py-1.5 px-3 rounded-2xl transition-colors duration-180 ease-out' type='button' title={compact ? 'Open Design Studio' : undefined} onClick={event => { event.currentTarget.focus(); show(); }})
+  div(className='flex items-center justify-center rounded-full gap-1.5')
     Icon(name='design' className='size-4 text-accent')
     if !compact
-      span(className='truncate -tracking-[0.018em] capitalize' title={'Builder'}) Design Studio
+      span(className='font-sans text-muted-foreground text-sm -tracking-[0.02em] truncate capitalize') Design Studio
 dialog(className={cn(dialogPanel, 'h-[min(920px,calc(100dvh-24px))] w-[min(1440px,calc(100vw-24px))] max-h-none overflow-hidden p-0 open:grid grid-rows-[auto_minmax(0,1fr)_auto] light:rounded-2xl')} ref={dialog} aria-labelledby='design-studio-title')
   header(className='flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-edge-strong px-5 py-3')
     div(className='min-w-0')

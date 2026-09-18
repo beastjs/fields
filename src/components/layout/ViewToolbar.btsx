@@ -5,6 +5,7 @@ import ButtonGroup from '../ui/button-group.btsx'
 import FluidTooltip, { FluidTooltipRoot, FluidTooltipTrigger, FluidTooltipContent } from '../ui/fluid-tooltip.btsx'
 import { Icon } from '@/lib/icons'
 import { cn } from '@/lib/utils'
+import Button from "../ui/button.btsx";
 
 component Arrange
   props { arranging, onToggle }: { arranging: boolean; onToggle: VoidFunction }
@@ -31,13 +32,19 @@ setup
     + (pane.id === 'editor' && errorCount ? ` · ${errorCount} ${errorCount === 1 ? 'error needs' : 'errors need'} attention` : '');
 
 div(className='view-toolbar flex min-w-0 items-center gap-3 overflow-x-auto bg-seam p-0 max-[1200px]:col-span-full max-[1200px]:row-start-2 max-[1200px]:min-h-[35px] max-[1200px]:max-w-full max-[1200px]:justify-self-center max-[760px]:gap-0.5 max-[760px]:px-1.5' role='group' aria-label='Workspace views')
+  Button(className='' variant='outline' size='xs')
+    | Extra
+  Button(className='' variant='default' size='sm')
+    | Default
+  Button(className='' variant='')
+    | Secondary
   FluidTooltip
     ButtonGroup(className='bg-background light:gap-0.5 light:rounded-[14px] light:border-transparent light:divide-transparent light:bg-muted light:p-1')
       each pane in toolbarPanes key pane.id
         FluidTooltipRoot(id={pane.id} sideOffset={16})
           FluidTooltipTrigger(ref={null})
             button(className='relative flex justify-center items-center min-h-8 h-full w-9 whitespace-nowrap light:min-h-7 light:rounded-lg light:text-dim light:hover:text-fg light:aria-pressed:bg-panel light:aria-pressed:text-fg light:aria-pressed:shadow-elevation' type='button' data-view={pane.id} aria-controls={'pane-' + pane.id} aria-pressed={visible[pane.id]} onClick={() => layout.toggle(pane.id)} title={paneTitle(pane)} disabled={visible[pane.id] && !layout.canCollapse(pane.id)})
-              Icon(name={pane.icon} className={cn('size-3.5 opacity-60', { 'opacity-100': visible[pane.id] })})
+              Icon(name={pane.icon} className={cn('size-3.5 opacity-75', { 'opacity-100': visible[pane.id] })})
               if pane.id === 'editor' && errorCount > 0
                 span#editor-error-badge(className='pointer-events-none absolute top-1.5 right-2 size-1.5 rounded-full bg-destructive ring-2 ring-background' aria-hidden='true')
           FluidTooltipContent(className='font-mono text-[10px] capitalize') #{pane.label}
