@@ -199,7 +199,7 @@ dialog(className={cn(dialogPanel, 'h-[min(920px,calc(100dvh-24px))] w-[min(1440p
             ~ aria-checked={device === option.id}
             ~ aria-label={option.label}
             ~ title={option.label}
-            ~ className='flex size-7 items-center justify-center rounded-[4px] text-dim hover:text-fg aria-checked:bg-control aria-checked:text-fg'
+            ~ className='flex size-7 items-center justify-center rounded-[4px] text-dim hover:text-fg aria-checked:bg-control aria-checked:text-fg aria-checked:shadow-xs'
             ~ onClick={() => setDevice(option.id)}
             ~ )
             Icon(name={option.icon} className='size-3.5')

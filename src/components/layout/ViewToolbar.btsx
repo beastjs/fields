@@ -16,7 +16,7 @@ component Arrange
     ~ title={arranging ? 'Keep this pane order' : 'Arrange panes'}
     ~ onClick={onToggle}
     ~ )
-    Icon(name={arranging ? 'check' : 'draggable'} className='size-4')
+    Icon(name={arranging ? 'check' : 'tweak'} className='size-4')
 
 props { session, layout, toggleArrangement }: WorkspaceProps & { toggleArrangement: VoidFunction }
 setup

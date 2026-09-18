@@ -58,29 +58,34 @@ setup
 
 form(className='shrink-0 border-t border-edge bg-editor p-3 chat-short:p-2' onSubmit={submit})
   if !state.messages.length
-    div(className='mb-3 flex rounded-[4px] border border-edge-strong bg-surface-hover chat-short:hidden [&>button]:px-[9px] [&>button]:py-2 [&>button]:text-left [&>button]:text-[9px] [&>button]:text-fg-secondary [&>button]:hover:bg-control [&>button]:hover:text-fg')
+    div(className='mb-3 flex rounded-[4px] overflow-hidden border border-edge-strong bg-surface-hover chat-short:hidden [&>button]:px-[9px] [&>button]:py-2 [&>button]:text-left [&>button]:text-[9px] [&>button]:text-fg-secondary [&>button]:hover:bg-control [&>button]:hover:text-fg')
       button(type='button' onClick={() => prompt.handleChange('Fix errors on active file.')})
         Icon(name='fix' className='size-4')
       button(type='button' onClick={() => prompt.handleChange('Improve active file.')})
         Icon(name='build' className='size-4')
-      button(type='button' onClick={() => prompt.handleChange('Improve active file.')})
-        Icon(name='plan' className='size-4')
-      button(type='button' onClick={() => prompt.handleChange('Optimize this active file for performance.')} ) Optimize for performance ↗
   div(className='w-full flex items-center justify-between')
     div(className='flex items-center gap-1')
       label(className='mb-[9px] flex flex-wrap items-center gap-[5px] text-[8px] text-dim [&_input]:m-0 [&_input]:size-[11px] [&_input]:accent-brand')
         input(type='checkbox' checked={includeFile.state.value} onChange={event => includeFile.handleChange(event.currentTarget.checked)})
-        span Include
         code(className='max-w-full overflow-hidden text-ellipsis rounded-[3px] border border-edge bg-surface-hover px-[5px] py-[3px] font-code text-[8px] text-[#c5ac8c] light:text-brand' title={project.activeFile}) #{fileLabel(project.activeFile)}
       div(className='mb-[9px] flex flex-wrap items-center gap-1 empty:hidden')
-        each file in visible key file
-          span(className='inline-flex max-w-full items-center rounded-[3px] border border-edge bg-surface-hover' title={file})
-            code(className='truncate py-[3px] pl-[5px] font-code text-[8px] text-[#c5ac8c]') #{fileLabel(file)}
-            button(className='border-0 bg-none px-[5px] text-[10px] leading-none text-dim hover:text-fg' type='button' onClick={() => removeFile(file)} aria-label={'Remove ' + file + ' from chat'}) ×
-        each file in linked key file
-          span.chat-linked-file(className='inline-flex max-w-full items-center rounded-[3px] border border-dashed border-edge bg-surface-hover' title={file + ' is included automatically because it imports or is imported by ' + fileLabel(project.activeFile)})
-            code(className='truncate py-[3px] pl-[5px] font-code text-[8px] text-dim') ↔ #{fileLabel(file)}
-            button(className='border-0 bg-none px-[5px] text-[10px] leading-none text-dim hover:text-fg' type='button' onClick={() => unlinkFile(file)} aria-label={'Stop including ' + file + ' automatically'}) ×
+        if visible.length < 2
+          each file in visible key file
+            span(className='inline-flex max-w-full items-center rounded-[3px] border border-edge bg-surface-hover' title={file})
+              code(className='truncate py-[3px] pl-[5px] font-code text-[8px] text-[#c5ac8c]') #{fileLabel(file)}
+              button(className='border-0 bg-none px-[5px] text-[10px] leading-none text-dim hover:text-fg' type='button' onClick={() => removeFile(file)} aria-label={'Remove ' + file + ' from chat'}) ×
+        else
+          span(className='inline-flex max-w-full items-center rounded-[3px] border border-edge bg-surface-hover' title={visible[0]})
+            code(className='truncate py-[3px] pl-[5px] font-code text-[8px] text-[#c5ac8c]') #{fileLabel(visible[0])}
+              button(className='border-0 bg-none px-[5px] text-[10px] leading-none text-dim hover:text-fg' type='button' onClick={() => removeFile(visible[0])} aria-label={'Remove ' + visible[0] + ' from chat'}) ×
+
+            code +
+            | #{visible.length - 1} more
+
+        span.chat-linked-file(className='inline-flex max-w-full items-center rounded-[3px] border border-dashed border-edge bg-surface-hover' title={linked[0] + ' is included automatically because it imports or is imported by ' + fileLabel(project.activeFile)})
+          code(className='truncate py-[3px] pl-[5px] font-code text-[8px] text-dim') ↪ #{linked.length} files
+          button(className='border-0 bg-none px-[5px] text-[10px] leading-none text-dim hover:text-fg' type='button' onClick={() => unlinkFile(linked[0])} aria-label={'Stop including ' + linked[0] + ' automatically'}) ×
+
         if available.length && visible.length < MAX_REFERENCES
           NativeSelect#chat-add-file(className='rounded-[3px] border border-dashed border-edge-strong bg-transparent px-1 py-0.75! font-code text-[8px] text-dim hover:text-fg' value='' onChange={addFile} aria-label='Include another file in chat' placeholder='+ Add')
             option(value='add') +Add

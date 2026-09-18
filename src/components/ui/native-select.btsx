@@ -12,14 +12,14 @@ component NativeSelectRoot
     ~ data-size={size}
     ~ )
     select(
-      ~ className="cn-native-select appearance-none outline-none disabled:pointer-events-none disabled:cursor-not-allowed"
+      ~ className="pe-3 appearance-none outline-none disabled:pointer-events-none disabled:cursor-not-allowed"
       ~ data-slot="native-select"
       ~ data-size={size}
       ~ {...props}
       ~ )
     Icon(
       ~ name='select-caret'
-      ~ className="size-3 opacity-70 cn-native-select-icon pointer-events-none absolute select-none right-0.25"
+      ~ className="size-2.5 opacity-70 cn-native-select-icon pointer-events-none absolute select-none right-0.25"
       ~ aria-hidden="true"
       ~ data-slot="select-icon"
       ~ )
