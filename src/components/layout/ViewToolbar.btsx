@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils'
 component Arrange
   props { arranging, onToggle }: { arranging: boolean; onToggle: VoidFunction }
   button(
-    ~ className='inline-flex shrink-0 items-center justify-center rounded-sm text-muted-foreground/70 text-[10px] transition-[color,background-color,border-color,scale] duration-160 ease-[ease] hover:bg-surface-hover/50 hover:text-accent focus-visible:bg-surface-hover focus-visible:text-fg active:scale-[0.97] aria-pressed:border-brand aria-pressed:bg-brand aria-pressed:text-[#1b1b1b] aria-pressed:shadow-none light:size-8 light:rounded-lg light:text-dim light:hover:bg-black/[0.045] light:hover:text-fg light:aria-pressed:text-white max-[760px]:w-8 max-[760px]:p-0'
+    ~ className='inline-flex shrink-0 items-center justify-center rounded-sm text-muted-foreground/70 text-[10px] transition-[color,background-color,border-color,scale] duration-160 ease-[ease] hover:opacity-90 hover:text-accent focus-visible:bg-surface-hover focus-visible:text-fg active:scale-[0.97] aria-pressed:border-brand aria-pressed:bg-brand aria-pressed:text-[#1b1b1b] aria-pressed:shadow-none light:size-8 light:rounded-lg light:text-dim light:hover:text-fg light:aria-pressed:text-white max-[760px]:w-8 max-[760px]:p-0'
     ~ type='button'
     ~ aria-label={arranging ? 'Finish arranging panes' : 'Arrange panes'}
     ~ aria-pressed={arranging}
@@ -32,7 +32,7 @@ setup
 
 div(className='view-toolbar flex min-w-0 items-center gap-3 overflow-x-auto bg-seam p-0 max-[1200px]:col-span-full max-[1200px]:row-start-2 max-[1200px]:min-h-[35px] max-[1200px]:max-w-full max-[1200px]:justify-self-center max-[760px]:gap-0.5 max-[760px]:px-1.5' role='group' aria-label='Workspace views')
   FluidTooltip
-    ButtonGroup(className='bg-background light:gap-0.5 light:rounded-[10px] light:border-transparent light:divide-transparent light:bg-black/[0.045] light:p-0.5')
+    ButtonGroup(className='bg-background light:gap-0.5 light:rounded-[14px] light:border-transparent light:divide-transparent light:bg-muted light:p-1')
       each pane in toolbarPanes key pane.id
         FluidTooltipRoot(id={pane.id} sideOffset={16})
           FluidTooltipTrigger(ref={null})

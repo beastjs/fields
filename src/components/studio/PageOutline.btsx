@@ -22,7 +22,7 @@ module
 props { blocks, selected, onSelect, onReorder, onRemove, onRecipe }: OutlineProps
 
 div(className='flex min-h-0 flex-col')
-  div(className='flex items-baseline justify-between gap-2 border-b border-edge px-3.5 py-3')
+  div(className='flex items-center justify-between gap-2 border-b border-edge bg-inset px-3.5 h-9')
     h3(className='text-[12px] font-medium text-fg') Your page
     span(className='font-code text-[10px] text-dim') #{blocks.length} #{blocks.length === 1 ? 'section' : 'sections'}
   div(className='min-h-0 flex-1 overflow-auto p-2')

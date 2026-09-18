@@ -71,14 +71,14 @@ setup
   const usage = (kind: SectionKindId) => blocks.filter(block => block.kind === kind).length;
 
 div(className='flex min-h-0 flex-col')
-  div(className='border-b border-edge p-3')
-    label(className='flex items-center gap-2 rounded-[6px] border border-edge bg-inset px-2.5 py-1.5 text-dim focus-within:border-brand')
+  div(className='border-b border-edge h-9')
+    label(className='flex items-center gap-2 bg-inset px-2.5 h-full text-dim focus-within:border-brand')
       Icon(name='search' className='size-3.5 shrink-0')
       span(className='sr-only') Search sections
       input(
         ~ type='search'
         ~ value={query}
-        ~ placeholder='Search sections — pricing, logos, waitlist…'
+        ~ placeholder='pricing, logos, waitlist…'
         ~ className='min-w-0 flex-1 bg-transparent text-[12px] text-fg outline-none placeholder:text-faint focus-visible:outline-none'
         ~ onInput={event => setQuery(event.currentTarget.value)}
         ~ )
@@ -100,13 +100,13 @@ div(className='flex min-h-0 flex-col')
               button(
                 ~ type='button'
                 ~ aria-expanded={openKind === kind.id}
-                ~ className='group/kind flex w-full items-center gap-2 rounded-[6px] px-1.5 py-1.5 text-left hover:bg-surface-hover aria-expanded:bg-surface-hover'
+                ~ className='group/kind flex w-full items-center gap-2 rounded-[6px] px-1.5 py-1.5 text-left hover:bg-surface-hover data-open:bg-bg-surface aria-expanded:bg-surface-hover'
                 ~ onClick={() => onOpenKind(openKind === kind.id ? undefined : kind.id)}
                 ~ )
-                Icon(name='chevron-down-tiny' className='size-3 shrink-0 -rotate-90 text-dim transition-transform group-aria-expanded/kind:rotate-0')
+                Icon(name='chevron-down-tiny' className='size-3 shrink-0 -rotate-45 text-dim transition-transform group-aria-expanded/kind:rotate-0')
                 span(className='min-w-0 flex-1')
                   span(className='block truncate text-[12px] text-fg') #{kind.label}
-                  span(className='block truncate text-[10px] text-dim') #{kind.summary}
+                  span(className='hidden _block truncate text-[10px] text-dim') #{kind.summary}
                 if usage(kind.id)
                   span(className='size-1.5 shrink-0 rounded-full bg-brand' title='On your page')
                 span(className='shrink-0 font-code text-[10px] text-faint') #{templatesOf(kind.id).length}
