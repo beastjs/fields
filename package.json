@@ -13,7 +13,8 @@
     "test:browser": "playwright test",
     "test:browser:hosted": "playwright test --config playwright.hosted.config.ts",
     "check": "bun run typecheck && bun run test && bun run build",
-    "probe:isolation": "bun run prepare:runtime && bun scripts/probe-preview-isolation.mjs"
+    "probe:isolation": "bun run prepare:runtime && bun scripts/probe-preview-isolation.mjs",
+    "seed:presets": "bun run scripts/seed-presets.ts"
   },
   "dependencies": {
     "@ai-sdk/provider": "^4.0.14",
@@ -57,7 +58,8 @@
     "octane": "0.2.10",
     "path-browserify": "1.0.1",
     "shiki": "^4.4.3",
-    "tailwind-merge": "^3.7.0"
+    "tailwind-merge": "^3.7.0",
+    "zod": "^4.6.3"
   },
   "devDependencies": {
     "@octanejs/rsbuild-plugin": "0.1.49",

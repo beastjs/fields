@@ -13,6 +13,7 @@ import type * as builds from "../builds.js";
 import type * as chatActions from "../chatActions.js";
 import type * as chats from "../chats.js";
 import type * as logs from "../logs.js";
+import type * as presets from "../presets.js";
 import type * as projectFiles from "../projectFiles.js";
 import type * as projects from "../projects.js";
 import type * as teams from "../teams.js";
@@ -35,6 +36,7 @@ declare const fullApi: ApiFromModules<{
   chatActions: typeof chatActions;
   chats: typeof chats;
   logs: typeof logs;
+  presets: typeof presets;
   projectFiles: typeof projectFiles;
   projects: typeof projects;
   teams: typeof teams;

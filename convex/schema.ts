@@ -3,12 +3,15 @@ import { userValidator } from './users/v'
 import {
   buildRunValidator,
   chatValidator,
+  pageRecipeValidator,
   projectFileValidator,
   projectLogValidator,
   projectValidator,
+  sectionPresetValidator,
   teamInvitationValidator,
   teamMemberValidator,
-  teamValidator
+  teamValidator,
+  themeValidator
 } from './validators'
 
 export default defineSchema({
@@ -54,5 +57,21 @@ export default defineSchema({
   projectLogs: defineTable(projectLogValidator)
     .index('by_projectId_and_occurredAt', ['projectId', 'occurredAt'])
     .index('by_projectId_and_source_and_occurredAt', ['projectId', 'source', 'occurredAt'])
-    .index('by_buildId_and_occurredAt', ['buildId', 'occurredAt'])
+    .index('by_buildId_and_occurredAt', ['buildId', 'occurredAt']),
+
+  sectionPresets: defineTable(sectionPresetValidator)
+    .index('by_presetId', ['presetId'])
+    .index('by_teamId_and_status_and_kind', ['teamId', 'status', 'kind'])
+    .index('by_teamId_and_updatedAt', ['teamId', 'updatedAt'])
+    .searchIndex('search_catalog', { searchField: 'searchText', filterFields: ['status', 'kind', 'teamId'] }),
+
+  themes: defineTable(themeValidator)
+    .index('by_themeId', ['themeId'])
+    .index('by_status', ['status'])
+    .index('by_teamId_and_updatedAt', ['teamId', 'updatedAt']),
+
+  pageRecipes: defineTable(pageRecipeValidator)
+    .index('by_recipeId', ['recipeId'])
+    .index('by_status', ['status'])
+    .index('by_teamId_and_updatedAt', ['teamId', 'updatedAt'])
 })

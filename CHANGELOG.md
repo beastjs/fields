@@ -6,6 +6,21 @@ All notable changes to `play` will be recorded here.
 
 ### Added
 
+- Section presets as JSON documents stored in Convex: a typed node tree whose
+  layout, spacing, sizing and typography are fields rather than class strings,
+  with unmodelled utilities, conditional class lists and `setup` behaviour
+  preserved verbatim. A parser and renderer convert between the document and
+  Beast source losslessly and idempotently, proven across all 44 built-in
+  templates, which still compile as part of a page. Adds `sectionPresets`,
+  `themes` and `pageRecipes` tables with team scoping and full-text search,
+  zod validation at the storage boundary, and an idempotent seeding script.
+  Presets are stored as a flat node list rather than a tree, so they stay inside
+  Convex's 16-level nesting limit at any section depth, and attributes are stored
+  as an ordered array so they survive Convex normalising object key order. All 44
+  presets were verified end-to-end: fetched back from the deployment, rebuilt, and
+  rendered identically to their original templates. The studio still reads the
+  bundled catalog; see docs/design-studio-presets.md.
+
 - Design Studio page composer: 40 monochrome, theme-agnostic section templates
   across 14 kinds (topbar, hero, partners marquee, stats, features, guides,
   products, testimonials, pricing, FAQ, team, call to action, newsletter, footer),

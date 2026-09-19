@@ -154,3 +154,67 @@ export const projectLogValidator = v.object({
   occurredAt: v.number(),
   createdAt: v.number()
 })
+
+export const presetStatusValidator = v.union(v.literal('published'), v.literal('draft'), v.literal('archived'))
+
+/**
+ * A stored section preset. `document` holds the preset's JSON tree: Convex validators cannot recurse, so the tree
+ * is validated with the zod schema in `src/playground/studio/ir/schema.ts` on every write and on every read that
+ * renders it. The fields beside it are denormalised copies used for indexing, search, and the library list, so the
+ * catalog can be listed without loading a single tree.
+ */
+export const sectionPresetValidator = v.object({
+  /** Globally unique and human-readable for built-ins (`cta-default`); suffixed for team-authored presets. */
+  presetId: v.string(),
+  kind: v.string(),
+  title: v.string(),
+  description: v.string(),
+  wireframe: v.array(v.string()),
+  keywords: v.array(v.string()),
+  /** Title, description, and keywords joined, so one search index covers the catalog. */
+  searchText: v.string(),
+  document: v.any(),
+  schemaVersion: v.number(),
+  status: presetStatusValidator,
+  /** Absent for the built-in catalog; set for presets a team authored. */
+  teamId: v.optional(v.id('teams')),
+  createdBy: v.optional(v.id('users')),
+  version: v.number(),
+  createdAt: v.number(),
+  updatedAt: v.number()
+})
+
+/** A named set of design tokens, emitted into the preview as Tailwind `@theme` custom properties. */
+export const themeTokensValidator = v.object({
+  color: v.record(v.string(), v.string()),
+  radius: v.optional(v.record(v.string(), v.string())),
+  font: v.optional(v.record(v.string(), v.string())),
+  spacing: v.optional(v.record(v.string(), v.string())),
+  shadow: v.optional(v.record(v.string(), v.string()))
+})
+
+export const themeValidator = v.object({
+  themeId: v.string(),
+  name: v.string(),
+  description: v.string(),
+  tokens: themeTokensValidator,
+  /** Overrides applied under `[data-theme=dark]`; absent for a theme that reads the same in both. */
+  dark: v.optional(themeTokensValidator),
+  status: presetStatusValidator,
+  teamId: v.optional(v.id('teams')),
+  createdBy: v.optional(v.id('users')),
+  createdAt: v.number(),
+  updatedAt: v.number()
+})
+
+/** An ordered starting point: the presets a recipe composes into a page. */
+export const pageRecipeValidator = v.object({
+  recipeId: v.string(),
+  title: v.string(),
+  description: v.string(),
+  presetIds: v.array(v.string()),
+  status: presetStatusValidator,
+  teamId: v.optional(v.id('teams')),
+  createdAt: v.number(),
+  updatedAt: v.number()
+})
