@@ -34,7 +34,7 @@ export interface PresetLookup {
   summary(presetId: string): PresetSummary | undefined
   /** The preset's tree, once loaded. */
   document(presetId: string): PresetDocument | undefined
-  /** The preset's `.btsx` source, once loaded, with any Design Mode overrides applied. */
+  /** The preset's `.btsx` source, once loaded, with any Fine Layout overrides applied. */
   source(presetId: string, overrides?: Record<string, NodeOverride>): string | undefined
   /** True when every id given has a loaded document, so a page built from them can be composed and installed. */
   loaded(presetIds: string[]): boolean
@@ -50,7 +50,7 @@ export function presetLookup(summaries: readonly PresetSummary[] = EMPTY, docume
   const byId = new Map(summaries.map(summary => [summary.presetId, summary]))
   const trees = new Map(documents.map(document => [document.id, document]))
   const rendered = new Map<string, string>()
-  // Overridden renders are cached against the override object itself, which a Design Mode edit replaces wholesale.
+  // Overridden renders are cached against the override object itself, which a Fine Layout edit replaces wholesale.
   const overridden = new WeakMap<object, Map<string, string>>()
 
   return {

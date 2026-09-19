@@ -5,7 +5,7 @@ import type { AttrValue, Node, PresetDocument, TextPart } from './types'
  * Renders a `PresetDocument` back to Beast source.
  *
  * Install output is what lands in `src/sections/*.btsx`. Preview output additionally stamps each element with
- * `data-node`, which is how Design Mode maps a hovered DOM element back to the node that produced it. Nodes inside
+ * `data-node`, which is how Fine Layout maps a hovered DOM element back to the node that produced it. Nodes inside
  * an `each` render once, so their id addresses the repeated template rather than any one iteration.
  */
 

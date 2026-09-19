@@ -1,5 +1,5 @@
 import { fileRecommendation } from '../../chat/recommendation'
-import { MAX_ATTEMPTS } from '../../chat/iterate'
+import { EXHAUSTED, MAX_ATTEMPTS } from '../../chat/iterate'
 import type { PlaygroundSession } from '../../playground/session'
 import { useEffect, useRef, useState } from 'octane'
 import { renderChatMarkdown } from '../../chat/markdown'
@@ -16,8 +16,8 @@ module
   const applyScope = 'rounded-full border border-edge px-1.5 py-px font-code text-fg-secondary';
   const messageState = 'ml-auto font-code text-[6px] tracking-[0.5px] text-faint';
   const applyErrorClass = 'chat-apply-error text-warning';
-  interface ChatMessageProps { message: ChatMessage; session: PlaygroundSession, auto: boolean, onAutoFailure?: (message: ChatMessage, error: string) => void }
-props { message, session, auto, onAutoFailure }: ChatMessageProps
+  interface ChatMessageProps { message: ChatMessage; session: PlaygroundSession, auto: boolean, onAutoFailure?: (message: ChatMessage, error: string) => void, haltReason?: string }
+props { message, session, auto, onAutoFailure, haltReason }: ChatMessageProps
 setup
   const recommendation = message.state === 'complete' ? fileRecommendation(message.content, message.context) : undefined;
   const [applyState, setApplyState] = useState('');
@@ -62,6 +62,8 @@ setup
     onAutoFailure?.(message, recommendation.error);
   }, [message.id, message.state, recommendation?.error]);
   const exhausted = autoOnArrival.current && (message.attempt ?? 1) >= MAX_ATTEMPTS && !!(recommendation?.error || applyError);
+  // Running out of attempts is one way the loop stops; `haltReason` carries the others.
+  const halt = haltReason ?? (exhausted ? EXHAUSTED : '');
 
   const [copied, setCopied] = useState(false);
   const copy = async () => { try { await navigator.clipboard.writeText(message.content); setCopied(true); } catch { setCopied(false); } };
@@ -110,5 +112,5 @@ article(className={'chat-message mb-6 ' + message.role} data-message-state={mess
             span(className={cn(applyScope, 'text-brand')}) compiled
         if applyError
           p(className={applyErrorClass} role='alert') #{applyError}
-      if exhausted
-        p(className={applyErrorClass} role='status') #{'Stopped auto-fixing after ' + MAX_ATTEMPTS + ' attempts. Adjust the request and try again.'}
+      if halt
+        p(className={applyErrorClass} role='status') #{halt}

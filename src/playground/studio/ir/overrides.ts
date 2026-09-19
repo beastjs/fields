@@ -1,7 +1,7 @@
 import type { Breakpoint, Node, NodeOverride, PresetDocument, Style } from './types'
 
 /**
- * Design Mode edits as non-destructive patches.
+ * Fine Layout edits as non-destructive patches.
  *
  * A preset is shared and read-only, so an edit made in the preview never touches it. Instead each block carries
  * overrides keyed by node id, and the source a block renders is the preset with those patches applied. Clearing an

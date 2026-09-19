@@ -1,0 +1,305 @@
+import { useState } from 'octane'
+import { Icon } from '@/lib/icons'
+import { cn } from '@/lib/utils'
+import { JevNotConfigured, jevConfigured } from '../../jev/status'
+import { auras, standardQueries, withAxes } from '../../jev/theme-model'
+import type { Aura, ThemeAnswer, ThemeDesign, ThemeMood } from '../../jev/theme-model'
+import type { ThemeBrief } from '../../jev/theme'
+import type { Ground, Hue, ThemeAxes, Voice } from '../../playground/studio/palette'
+import type { ThemeDocument } from '../../playground/studio/themes'
+import { eyebrowLabel } from '../ui/styles'
+
+module
+  interface DesignerProps {
+    /** Preview a generated theme: the studio registers it and selects it. */
+    onPreview: (theme: ThemeDocument) => void
+    /** The theme currently applied to the page, which is what mood and questions are asked about. */
+    current: ThemeDocument
+  }
+
+  /** The categorical axes, in the order they matter to a page. Values come from the palette's own tables. */
+  const grounds: Ground[] = ['void', 'dark', 'dim', 'light', 'bright']
+  const hues: Hue[] = ['neutral', 'rose', 'red', 'amber', 'yellow', 'lime', 'green', 'teal', 'cyan', 'blue', 'indigo', 'violet', 'magenta']
+  const voices: Voice[] = ['mono', 'grotesk', 'geometric', 'humanist', 'serif', 'rounded']
+  const scaleAxes: { field: 'saturation' | 'corners' | 'density' | 'contrast'; label: string; low: string; high: string }[] = [
+    { field: 'saturation', label: 'Colour', low: 'bleached', high: 'vivid' },
+    { field: 'corners', label: 'Corners', low: 'square', high: 'pill' },
+    { field: 'density', label: 'Space', low: 'tight', high: 'airy' },
+    { field: 'contrast', label: 'Contrast', low: 'quiet', high: 'stark' }
+  ]
+  const moodAxes: { field: 'temperature' | 'energy' | 'formality' | 'weight'; label: string; low: string; high: string }[] = [
+    { field: 'temperature', label: 'Warmth', low: 'cold', high: 'warm' },
+    { field: 'energy', label: 'Energy', low: 'still', high: 'electric' },
+    { field: 'formality', label: 'Formality', low: 'playful', high: 'institutional' },
+    { field: 'weight', label: 'Weight', low: 'light', high: 'heavy' }
+  ]
+  /** A 0..1 value as a labelled bar. Used for both the palette's scales and the mood it reads back. */
+  interface MeterProps {
+    label: string
+    value: number
+    /** What the low end means, shown when the value sits there. */
+    low: string
+    high: string
+  }
+
+  const percent = (value: number) => Math.round(value * 100) + '%'
+  const chip = 'rounded-full border px-1.5 py-px font-code text-[9px] whitespace-nowrap'
+  const fieldLabel = 'font-code text-[9px] tracking-[0.12em] text-faint uppercase'
+  const pill = 'rounded-[4px] border border-edge px-1.5 py-0.5 text-[10px] text-dim hover:border-brand hover:text-fg aria-pressed:border-brand aria-pressed:bg-brand/15 aria-pressed:text-fg'
+  const actionButton = 'flex items-center justify-center gap-1 rounded-[5px] border border-brand bg-brand/15 px-2 py-1 text-[10px] text-fg hover:bg-brand/25 disabled:cursor-default disabled:opacity-45'
+  const textField = 'w-full rounded-[5px] border border-edge bg-inset px-2 py-1.5 text-[11px] text-fg outline-none placeholder:text-faint focus-visible:border-brand'
+
+component Meter
+  props { label, value, low, high }: MeterProps
+  div(className='grid gap-1')
+    div(className='flex items-baseline justify-between gap-2')
+      span(className={fieldLabel}) #{label}
+      span(className='font-code text-[9px] text-dim') #{value < 0.34 ? low : value > 0.66 ? high : '—'} #{percent(value)}
+    div(className='h-1 rounded-full bg-inset')
+      div(className='h-full rounded-full bg-brand' style={{ width: percent(value) }})
+
+props { onPreview, current }: DesignerProps
+setup
+  const [brief, setBrief] = useState('');
+  const [design, setDesign] = useState<ThemeDesign | undefined>(undefined);
+  const [refinements, setRefinements] = useState<string[]>([]);
+  const [refinement, setRefinement] = useState('');
+  const [mood, setMood] = useState<ThemeMood | undefined>(undefined);
+  const [query, setQuery] = useState('');
+  const [answers, setAnswers] = useState<ThemeAnswer[]>([]);
+  const [busy, setBusy] = useState('');
+  const [error, setError] = useState('');
+
+  /**
+   * The workflows and Effect, loaded the first time someone designs something.
+   *
+   * The Design Studio is in the shell's initial bundle, so a static import here would put Effect and the whole
+   * workflow layer in front of every session — including every session that never opens this tab. The status check
+   * comes from `status.ts`, which has no such dependency, so an unconfigured server never loads any of it.
+   */
+  const workflows = async () => {
+    const [{ runJev }, jev] = await Promise.all([import('../../jev/browser'), import('../../jev/theme')]);
+    return { runJev, ...jev };
+  };
+
+  /**
+   * Every call goes through here so one failure path covers all four. A missing key is reported as the setup step
+   * it is, rather than as an error, because nothing about the studio is broken without it.
+   */
+  const call = async <A,>(what: string, work: (loaded: Awaited<ReturnType<typeof workflows>>) => Promise<A>): Promise<A | undefined> => {
+    if (busy) return undefined;
+    setBusy(what);
+    setError('');
+    try {
+      if (!(await jevConfigured())) throw new JevNotConfigured();
+      return await work(await workflows());
+    }
+    catch (cause) {
+      setError(cause instanceof JevNotConfigured
+        ? 'Set TYPESAFE_API_KEY on the server to design themes.'
+        : cause instanceof Error ? cause.message : 'That evaluation failed. Try again.');
+      return undefined;
+    }
+    finally { setBusy(''); }
+  };
+
+  /** A new design replaces whatever was read about the old one, so nothing on screen describes a stale palette. */
+  const adopt = (next: ThemeDesign) => {
+    setDesign(next);
+    setMood(undefined);
+    setAnswers([]);
+    onPreview(next.theme);
+  };
+  const design1 = (input: ThemeBrief) =>
+    call('Designing', ({ runJev, designTheme }) => runJev(designTheme(input)));
+  const generate = async () => {
+    if (!brief.trim()) return;
+    setRefinements([]);
+    const next = await design1({ brief: brief.trim() });
+    if (next) adopt(next);
+  };
+  const refine = async () => {
+    const asked = refinement.trim();
+    if (!asked || !design) return;
+    const history = [...refinements, asked];
+    const next = await design1({ brief: brief.trim(), refinements: history, ...(mood ? { current: mood.portrait } : {}) });
+    if (!next) return;
+    setRefinements(history);
+    setRefinement('');
+    adopt(next);
+  };
+  // Taking a coordinate back is pure composition: no call, no waiting, and the palette repaints immediately.
+  const tweak = (overrides: Partial<ThemeAxes>) => {
+    if (!design) return;
+    const next = withAxes(design, overrides);
+    setDesign(next);
+    setAnswers([]);
+    onPreview(next.theme);
+  };
+  const analyse = async () => {
+    const next = await call('Reading', ({ runJev, readMood }) => runJev(readMood(current)));
+    if (next) setMood(next);
+  };
+  const ask = async (questions: readonly string[]) => {
+    const next = await call('Asking', ({ runJev, askAboutTheme }) => runJev(askAboutTheme(current, questions)));
+    if (next) setAnswers(previous => [...next, ...previous.filter(answer => !next.some(fresh => fresh.question === answer.question))].slice(0, 12));
+  };
+  const askTyped = async () => {
+    if (!query.trim()) return;
+    await ask([query.trim()]);
+    setQuery('');
+  };
+
+  const auraName = (aura: Aura) => aura.charAt(0).toUpperCase() + aura.slice(1);
+  const verdictClass = (verdict: ThemeAnswer['verdict']) =>
+    verdict === 'yes' ? 'border-brand/50 text-brand' : verdict === 'no' ? 'border-edge text-dim' : 'border-warning/40 text-warning';
+  const unanswered = standardQueries.filter(question => !answers.some(answer => answer.question === question));
+
+div(className='flex min-h-0 flex-col')
+  div(className='flex h-9 shrink-0 items-center gap-2 border-b border-edge bg-inset px-2.5')
+    Icon(name='sparkle' className='size-3.5 shrink-0 text-brand')
+    span(className='min-w-0 flex-1 truncate text-[11px] text-fg') Describe the feel
+    if busy
+      span(className='flex shrink-0 items-center gap-1 font-code text-[9px] text-dim' role='status')
+        Icon(name='spinner-ring' className='size-3 animate-spin')
+        span #{busy}…
+
+  div(className='min-h-0 flex-1 overflow-auto p-2.5')
+    div(className='grid gap-2')
+      textarea(
+        ~ rows={3}
+        ~ value={brief}
+        ~ className={cn(textField, 'resize-none leading-[1.5]')}
+        ~ placeholder='a calm scheduling tool for clinicians, sold to hospital procurement'
+        ~ onInput={event => setBrief(event.currentTarget.value)}
+        ~ )
+      button(className={actionButton} type='button' disabled={!brief.trim() || !!busy} onClick={generate})
+        Icon(name='sparkle' className='size-3')
+        span #{design ? 'Design again' : 'Design a theme'}
+
+    if error
+      p(className='mt-2 rounded-[5px] border border-warning/40 bg-warning/10 px-2 py-1.5 text-[10px] leading-[1.5] text-warning' role='alert') #{error}
+
+    if design
+      div(className='mt-3 grid gap-3 border-t border-edge pt-3')
+        div(className='grid gap-1.5')
+          div(className='flex flex-wrap items-baseline gap-1.5')
+            span(className='text-[12px] text-fg') #{design.theme.name}
+            span(className={cn(chip, 'border-brand/50 text-brand')}) #{auraName(design.aura.value)}
+            span(className={cn(chip, design.contrast.body >= 7 ? 'border-edge text-dim' : 'border-warning/40 text-warning')} title='Measured body-text contrast against the page ground')
+              | #{design.contrast.body}:1 #{design.contrast.body >= 7 ? 'AAA' : 'AA'}
+          p(className='text-[10px] leading-[1.55] text-dim') #{design.theme.description}
+          if design.contrastRaised
+            p(className='text-[10px] leading-[1.5] text-warning') Contrast was raised to stay legible — the quiet end of the axis does not pass on this ground.
+          if design.aura.unsure || design.hue.unsure || design.ground.unsure || design.voice.unsure
+            p(className='text-[10px] leading-[1.5] text-dim') Some axes were too close to call, so they fell back rather than guess. Pick one below, or add a refinement.
+
+        div(className='grid gap-2.5')
+          div(className='grid gap-1')
+            span(className={fieldLabel}) Ground
+            div(className='flex flex-wrap gap-1')
+              each option in grounds key option
+                button(className={pill} type='button' aria-pressed={design.axes.ground === option} onClick={() => tweak({ ground: option })}) #{option}
+          div(className='grid gap-1')
+            span(className={fieldLabel}) Page cast
+            div(className='flex flex-wrap gap-1')
+              each option in hues key option
+                button(className={pill} type='button' aria-pressed={design.axes.hue === option} onClick={() => tweak({ hue: option })}) #{option}
+          div(className='grid gap-1')
+            span(className={fieldLabel}) Accent
+            div(className='flex flex-wrap gap-1')
+              each option in hues key option
+                button(className={pill} type='button' aria-pressed={design.axes.accent === option} onClick={() => tweak({ accent: option })}) #{option}
+          div(className='grid gap-1')
+            span(className={fieldLabel}) Voice
+            div(className='flex flex-wrap gap-1')
+              each option in voices key option
+                button(className={pill} type='button' aria-pressed={design.axes.voice === option} onClick={() => tweak({ voice: option })}) #{option}
+
+          each axis in scaleAxes key axis.field
+            div(className='grid gap-1')
+              div(className='flex items-baseline justify-between gap-2')
+                span(className={fieldLabel}) #{axis.label}
+                span(className='font-code text-[9px] text-dim') #{axis.low} → #{axis.high}
+              input(
+                ~ type='range'
+                ~ min='0'
+                ~ max='1'
+                ~ step='0.01'
+                ~ value={String(design.axes[axis.field])}
+                ~ aria-label={axis.label}
+                ~ className='h-1 w-full accent-brand'
+                ~ onInput={event => tweak({ [axis.field]: Number(event.currentTarget.value) })}
+                ~ )
+
+        if design.hue.ranked.length > 1
+          div(className='grid gap-1')
+            span(className={fieldLabel}) Also considered
+            div(className='flex flex-wrap gap-1')
+              each option in design.hue.ranked.slice(0, 4) key option[0]
+                button(className={pill} type='button' title={'Jev gave this ' + percent(option[1])} onClick={() => tweak({ hue: option[0] })})
+                  | #{option[0]} #{percent(option[1])}
+
+        div(className='grid gap-1.5')
+          span(className={fieldLabel}) Refine
+          if refinements.length
+            div(className='flex flex-wrap gap-1')
+              each asked in refinements key asked
+                span(className={cn(chip, 'border-edge text-dim')}) #{asked}
+          div(className='flex gap-1.5')
+            input(
+              ~ type='text'
+              ~ value={refinement}
+              ~ className={cn(textField, 'min-w-0 flex-1')}
+              ~ placeholder='warmer, less corporate…'
+              ~ onInput={event => setRefinement(event.currentTarget.value)}
+              ~ onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); void refine(); } }}
+              ~ )
+            button(className={cn(actionButton, 'shrink-0')} type='button' disabled={!refinement.trim() || !!busy} onClick={refine}) Apply
+
+    div(className='mt-3 grid gap-2 border-t border-edge pt-3')
+      div(className='flex items-baseline justify-between gap-2')
+        span(className={eyebrowLabel}) MOOD OF #{current.name.toUpperCase()}
+        button(className='rounded-[4px] px-1.5 py-0.5 text-[10px] text-dim hover:bg-control hover:text-fg disabled:opacity-45' type='button' disabled={!!busy} onClick={analyse}) #{mood ? 'Re-read' : 'Read'}
+      if mood
+        div(className='grid gap-2')
+          div(className='flex flex-wrap gap-1')
+            span(className={cn(chip, 'border-brand/50 text-brand')}) #{auraName(mood.aura.value)}
+            span(className={cn(chip, 'border-edge text-dim')}) #{mood.era.value.replace('_', ' ')}
+            span(className={cn(chip, 'border-edge text-dim')} title='Probability a reader finds this expensive rather than cheap') premium #{percent(mood.premium)}
+            span(className={cn(chip, 'border-edge text-dim')} title='Probability a cautious buyer would trust a financial or medical product wearing this') trust #{percent(mood.trustworthy)}
+          each axis in moodAxes key axis.field
+            Meter(label={axis.label} value={mood[axis.field]} low={axis.low} high={axis.high})
+          p(className='text-[10px] leading-[1.5] text-faint') Judged from: #{mood.portrait.summary}
+      else
+        p(className='text-[10px] leading-[1.5] text-dim') Read the warmth, energy, formality and weight of whatever theme is applied — including the built-ins.
+
+    div(className='mt-3 grid gap-2 border-t border-edge pt-3')
+      span(className={eyebrowLabel}) ASK ABOUT IT
+      div(className='flex gap-1.5')
+        input(
+          ~ type='text'
+          ~ value={query}
+          ~ className={cn(textField, 'min-w-0 flex-1')}
+          ~ placeholder='would a night-shift nurse find this harsh?'
+          ~ onInput={event => setQuery(event.currentTarget.value)}
+          ~ onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); void askTyped(); } }}
+          ~ )
+        button(className={cn(actionButton, 'shrink-0')} type='button' disabled={!query.trim() || !!busy} onClick={askTyped}) Ask
+      if unanswered.length
+        div(className='flex flex-wrap gap-1')
+          button(className={pill} type='button' disabled={!!busy} onClick={() => ask(unanswered)}) Ask all #{unanswered.length}
+          each question in unanswered.slice(0, 3) key question
+            button(className={cn(pill, 'max-w-full truncate')} type='button' disabled={!!busy} title={question} onClick={() => ask([question])}) #{question}
+      each answer in answers key answer.question
+        div(className='grid gap-1 rounded-[5px] border border-edge bg-surface-recessed p-1.5')
+          div(className='flex items-start justify-between gap-2')
+            span(className='min-w-0 text-[10px] leading-[1.45] text-fg-secondary') #{answer.question}
+            span(className={cn(chip, 'shrink-0', verdictClass(answer.verdict))}) #{answer.verdict}
+          div(className='h-1 rounded-full bg-inset')
+            div(className={cn('h-full rounded-full', answer.verdict === 'unsure' ? 'bg-warning' : 'bg-brand')} style={{ width: percent(answer.probability) }})
+      empty
+        p(className='text-[10px] leading-[1.5] text-dim') Any yes/no question works. Answers come back as a probability, and an even split is reported as unsure rather than rounded into a yes.
+
+    p(className='mt-3 border-t border-edge pt-2 text-[10px] leading-[1.5] text-faint')
+      | Themes are composed in code from #{Object.keys(auras).length} characters and seven coordinates. Contrast is measured, never guessed.

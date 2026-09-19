@@ -4,7 +4,7 @@ import { RuntimeSourceMapper, type PreviewModuleURL, type RuntimePosition, type 
 import { planHotUpdate } from './hot-update';
 import type { Theme } from './theme';
 
-/** One node's box as Design Mode measured it, in the preview's own CSS pixels. */
+/** One node's box as Fine Layout measured it, in the preview's own CSS pixels. */
 export interface DesignSides { top: number; right: number; bottom: number; left: number }
 export interface DesignNode {
   nodeId: string;
@@ -166,7 +166,7 @@ export class Preview {
         message: this.hostedURL ? 'Hosted preview did not start. Check the configured endpoint and reload, or choose Local preview.' : 'Preview did not start. Reload to try again.' });
     }, 10000);
   }
-  /** Turns the frame's inspector on or off; re-sent after every load so a rebuild stays in Design Mode. */
+  /** Turns the frame's inspector on or off; re-sent after every load so a rebuild stays in Fine Layout. */
   setDesigning(enabled: boolean) {
     this.designing = enabled;
     this.post({ type: 'design', enabled });

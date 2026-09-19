@@ -6,7 +6,7 @@ import CollapseButton from '../layout/CollapseButton.btsx'
 import ChatSettings from './ChatSettings.btsx'
 import ChatComposer from './ChatComposer.btsx'
 import ChatMessage from './ChatMessage.btsx'
-import { fixUpPrompt } from '../../chat/iterate'
+import { planRepair } from '../../chat/iterate'
 import type { ChatMessage as Message } from '../../chat/controller'
 import {Icon} from '@/lib/icons'
 import type { WorkspaceProps } from '../types'
@@ -30,24 +30,39 @@ setup
   const toggleAuto = () => setIsAutoApply(v => !v)
   const autoRef = useRef(isAutoApply)
   autoRef.current = isAutoApply
+  // Why the loop stopped, keyed by the reply it stopped on, so the message can say so.
+  const [halted, setHalted] = useState<Record<number, string>>({});
+  // The reply this fix-up round still belongs to: the latest one, while auto is on.
+  const current = (message: Message) => autoRef.current && chat.getSnapshot().messages.at(-1)?.id === message.id;
   // Auto-apply failures go back to the model with the current file until a change applies
-  // cleanly or the attempts run out. Only the latest reply iterates, and only while auto is on.
+  // cleanly, the attempts run out, or the failure is judged not worth another attempt.
+  // Only the latest reply iterates, and only while auto is on.
   const autoFix = (message: Message, error: string) => {
     // The reply is marked complete just before the controller clears `busy`; wait for idle.
     if (chat.getSnapshot().busy) {
       const unsubscribe = chat.subscribe(() => { if (!chat.getSnapshot().busy) { unsubscribe(); autoFix(message, error); } });
       return;
     }
-    if (!autoRef.current || chat.getSnapshot().messages.at(-1)?.id !== message.id || !message.context) return;
-    const prompt = fixUpPrompt(error, message.context.file, message.attempt ?? 1);
-    const source = session.read(message.context.file);
-    if (!prompt || source === undefined) return;
-    const references = chat.lastReferences.flatMap(reference => {
-      const current = session.read(reference.file);
-      return current === undefined ? [] : [{ file: reference.file, source: current }];
+    if (!current(message) || !message.context) return;
+    const file = message.context.file;
+    const attempt = message.attempt ?? 1;
+    if (session.read(file) === undefined) return;
+    const messages = chat.getSnapshot().messages;
+    const reply = messages.findIndex(entry => entry.id === message.id);
+    const request = messages.slice(0, reply < 0 ? 0 : reply).filter(entry => entry.role === 'user').at(-1)?.content ?? '';
+    void planRepair({ prompt: request, file, error, attempt }).then(plan => {
+      // Deciding took a round trip, in which the developer may have turned auto off or moved on.
+      if (!current(message)) return;
+      if (plan.action === 'stop') { setHalted(reasons => ({ ...reasons, [message.id]: plan.reason })); return; }
+      const source = session.read(file);
+      if (source === undefined) return;
+      const references = chat.lastReferences.flatMap(reference => {
+        const latest = session.read(reference.file);
+        return latest === undefined ? [] : [{ file: reference.file, source: latest }];
+      });
+      const snapshot = session.getSnapshot();
+      void chat.submit(plan.prompt, { file, source }, snapshot.projectGeneration, references, attempt + 1, Object.keys(snapshot.project.files));
     });
-    const snapshot = session.getSnapshot();
-    void chat.submit(prompt, { file: message.context.file, source }, snapshot.projectGeneration, references, (message.attempt ?? 1) + 1, Object.keys(snapshot.project.files));
   }
 
 
@@ -80,7 +95,7 @@ PaneSurface(layout={layout} pane='chat' label='AI chat' className='flex flex-col
             span #{idea}
         button(className='border-0 bg-none p-0 text-[10px] text-[#efa571] light:text-brand' type='button' hidden={connected} onClick={() => setSettingsOpen(true)}) Set up your connection ↗
     each message in state.messages key message.id
-      ChatMessage(message={message} session={session} auto={isAutoApply} onAutoFailure={autoFix})
+      ChatMessage(message={message} session={session} auto={isAutoApply} onAutoFailure={autoFix} haltReason={halted[message.id]})
     if state.error || state.connectionError
       div(className='chat-error rounded-[5px] border border-[#755335] bg-surface-hover p-2.5 text-[10px] leading-[1.7] text-[#deb68a] light:border-notice-edge light:bg-notice-surface light:text-notice' role='alert')
         p(className='mb-2') #{state.error || state.connectionError}

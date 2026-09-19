@@ -32,7 +32,7 @@ export interface PageBlock {
    * the install leaves it alone. Set by `readPage`, and cleared when a new design is chosen.
    */
   edited?: boolean
-  /** Design Mode edits, keyed by node id. Non-destructive: the preset itself is never changed. */
+  /** Fine Layout edits, keyed by node id. Non-destructive: the preset itself is never changed. */
   overrides?: Record<string, NodeOverride>
 }
 
@@ -157,10 +157,10 @@ export const recipeBlocks = (presetIds: string[], presets: PresetLookup) =>
   presetIds.reduce<PageBlock[]>((blocks, presetId) => (presets.summary(presetId) ? addSection(blocks, presetId, presets, blocks.length).blocks : blocks), [])
 
 /**
- * The tree a block renders, for Design Mode to inspect and patch.
+ * The tree a block renders, for Fine Layout to inspect and patch.
  *
  * A block that still matches its preset edits the preset's document. One whose file has been edited — by hand, or
- * by a previous install of its own Design Mode edits — is parsed back from that file, so visual editing survives
+ * by a previous install of its own Fine Layout edits — is parsed back from that file, so visual editing survives
  * the round trip through the project. Parsing is lossless and assigns ids in document order, so the ids line up
  * with the preset's as long as the structure is unchanged.
  */
@@ -183,7 +183,7 @@ export function blockDocument(project: CompilationProject, block: PageBlock, pre
 /**
  * A block's current source: the project's file once it has been edited, otherwise the preset it renders.
  *
- * `inspectable` stamps every element with `data-node` so Design Mode can trace a hovered element back to the node
+ * `inspectable` stamps every element with `data-node` so Fine Layout can trace a hovered element back to the node
  * that produced it. Only the preview ever asks for it; an install never carries inspection attributes.
  */
 export function blockSource(project: CompilationProject, block: PageBlock, presets: PresetLookup, inspectable = false) {

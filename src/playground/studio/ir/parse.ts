@@ -7,7 +7,7 @@ import type { AttrValue, ElementNode, Node, PresetDocument, TextPart } from './t
  * Supported: leading imports, a `setup` block (kept verbatim as opaque TypeScript), elements with `#id` shorthand,
  * attributes with quoted or `{}` values, `#{}` text interpolation, `each … in … key …`, and `if`/`elseif`/`else`.
  * Node ids are assigned in document order, so re-parsing the same source yields the same ids and a page's
- * Design Mode overrides keep pointing at the nodes they were made against.
+ * Fine Layout overrides keep pointing at the nodes they were made against.
  */
 
 export class ParseError extends Error {

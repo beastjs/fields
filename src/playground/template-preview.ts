@@ -4,7 +4,7 @@ import { Preview, type DesignNode, type ResolvedPreviewEvent } from './preview';
 import type { Theme } from './theme';
 
 export type TemplatePreviewStatus = { state: 'compiling' | 'ready' } | { state: 'error'; message: string };
-/** What Design Mode reports back from the visible frame. */
+/** What Fine Layout reports back from the visible frame. */
 export type DesignEvent =
   | { type: 'hover'; node: DesignNode }
   | { type: 'select'; node: DesignNode }
@@ -28,7 +28,7 @@ export class TemplatePreview {
   private pendingReveal?: Reveal;
   /** When true, compatible rebuilds update the running app in place instead of reloading it. */
   hot = false;
-  /** Called with what Design Mode reports; only the visible frame is ever inspected. */
+  /** Called with what Fine Layout reports; only the visible frame is ever inspected. */
   onDesign?: (event: DesignEvent) => void;
   private designing = false;
 
@@ -60,7 +60,7 @@ export class TemplatePreview {
   /** Applies a theme's custom properties to both frames; no rebuild, so the page repaints in place. */
   setTokens(css: string) { for (const preview of this.previews) preview.setTokens(css); }
 
-  /** Both frames inspect, so a rebuild that swaps frames stays in Design Mode. */
+  /** Both frames inspect, so a rebuild that swaps frames stays in Fine Layout. */
   setDesigning(enabled: boolean) {
     this.designing = enabled;
     for (const preview of this.previews) preview.setDesigning(enabled);

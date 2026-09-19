@@ -3,7 +3,7 @@ import { breakpoints, type Breakpoint, type Length, type Style } from './types'
 /**
  * The two-way bridge between a Tailwind class list and the typed `Style` model.
  *
- * `toStyle` classifies every utility Design Mode needs a handle for and keeps the rest, in source order, in `raw`.
+ * `toStyle` classifies every utility Fine Layout needs a handle for and keeps the rest, in source order, in `raw`.
  * `toClasses` inverts it. Values are stored exactly as they appear after the utility's dash (`4`, `4xl`, `[42rem]`),
  * so the pair is lossless for any class list: no utility is dropped, invented, or rewritten.
  */
@@ -79,7 +79,7 @@ function classify(token: string, style: Group): boolean {
     if (body === 'border') return set(style, 'surface', 'border', DEFAULT_STEP), true
 
     const rounded = /^rounded-(.+)$/.exec(body)
-    // Per-corner radii (`rounded-t-lg`) stay raw: Design Mode edits one radius, not four.
+    // Per-corner radii (`rounded-t-lg`) stay raw: Fine Layout edits one radius, not four.
     if (rounded && !/^(?:t|r|b|l|tl|tr|br|bl|s|e|ss|se|es|ee)(?:-|$)/.test(rounded[1])) {
       return set(style, 'surface', 'radius', rounded[1]), true
     }
@@ -197,5 +197,5 @@ export function toClasses(style: Style | undefined): string {
   return out.join(' ')
 }
 
-/** True when a length is a Tailwind arbitrary value (`[42rem]`); Design Mode edits the inner CSS directly. */
+/** True when a length is a Tailwind arbitrary value (`[42rem]`); Fine Layout edits the inner CSS directly. */
 export const isArbitrary = (value: Length | undefined) => typeof value === 'string' && value.startsWith('[') && value.endsWith(']')

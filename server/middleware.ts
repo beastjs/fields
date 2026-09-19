@@ -2,10 +2,12 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import { handleAIRequest } from './chat-api'
+import { handleJevRequest } from './jev-api'
 
 /** Runs on both Rsbuild dev and preview servers. Never imported by the browser. */
 export function aiMiddleware(req: IncomingMessage, res: ServerResponse, next: () => void) {
-  if (!req.url?.split('?')[0].startsWith('/api/ai/')) {
+  const route = req.url?.split('?')[0] ?? ''
+  if (!route.startsWith('/api/ai/') && !route.startsWith('/api/jev/')) {
     next()
     return
   }
@@ -38,12 +40,14 @@ export function aiMiddleware(req: IncomingMessage, res: ServerResponse, next: ()
       ...(!['GET', 'HEAD'].includes(req.method ?? 'GET') ? { body: Buffer.concat(chunks) } : {})
     })
 
-    const response = await handleAIRequest(request, {
-      COHERE_API_KEY: process.env.COHERE_API_KEY,
-      OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
-      AI_CUSTOM_API_KEY: process.env.AI_CUSTOM_API_KEY,
-      AI_CUSTOM_BASE_URL: process.env.AI_CUSTOM_BASE_URL
-    })
+    const response = route.startsWith('/api/jev/')
+      ? await handleJevRequest(request, { TYPESAFE_API_KEY: process.env.TYPESAFE_API_KEY })
+      : await handleAIRequest(request, {
+          COHERE_API_KEY: process.env.COHERE_API_KEY,
+          OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
+          AI_CUSTOM_API_KEY: process.env.AI_CUSTOM_API_KEY,
+          AI_CUSTOM_BASE_URL: process.env.AI_CUSTOM_BASE_URL
+        })
     res.writeHead(response.status, Object.fromEntries(response.headers))
     if (response.body)
       await pipeline(Readable.fromWeb(response.body as unknown as import('node:stream/web').ReadableStream), res)

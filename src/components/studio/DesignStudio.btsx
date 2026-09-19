@@ -23,6 +23,8 @@ import { TemplatePreview, type TemplatePreviewStatus } from '../../playground/te
 import { dialogPanel, eyebrowLabel, iconButton, primaryButton, secondaryButton } from '../ui/styles'
 import PageOutline from './PageOutline.btsx'
 import SectionLibrary from './SectionLibrary.btsx'
+import ThemeDesigner from './ThemeDesigner.btsx'
+import { themeFromId } from '../../jev/theme-model'
 import Button from "../ui/button.btsx";
 
 module
@@ -60,6 +62,17 @@ setup
   const [copied, setCopied] = useState(false);
   const [themeId, setThemeId] = useState<string>(INHERIT_THEME.themeId);
   const [designing, setDesigning] = useState(false);
+  const [asidePanel, setAsidePanel] = useState<'outline' | 'theme'>('outline');
+  // Hides the side panels so the preview fills the dialog. Fine Layout keeps working: its button is in the
+  // header and its overlay lives over the preview, neither of which the panels own.
+  const [maximized, setMaximized] = useState(false);
+  const maximizedRef = useRef(false);
+  maximizedRef.current = maximized;
+  /**
+   * Themes designed in this session. They need no Convex row: a generated theme's id encodes every coordinate it
+   * was composed from, so one already installed in a project is recomposed from its id on open.
+   */
+  const [generated, setGenerated] = useState<ThemeDocument[]>([]);
   const [hoveredNode, setHoveredNode] = useState<DesignNode | undefined>(undefined);
   const [selectedNode, setSelectedNode] = useState<DesignNode | undefined>(undefined);
   // The edit in flight during a drag, committed to the document on release.
@@ -77,10 +90,13 @@ setup
   const saved = open ? readPage(state.project, presets) : [];
   const recipes: PresetRecipe[] = recipeRows ?? [];
   const themeRows = useConvexQuery(api.presets.themes, open ? {} : 'skip');
-  // A theme is only custom properties, so the whole list is small enough to hold and switching costs no rebuild.
-  const themes: ThemeDocument[] = [INHERIT_THEME, ...(themeRows ?? [])];
-  const pageTheme = themeById(themes, themeId);
   const savedThemeId = readProjectThemeId(state.project) ?? INHERIT_THEME.themeId;
+  // A generated theme installed in an earlier session is rebuilt from the id in the stylesheet, so reopening the
+  // studio finds it selected rather than silently falling back to Inherit and stripping it from the preview.
+  const installedGenerated = open && !generated.some(theme => theme.themeId === savedThemeId) ? themeFromId(savedThemeId) : undefined;
+  // A theme is only custom properties, so the whole list is small enough to hold and switching costs no rebuild.
+  const themes: ThemeDocument[] = [INHERIT_THEME, ...generated, ...(installedGenerated ? [installedGenerated] : []), ...(themeRows ?? [])];
+  const pageTheme = themeById(themes, themeId);
   const catalogLoading = open && catalog === undefined;
   // Composing and installing need every referenced tree and theme in hand; until then the studio waits rather than
   // writing a page with sections missing or replacing an applied theme with a loading fallback.
@@ -102,6 +118,14 @@ setup
     ? { width: width + 'px', height: stageSize.height / scale + 'px', ...(scale === 1 ? {} : { transform: 'scale(' + scale + ')' }) }
     : { width: '100%', height: '100%' };
   const frameClass = 'absolute top-0 left-0 m-0 origin-top-left rounded-[6px] border border-edge shadow-elevation data-[front=false]:pointer-events-none data-[front=false]:opacity-0';
+  /**
+   * Maximised, the body is one column and the panels are hidden rather than unmounted — the theme designer holds
+   * a brief, a design and its answers, and restoring the panels should not throw that away.
+   */
+  const bodyClass = maximized
+    ? 'grid min-h-0 grid-cols-[minmax(0,1fr)]'
+    : 'grid min-h-0 grid-cols-[300px_minmax(0,1fr)_252px] max-[1180px]:grid-cols-[280px_minmax(0,1fr)] max-[1180px]:grid-rows-[minmax(0,1fr)_minmax(0,42%)] max-[760px]:flex max-[760px]:flex-col max-[760px]:overflow-auto';
+  const mainClass = cn('flex min-h-0 min-w-0 flex-col bg-canvas', !maximized && 'max-[1180px]:col-start-2 max-[1180px]:row-span-2 max-[1180px]:row-start-1 max-[760px]:order-3 max-[760px]:h-[80dvh] max-[760px]:shrink-0');
   const targetOf = (kind: SectionKindId) => (focused?.kind === kind ? focused : blocks.find(block => block.kind === kind));
   const designLabel = (block: PageBlock) => (block.presetId === undefined ? undefined : presets.summary(block.presetId)?.title) ?? 'Edited in code';
 
@@ -119,7 +143,7 @@ setup
       !themeChanged ? '' : pageTheme.themeId === INHERIT_THEME.themeId
         ? 'Removes the Design Studio theme from your stylesheet.'
         : `Writes the ${pageTheme.name} theme into your stylesheet.`,
-      editedNodes ? `Includes ${plural(editedNodes, 'Design Mode edit')}.` : '',
+      editedNodes ? `Includes ${plural(editedNodes, 'Fine Layout edit')}.` : '',
       install?.rendered === false ? 'App.btsx could not be updated automatically, so import Page and render it where it belongs.' : ''
     ].filter(Boolean).join(' ');
   const overwriteNote = install?.overwrites.length ? `Replaces your edits to ${install.overwrites.map(fileLabel).join(', ')}.` : '';
@@ -241,6 +265,17 @@ setup
     setThemeId(nextThemeId);
     session.setStudioThemePreview(themeCss(themeById(themes, nextThemeId)));
   };
+  /**
+   * A theme from the designer, registered and selected in one step.
+   *
+   * Replacing by id rather than appending keeps the list from growing on every slider nudge, since a tweaked theme
+   * carries the same aura but new coordinates. The preview repaints from the `setTokens` effect below.
+   */
+  const previewGenerated = (theme: ThemeDocument) => {
+    setGenerated(current => [theme, ...current.filter(existing => existing.themeId !== theme.themeId)].slice(0, 12));
+    setThemeId(theme.themeId);
+    session.setStudioThemePreview(themeCss(theme));
+  };
 
   const show = () => {
     const page = readPage(state.project, presets);
@@ -249,6 +284,7 @@ setup
     setOpenKind(page[0]?.kind ?? 'topbar');
     setThemeId(readProjectThemeId(state.project) ?? INHERIT_THEME.themeId);
     setView('preview');
+    setMaximized(false);
     if (window.matchMedia('(max-width: 760px)').matches) setDevice('mobile');
     setOpen(true);
     dialog.current?.showModal();
@@ -268,7 +304,11 @@ setup
   useEffect(() => {
     const element = dialog.current;
     if (!element) return;
-    const onCancel = (event: Event) => event.preventDefault();
+    const onCancel = (event: Event) => {
+      event.preventDefault();
+      // Esc already reaches the dialog and is discarded; while maximised it restores the panels instead.
+      if (maximizedRef.current) setMaximized(false);
+    };
     const onClose = () => { setOpen(false); session.setStudioThemePreview(undefined); };
     element.addEventListener('cancel', onCancel);
     element.addEventListener('close', onClose);
@@ -305,13 +345,13 @@ setup
     return () => observer.disconnect();
   }, [open]);
   useEffect(() => { preview.current?.setTheme(theme); }, [theme]);
-  useEffect(() => { preview.current?.setTokens(themeCss(pageTheme)); }, [open, themeId, themeRows]);
+  useEffect(() => { preview.current?.setTokens(themeCss(pageTheme)); }, [open, themeId, themeRows, generated]);
   useEffect(() => { preview.current?.setDesigning(designing); }, [open, designing]);
   // A rebuild replaces the node that was measured, so the overlay asks the new one for its box.
   useEffect(() => {
     if (designing && status.state === 'ready' && selectedNode) preview.current?.measureNode(selectedNode.nodeId);
   }, [status, designing]);
-  // The preview must carry `data-node` to be inspectable, so entering or leaving Design Mode rebuilds it once.
+  // The preview must carry `data-node` to be inspectable, so entering or leaving Fine Layout rebuilds it once.
   useEffect(() => { if (open && blocks.length) setStatus({ state: 'compiling' }); }, [designing]);
   useEffect(() => { setCopied(false); }, [code]);
 
@@ -324,7 +364,7 @@ dialog(className={cn(dialogPanel, 'h-[min(920px,calc(100dvh-24px))] w-[min(1440p
   header(className='flex flex-wrap items-center justify-between gap-x-6 border-b border-edge-strong px-5 py-3')
     div(className='min-w-0 -space-y-1.5')
       div(className='flex flex-wrap items-baseline gap-x-3')
-        h2#design-studio-title(className='font-semibold text-muted-foreground text-lg -tracking-[0.024em]') Design Studio
+        h2#design-studio-title(className='font-semibold text-foreground/80 text-lg -tracking-[0.028em]') Design Studio
       span(className='font-serif script text-brand/80 text-sm') for web apps
     div(className='flex items-center justify-center gap-2')
       span(className='hidden font-code text-[10px] text-faint sm:inline' title='Preview width and zoom') #{width}px · #{Math.round(scale * 100)}%
@@ -340,6 +380,15 @@ dialog(className={cn(dialogPanel, 'h-[min(920px,calc(100dvh-24px))] w-[min(1440p
             ~ onClick={() => setDevice(option.id)}
             ~ )
             Icon(name={option.icon} className='size-3.5')
+      button(
+        ~ type='button'
+        ~ aria-pressed={maximized}
+        ~ aria-label={maximized ? 'Show the side panels' : 'Maximize the preview'}
+        ~ title={maximized ? 'Show the library and outline (Esc)' : 'Hide the side panels and fill the studio with the preview'}
+        ~ className='flex size-7 items-center justify-center rounded-[4px] text-dim hover:text-fg aria-pressed:bg-control aria-pressed:text-brand'
+        ~ onClick={() => setMaximized(value => !value)}
+        ~ )
+        Icon(name='sidebar' className='size-3.5')
     div(className='flex items-center gap-2')
       button(
         ~ type='button'
@@ -350,7 +399,7 @@ dialog(className={cn(dialogPanel, 'h-[min(920px,calc(100dvh-24px))] w-[min(1440p
         ~ onClick={toggleDesigning}
         ~ )
         Icon(name='layout' className='size-3' )
-        span Design Mode
+        span Fine Layout
       label(className='flex items-center gap-1.5 text-[10px] text-dim')
         span(className='sr-only') Theme
         select(
@@ -364,10 +413,10 @@ dialog(className={cn(dialogPanel, 'h-[min(920px,calc(100dvh-24px))] w-[min(1440p
 
       Button(variant='ghost' size='icon' aria-label='Close Design Studio' onClick={closeFromButton} className='relative -translate-y-3 translate-x-3') ×
 
-  div(className='grid min-h-0 grid-cols-[300px_minmax(0,1fr)_252px] max-[1180px]:grid-cols-[280px_minmax(0,1fr)] max-[1180px]:grid-rows-[minmax(0,1fr)_minmax(0,42%)] max-[760px]:flex max-[760px]:flex-col max-[760px]:overflow-auto')
-    aside(className='flex min-h-0 flex-col border-r border-edge bg-panel-deep max-[1180px]:row-start-1 max-[760px]:order-2 max-[760px]:h-[70dvh] max-[760px]:shrink-0 max-[760px]:border-r-0 max-[760px]:border-b' aria-label='Section library')
+  div(className={bodyClass})
+    aside(className={cn('flex min-h-0 flex-col border-r border-edge bg-panel-deep max-[1180px]:row-start-1 max-[760px]:order-2 max-[760px]:h-[70dvh] max-[760px]:shrink-0 max-[760px]:border-r-0 max-[760px]:border-b', maximized && 'hidden')} aria-label='Section library')
       SectionLibrary(blocks={blocks} presets={presets} targetOf={targetOf} openKind={openKind} onOpenKind={setOpenKind} onUse={chooseDesign} onAdd={addAnother})
-    main(className='flex min-h-0 min-w-0 flex-col bg-canvas max-[1180px]:col-start-2 max-[1180px]:row-span-2 max-[1180px]:row-start-1 max-[760px]:order-3 max-[760px]:h-[80dvh] max-[760px]:shrink-0')
+    main(className={mainClass})
       div(className='flex items-center justify-between gap-3 border-b border-edge bg-surface-toolbar px-2.5 py-1.5')
         div(className='flex gap-0.5' role='tablist' aria-label='Studio view')
           button(className='rounded-[4px] px-2.5 py-1 text-[10px] text-dim aria-selected:bg-control aria-selected:text-fg' type='button' role='tab' aria-selected={view === 'preview'} onClick={() => setView('preview')}) Preview
@@ -417,8 +466,16 @@ dialog(className={cn(dialogPanel, 'h-[min(920px,calc(100dvh-24px))] w-[min(1440p
                     p(className='text-[11px] text-dim' role='status') No recipes are published yet.
         if view === 'code'
           pre(className='absolute inset-0 m-0 overflow-auto bg-inset p-4 font-code text-[11px]/[1.75] text-fg-secondary' aria-label={fileLabel(codePath)}) #{code}
-    aside(className='flex min-h-0 flex-col border-l border-edge bg-panel-deep max-[1180px]:col-start-1 max-[1180px]:row-start-2 max-[1180px]:border-t max-[1180px]:border-l-0 max-[1180px]:border-r max-[760px]:order-1 max-[760px]:max-h-[45dvh] max-[760px]:shrink-0 max-[760px]:border-r-0 max-[760px]:border-b' aria-label='Page outline')
-      PageOutline(blocks={blocks} presets={presets} recipes={recipes} selected={focused?.name} onSelect={select} onReorder={next => setBlocks(next)} onRemove={remove} onRecipe={startRecipe})
+    aside(className={cn('flex min-h-0 flex-col border-l border-edge bg-panel-deep max-[1180px]:col-start-1 max-[1180px]:row-start-2 max-[1180px]:border-t max-[1180px]:border-l-0 max-[1180px]:border-r max-[760px]:order-1 max-[760px]:max-h-[45dvh] max-[760px]:shrink-0 max-[760px]:border-r-0 max-[760px]:border-b', maximized && 'hidden')} aria-label='Page outline and theme')
+      div(className='flex h-9 shrink-0 gap-0.5 border-b border-edge bg-surface-toolbar px-1.5 py-1.5' role='tablist' aria-label='Right panel')
+        button(className='rounded-[4px] px-2 py-0.5 text-[10px] text-dim aria-selected:bg-control aria-selected:text-fg' type='button' role='tab' aria-selected={asidePanel === 'outline'} onClick={() => setAsidePanel('outline')}) Outline
+        button(className='flex items-center gap-1 rounded-[4px] px-2 py-0.5 text-[10px] text-dim aria-selected:bg-control aria-selected:text-fg' type='button' role='tab' aria-selected={asidePanel === 'theme'} onClick={() => setAsidePanel('theme')})
+          Icon(name='sparkle' className='size-2.5')
+          span Theme
+      if asidePanel === 'theme'
+        ThemeDesigner(onPreview={previewGenerated} current={pageTheme})
+      else
+        PageOutline(blocks={blocks} presets={presets} recipes={recipes} selected={focused?.name} onSelect={select} onReorder={next => setBlocks(next)} onRemove={remove} onRecipe={startRecipe})
 
   footer(className='flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-t border-edge-strong px-5 py-3')
     p(className='min-w-0 flex-1 basis-80 text-[11px] leading-[1.6] text-dim' role='status')
@@ -427,7 +484,7 @@ dialog(className={cn(dialogPanel, 'h-[min(920px,calc(100dvh-24px))] w-[min(1440p
         span(className='ml-1 text-warning') #{overwriteNote}
     div(className='flex shrink-0 items-center gap-[7px]')
       if editedNodes
-        button(className='rounded-[5px] px-2 py-1 text-[10px] text-warning hover:bg-control' type='button' title='Drop every Design Mode edit and go back to the presets' onClick={clearDesign}) Reset #{plural(editedNodes, 'edit')}
+        button(className='rounded-[5px] px-2 py-1 text-[10px] text-warning hover:bg-control' type='button' title='Drop every Fine Layout edit and go back to the presets' onClick={clearDesign}) Reset #{plural(editedNodes, 'edit')}
       if dirty && saved.length
         button(className={secondaryButton} type='button' onClick={discard}) Discard changes
       button(className={secondaryButton} type='button' onClick={closeFromButton}) Close

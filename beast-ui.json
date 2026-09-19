@@ -1,0 +1,12 @@
+{
+  "registry": "http://127.0.0.1:5173/r",
+  "paths": {
+    "ui": "src/components/ui",
+    "lib": "src/lib",
+    "styles": "src/styles"
+  },
+  "aliases": {
+    "utils": "@/lib/utils"
+  },
+  "packageManager": "bun"
+}

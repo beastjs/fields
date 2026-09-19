@@ -58,7 +58,7 @@ function bootstrap(channel: string, build: number) {
     };
   }
   /**
-   * Design Mode's agent.
+   * Fine Layout's agent.
    *
    * It only runs while the host turns it on, and it does two jobs: report the box under the pointer, and apply a
    * class change straight to the DOM while a handle is being dragged. The second is what makes dragging feel

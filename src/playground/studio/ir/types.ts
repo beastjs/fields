@@ -2,7 +2,7 @@
  * The preset document model: the JSON a section is stored as.
  *
  * A preset is a tree of nodes. Layout, spacing, sizing and typography live in a typed `style` object that compiles
- * to Tailwind utilities, so Design Mode can bind a drag handle to a field instead of editing a class string. Anything
+ * to Tailwind utilities, so Fine Layout can bind a drag handle to a field instead of editing a class string. Anything
  * the typed model does not cover survives verbatim in `raw`, and conditional classes survive in `dyn`, so every
  * existing section round-trips without loss.
  *
@@ -66,7 +66,7 @@ export interface PositionStyle {
 }
 
 /**
- * One node's styling. Typed groups are what Design Mode edits; `raw` holds every other utility (colors, shadows,
+ * One node's styling. Typed groups are what Fine Layout edits; `raw` holds every other utility (colors, shadows,
  * gradients, transitions, state variants) in the order the author wrote them.
  */
 export interface Style {
@@ -81,7 +81,7 @@ export interface Style {
   at?: Partial<Record<Breakpoint, Omit<Style, 'at' | 'dyn'>>>
   /**
    * A TypeScript expression appended to the class list, for classes that depend on state
-   * (`plan.featured ? '…' : '…'`). Preserved verbatim; Design Mode shows it but does not rewrite it.
+   * (`plan.featured ? '…' : '…'`). Preserved verbatim; Fine Layout shows it but does not rewrite it.
    */
   dyn?: string
 }
@@ -104,7 +104,7 @@ export type AttrValue =
 
 export interface ElementNode {
   type: 'element'
-  /** Stable within a document; Design Mode addresses nodes by this and the renderer emits it as `data-node`. */
+  /** Stable within a document; Fine Layout addresses nodes by this and the renderer emits it as `data-node`. */
   id: string
   tag: string
   /** The `#id` shorthand, kept separate so it renders in shorthand position. */
@@ -147,7 +147,7 @@ export interface ComponentNode {
 
 export type Node = ElementNode | EachNode | IfNode | ComponentNode
 
-/** An editable content value, surfaced as a form field and as an inline Design Mode edit target. */
+/** An editable content value, surfaced as a form field and as an inline Fine Layout edit target. */
 export type ContentValue =
   | { type: 'text'; label: string; value: string; multiline?: boolean }
   | { type: 'link'; label: string; value: { label: string; href: string } }
@@ -171,7 +171,7 @@ export interface PresetDocument {
   root: ElementNode
 }
 
-/** A patch Design Mode applies to one node of one block, layered over the shared preset. */
+/** A patch Fine Layout applies to one node of one block, layered over the shared preset. */
 export interface NodeOverride {
   style?: Style
   text?: TextPart[]

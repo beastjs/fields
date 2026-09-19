@@ -139,7 +139,7 @@ div(className='pointer-events-none absolute inset-0 z-10 overflow-hidden' aria-h
   if selected
     div
       div(className='absolute' style={frame(selected)})
-        div(className='absolute inset-0 rounded-[2px] outline outline-2 outline-brand')
+        div(className='absolute inset-0 rounded-[2px] outline outline-1 outline-brand')
         each side in ['top', 'right', 'bottom', 'left'] key 'p' + side
           div(className='absolute bg-brand/20' style={band(selected, side, 'padding')})
         each side in ['top', 'right', 'bottom', 'left'] key 'm' + side
