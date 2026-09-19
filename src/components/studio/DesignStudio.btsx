@@ -9,7 +9,7 @@ import { sectionKind } from '../../playground/studio/kinds'
 import { presetsFor } from '../../playground/studio/presets'
 import type { PresetRecipe } from '../../playground/studio/presets'
 import type { SectionKindId } from '../../playground/studio/types'
-import { addSection, blockDocument, blockSource, composePage, PAGE_FILE, pagePresetIds, pagePreviewProject, planPageInstall, readNodeId, readPage, recipeBlocks, samePage, sectionFile, swapPreset } from '../../playground/studio/page'
+import { addSection, blockDocument, blockSource, composePage, PAGE_FILE, pagePresetIds, pagePreviewProject, planPageInstall, readNodeId, readPage, readProjectThemeId, recipeBlocks, samePage, sectionFile, swapPreset } from '../../playground/studio/page'
 import { clearNodeOverride, mergeStyle, overrideCount, setNodeOverride } from '../../playground/studio/ir/overrides'
 import { nodeIndex } from '../../playground/studio/ir/render'
 import { toClasses } from '../../playground/studio/ir/classes'
@@ -23,6 +23,7 @@ import { TemplatePreview, type TemplatePreviewStatus } from '../../playground/te
 import { dialogPanel, eyebrowLabel, iconButton, primaryButton, secondaryButton } from '../ui/styles'
 import PageOutline from './PageOutline.btsx'
 import SectionLibrary from './SectionLibrary.btsx'
+import Button from "../ui/button.btsx";
 
 module
   type Device = 'desktop' | 'tablet' | 'mobile'
@@ -79,12 +80,16 @@ setup
   // A theme is only custom properties, so the whole list is small enough to hold and switching costs no rebuild.
   const themes: ThemeDocument[] = [INHERIT_THEME, ...(themeRows ?? [])];
   const pageTheme = themeById(themes, themeId);
+  const savedThemeId = readProjectThemeId(state.project) ?? INHERIT_THEME.themeId;
   const catalogLoading = open && catalog === undefined;
-  // Composing and installing need every referenced tree in hand; until then the studio waits rather than
-  // writing a page with sections missing.
-  const ready = open && presets.loaded(needed);
+  // Composing and installing need every referenced tree and theme in hand; until then the studio waits rather than
+  // writing a page with sections missing or replacing an applied theme with a loading fallback.
+  const ready = open && themeRows !== undefined && presets.loaded(needed);
 
-  const dirty = open && !samePage(blocks, saved);
+  const pageChanged = open && !samePage(blocks, saved);
+  const themeChanged = open && themeId !== savedThemeId;
+  const dirty = pageChanged || themeChanged;
+  const themeOnly = themeChanged && !pageChanged;
   const install = ready && blocks.length ? planPageInstall(state.project, blocks, presets, pageTheme) : undefined;
   const upToDate = install !== undefined && Object.keys(install.files).length === 0 && install.removes.length === 0;
   const focused = blocks.find(block => block.name === selected) ?? blocks[0];
@@ -104,14 +109,16 @@ setup
   const clearDesign = () => setBlocks(blocks.map(block => ({ ...block, overrides: undefined })));
   const sectionWrites = install ? Object.keys(install.files).filter(path => path.startsWith('/src/sections/')).length : 0;
   const cleanups = install ? install.removes.filter(path => path.startsWith('/src/sections/')).length : 0;
-  const installNote = !ready && blocks.length ? 'Loading the sections this page uses…'
+  const installNote = !ready && blocks.length ? 'Loading the studio data this page uses…'
     : !blocks.length ? 'Add sections from the library or start from a recipe. Nothing changes in your project until you add the page.'
     : upToDate ? 'Your project already has this page. Edit the sections in code, or change the page here.'
     : [
-      install?.replacesStarter ? 'Replaces the starter app with your page.' : saved.length ? 'Updates Page.btsx.' : 'Adds Page.btsx and renders it at the top of App.btsx.',
+      !pageChanged ? '' : install?.replacesStarter ? 'Replaces the starter app with your page.' : saved.length ? 'Updates Page.btsx.' : 'Adds Page.btsx and renders it at the top of App.btsx.',
       sectionWrites ? `Writes ${plural(sectionWrites, 'section file')} to src/sections.` : '',
       cleanups ? `Removes ${plural(cleanups, 'unused section')}.` : '',
-      pageTheme.themeId === INHERIT_THEME.themeId ? '' : `Writes the ${pageTheme.name} theme into your stylesheet.`,
+      !themeChanged ? '' : pageTheme.themeId === INHERIT_THEME.themeId
+        ? 'Removes the Design Studio theme from your stylesheet.'
+        : `Writes the ${pageTheme.name} theme into your stylesheet.`,
       editedNodes ? `Includes ${plural(editedNodes, 'Design Mode edit')}.` : '',
       install?.rendered === false ? 'App.btsx could not be updated automatically, so import Page and render it where it belongs.' : ''
     ].filter(Boolean).join(' ');
@@ -170,8 +177,8 @@ setup
     const style: Style = {};
     for (const edit of edits) {
       // Spacing stays in the theme's steps; a dimension is an explicit pixel value.
-      if (edit.group === 'spacing') (style.spacing ??= {} as Record<string, number>)[edit.field] = edit.value;
-      else (style.size ??= {} as Record<string, string>)[edit.field] = `[${edit.value}px]`;
+      if (edit.group === 'spacing') (style.spacing ??= {})[edit.field] = edit.value;
+      else (style.size ??= {})[edit.field] = `[${edit.value}px]`;
     }
     return style;
   };
@@ -224,38 +231,49 @@ setup
     change(next, next[0]?.name);
     setOpenKind(next[0]?.kind);
   };
-  const discard = () => { setBlocks(saved); setSelected(saved[0]?.name); };
+  const discard = () => {
+    setBlocks(saved);
+    setSelected(saved[0]?.name);
+    setThemeId(savedThemeId);
+    session.setStudioThemePreview(undefined);
+  };
+  const chooseTheme = (nextThemeId: string) => {
+    setThemeId(nextThemeId);
+    session.setStudioThemePreview(themeCss(themeById(themes, nextThemeId)));
+  };
 
   const show = () => {
     const page = readPage(state.project, presets);
     setBlocks(page);
     setSelected(page[0]?.name);
     setOpenKind(page[0]?.kind ?? 'topbar');
+    setThemeId(readProjectThemeId(state.project) ?? INHERIT_THEME.themeId);
     setView('preview');
     if (window.matchMedia('(max-width: 760px)').matches) setDevice('mobile');
     setOpen(true);
     dialog.current?.showModal();
   };
-  const close = () => dialog.current?.close();
+  const closeFromButton = () => dialog.current?.close();
   const apply = () => {
     if (!install || upToDate) return;
     session.writeFiles(install.files, PAGE_FILE);
     for (const path of install.removes) session.deleteFile(path);
-    close();
   };
   const copyCode = async () => {
     try { await navigator.clipboard.writeText(code); setCopied(true); }
     catch { setCopied(false); }
   };
 
-  // Escape and form-method dialogs close natively; keep `open` in sync with the element.
+  // Only the explicit close buttons dismiss the studio; platform close requests such as Escape are ignored.
   useEffect(() => {
     const element = dialog.current;
     if (!element) return;
-    const onClose = () => setOpen(false);
+    const onCancel = (event: Event) => event.preventDefault();
+    const onClose = () => { setOpen(false); session.setStudioThemePreview(undefined); };
+    element.addEventListener('cancel', onCancel);
     element.addEventListener('close', onClose);
-    return () => { element.removeEventListener('close', onClose); element.close(); };
-  }, []);
+    return () => { element.removeEventListener('cancel', onCancel); element.removeEventListener('close', onClose); session.setStudioThemePreview(undefined); element.close(); };
+  }, [session]);
   // The compiler worker and iframe runtime only exist while the studio is open.
   useEffect(() => {
     if (!open || !frame.current || !standby.current) return;
@@ -273,9 +291,7 @@ setup
       const focus = pendingReveal.current;
       pendingReveal.current = undefined;
       const index = focus === undefined ? -1 : blocks.findIndex(block => block.name === focus.name);
-      const built = pagePreviewProject(state.project, blocks, presets, designing);
-      console.info('[studio-debug]', JSON.stringify(Object.fromEntries(Object.entries(built.files).map(([k, v]) => [k, v.length]))), 'ready=' + ready, 'designing=' + designing);
-      preview.current?.show(built, index >= 0 ? { selector: blockSelector(index), highlight: focus!.highlight } : undefined);
+      preview.current?.show(pagePreviewProject(state.project, blocks, presets, designing), index >= 0 ? { selector: blockSelector(index), highlight: focus!.highlight } : undefined);
     }, 140);
     return () => clearTimeout(timer);
   }, [open, blocks, ready, designing]);
@@ -291,6 +307,10 @@ setup
   useEffect(() => { preview.current?.setTheme(theme); }, [theme]);
   useEffect(() => { preview.current?.setTokens(themeCss(pageTheme)); }, [open, themeId, themeRows]);
   useEffect(() => { preview.current?.setDesigning(designing); }, [open, designing]);
+  // A rebuild replaces the node that was measured, so the overlay asks the new one for its box.
+  useEffect(() => {
+    if (designing && status.state === 'ready' && selectedNode) preview.current?.measureNode(selectedNode.nodeId);
+  }, [status, designing]);
   // The preview must carry `data-node` to be inspectable, so entering or leaving Design Mode rebuilds it once.
   useEffect(() => { if (open && blocks.length) setStatus({ state: 'compiling' }); }, [designing]);
   useEffect(() => { setCopied(false); }, [code]);
@@ -304,10 +324,23 @@ dialog(className={cn(dialogPanel, 'h-[min(920px,calc(100dvh-24px))] w-[min(1440p
   header(className='flex flex-wrap items-center justify-between gap-x-6 border-b border-edge-strong px-5 py-3')
     div(className='min-w-0 -space-y-1.5')
       div(className='flex flex-wrap items-baseline gap-x-3')
-        h2#design-studio-title(className='text-xl font-medium tracking-[-0.4px]') Design Studio
-      span(className='font-serif script text-brand text-sm') for web apps
-    div(className='flex items-center gap-2')
+        h2#design-studio-title(className='font-semibold text-muted-foreground text-lg -tracking-[0.024em]') Design Studio
+      span(className='font-serif script text-brand/80 text-sm') for web apps
+    div(className='flex items-center justify-center gap-2')
       span(className='hidden font-code text-[10px] text-faint sm:inline' title='Preview width and zoom') #{width}px · #{Math.round(scale * 100)}%
+      div(className='flex gap-0.5 rounded-[6px] border border-edge bg-inset p-0.5' role='radiogroup' aria-label='Preview size')
+        each option in devices key option.id
+          button(
+            ~ type='button'
+            ~ role='radio'
+            ~ aria-checked={device === option.id}
+            ~ aria-label={option.label}
+            ~ title={option.label}
+            ~ className='flex size-7 items-center justify-center rounded-[4px] text-dim hover:text-fg aria-checked:bg-control aria-checked:text-brand aria-checked:shadow-xs'
+            ~ onClick={() => setDevice(option.id)}
+            ~ )
+            Icon(name={option.icon} className='size-3.5')
+    div(className='flex items-center gap-2')
       button(
         ~ type='button'
         ~ aria-pressed={designing}
@@ -324,23 +357,12 @@ dialog(className={cn(dialogPanel, 'h-[min(920px,calc(100dvh-24px))] w-[min(1440p
           ~ className='rounded-[6px] border border-edge bg-inset px-2 py-1 text-[11px] text-fg outline-none focus-visible:border-brand'
           ~ value={themeId}
           ~ title={pageTheme.description}
-          ~ onChange={event => setThemeId(event.currentTarget.value)}
+          ~ onChange={event => chooseTheme(event.currentTarget.value)}
           ~ )
           each option in themes key option.themeId
             option(value={option.themeId}) #{option.name}
-      div(className='flex gap-0.5 rounded-[6px] border border-edge bg-inset p-0.5' role='radiogroup' aria-label='Preview size')
-        each option in devices key option.id
-          button(
-            ~ type='button'
-            ~ role='radio'
-            ~ aria-checked={device === option.id}
-            ~ aria-label={option.label}
-            ~ title={option.label}
-            ~ className='flex size-7 items-center justify-center rounded-[4px] text-dim hover:text-fg aria-checked:bg-control aria-checked:text-brand aria-checked:shadow-xs'
-            ~ onClick={() => setDevice(option.id)}
-            ~ )
-            Icon(name={option.icon} className='size-3.5')
-      button(className={iconButton} type='button' aria-label='Close Design Studio' onClick={close}) ×
+
+      Button(variant='ghost' size='icon' aria-label='Close Design Studio' onClick={closeFromButton} className='relative -translate-y-3 translate-x-3') ×
 
   div(className='grid min-h-0 grid-cols-[300px_minmax(0,1fr)_252px] max-[1180px]:grid-cols-[280px_minmax(0,1fr)] max-[1180px]:grid-rows-[minmax(0,1fr)_minmax(0,42%)] max-[760px]:flex max-[760px]:flex-col max-[760px]:overflow-auto')
     aside(className='flex min-h-0 flex-col border-r border-edge bg-panel-deep max-[1180px]:row-start-1 max-[760px]:order-2 max-[760px]:h-[70dvh] max-[760px]:shrink-0 max-[760px]:border-r-0 max-[760px]:border-b' aria-label='Section library')
@@ -408,6 +430,5 @@ dialog(className={cn(dialogPanel, 'h-[min(920px,calc(100dvh-24px))] w-[min(1440p
         button(className='rounded-[5px] px-2 py-1 text-[10px] text-warning hover:bg-control' type='button' title='Drop every Design Mode edit and go back to the presets' onClick={clearDesign}) Reset #{plural(editedNodes, 'edit')}
       if dirty && saved.length
         button(className={secondaryButton} type='button' onClick={discard}) Discard changes
-      else
-        button(className={secondaryButton} type='button' onClick={close}) Close
-      button(className={cn(primaryButton, 'disabled:cursor-default disabled:opacity-60')} type='button' disabled={!install || upToDate} onClick={apply}) #{upToDate ? 'Page is up to date' : saved.length ? 'Update page' : 'Add page to project'}
+      button(className={secondaryButton} type='button' onClick={closeFromButton}) Close
+      button(className={cn(primaryButton, 'disabled:cursor-default disabled:opacity-60')} type='button' disabled={!install || upToDate} onClick={apply}) #{upToDate ? 'Page is up to date' : themeOnly ? 'Apply theme' : saved.length ? 'Update page' : 'Add page to project'}

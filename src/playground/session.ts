@@ -39,6 +39,8 @@ export interface SessionSnapshot {
   hasPreview: boolean;
   compileFailed: boolean;
   previewFailed: boolean;
+  /** Temporary Design Studio palette shown in the application preview until it is applied or discarded. */
+  studioThemeCss?: string;
   previewBuild?: { revision: number; result: CompilationResult; forceReload?: boolean };
   editorFocus?: { revision: number; position?: Position };
 }
@@ -133,7 +135,7 @@ export class PlaygroundSession {
       diagnostics: [], console: [], toolPanel: 'problems', lastResult: undefined,
       buildStatus: 'Changes pending…', buildError: false, previewStatus: 'Starting',
       previewError: '', hasPreview: false, compileFailed: false, previewFailed: false,
-      previewBuild: undefined, editorFocus: { revision: ++this.sequence } });
+      studioThemeCss: undefined, previewBuild: undefined, editorFocus: { revision: ++this.sequence } });
     this.run();
   }
   run = () => this.coordinator.schedule(this.project.snapshot(), true);
@@ -218,6 +220,9 @@ export class PlaygroundSession {
     this.patch({ editorTheme });
   };
   toggleTheme = () => this.setTheme(this.state.theme === 'dark' ? 'light' : 'dark');
+  setStudioThemePreview = (studioThemeCss?: string) => {
+    if (this.state.studioThemeCss !== studioThemeCss) this.patch({ studioThemeCss });
+  };
   selectTool = (toolPanel: ToolPanel) => this.patch({ toolPanel });
   clearConsole = () => this.patch({ console: [] });
   setPreviewMode = (mode: 'local' | 'hosted') => {

@@ -199,10 +199,18 @@ function bootstrap(channel: string, build: number) {
   const manifest = () => send('module-manifest', { modules: Object.entries(imports).map(([id, url]) => ({ id, url })) });
   const rendered = (update: 'reload' | 'hot') => {
     const revision = build;
-    requestAnimationFrame(() => requestAnimationFrame(() => {
+    let reported = false;
+    const finish = () => {
+      if (reported) return;
+      reported = true;
       busy = false;
       if (revision === build) send('rendered', { update });
-    }));
+    };
+    // Two frames is the accurate "it has painted" signal, but requestAnimationFrame never fires while the
+    // document is hidden — switching tabs mid-build would otherwise leave the host waiting for a build that
+    // already finished, until it gave up with a startup error. The timer guarantees the report either way.
+    requestAnimationFrame(() => requestAnimationFrame(finish));
+    setTimeout(finish, 300);
   };
   addEventListener('message', async event => {
     const message = event.data;

@@ -205,11 +205,50 @@ replaces that block rather than stacking, and choosing **Inherit** removes it,
 leaving no stale variables. Re-installing the same theme is byte-identical, so the
 button correctly reads as up to date.
 
+## Design Mode
+
+Hovering the preview reports the box under the pointer; clicking selects it; the
+padding, margin and size handles edit it in place.
+
+The frame carries an inspector (`preview-bootstrap.ts`) that only runs while the
+host turns it on. It reports a node's id, tag, rect and computed box, plus the
+theme's current spacing step so a drag converts pixels into the right number of
+Tailwind steps under any theme. The overlay is drawn in **host DOM over the
+iframe**, not inside it, which keeps the sandbox intact and the handles crisp at
+any preview scale.
+
+A drag is two-tier. While the pointer is down the host writes the new class list
+straight onto the node in the frame, so it tracks at pointer speed with no
+rebuild. On release the edit is committed to the document and the debounced
+rebuild takes over. Releasing is also what makes it undoable — nothing is stored
+until then.
+
+Edits are **non-destructive overrides** (`ir/overrides.ts`) keyed by node id and
+held on the block, never on the shared preset. Clearing an override restores the
+preset byte for byte, which is what makes the whole feature safe to experiment
+in. The preview renders with `data-node` stamped on every element; an install
+never carries it.
+
+Two things worth knowing:
+
+- **Ids are namespaced per block** (`Hero:n3`). Node ids are unique within a
+  preset but not across a page, so without the prefix `n3` names a node in every
+  section and an edit would silently restyle all of them. `readNodeId` splits it
+  back, which is also how clicking a node in any section edits *that* section.
+- **A node inside an `each` appears once in the tree and many times in the DOM.**
+  Editing it changes every copy, because it is one template; the toolbar shows a
+  `×N` badge so that is not a surprise.
+
+An installed section can be edited again: its file parses back to a document with
+the same node ids, so Design Mode picks up where it left off. A hand-written
+section the parser cannot read simply is not editable, rather than breaking.
+
+Overrides live in the studio's own state, so they survive until the page is added
+to the project — at which point the *result* is durable in the section files. A
+persisted page document would make the editing state itself survive a reload.
+
 ## Still to come
 
-- Design Mode: an inspector in the preview bootstrap that reports the hovered
-  node's id and box, an overlay drawn in host DOM over the iframe, and edits that
-  land as non-destructive per-node overrides on the page document.
 - A persisted page document. The composition and the chosen theme are still
   component state today, so they only become durable when a page is added to the
   project.

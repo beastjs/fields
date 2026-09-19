@@ -5,7 +5,7 @@ import { renderPreset } from './ir/render'
 import { parsePreset } from './ir/parse'
 import { applyOverrides } from './ir/overrides'
 import type { NodeOverride, PresetDocument } from './ir/types'
-import { THEME_BASE, THEME_BLOCK, themeCss, type ThemeDocument } from './themes'
+import { THEME_BASE, THEME_BLOCK, themeCss, themeIdFromCss, type ThemeDocument } from './themes'
 import { kindOrder, sectionKind, sectionKinds } from './kinds'
 import type { PresetLookup } from './presets'
 import type { SectionKindId } from './types'
@@ -92,6 +92,16 @@ export function pagePresetIds(project: CompilationProject): string[] {
   const source = project.files[PAGE_FILE]
   if (source === undefined) return []
   return [...new Set(readPresetMarker(source).values())]
+}
+
+/** The theme currently applied to the project's Tailwind stylesheet. No generated block means Inherit. */
+export function readProjectThemeId(project: CompilationProject): string | undefined {
+  for (const [path, source] of Object.entries(project.files)) {
+    if (!path.endsWith('.css') || !usesTailwind(source)) continue
+    const themeId = themeIdFromCss(source)
+    if (themeId !== undefined) return themeId
+  }
+  return undefined
 }
 
 /**
@@ -273,9 +283,12 @@ export function planPageInstall(project: CompilationProject, blocks: PageBlock[]
 function withStudioStyles(css: string, theme?: ThemeDocument) {
   const styled = usesTailwind(css) ? css : TAILWIND_UTILITIES + css
   const withDefaults = styled.includes(STYLES_MARKER) ? styled : `${styled}${styled.endsWith('\n') ? '' : '\n'}\n${STUDIO_STYLES}`
+  // Older installs already have the section marker but predate the rules that paint a page from theme tokens.
+  // Upgrade those independently, preserving the project's own styles and avoiding duplicate section defaults.
+  const withTheme = withDefaults.includes(THEME_BASE.trim()) ? withDefaults : `${withDefaults}\n${THEME_BASE}`
   // A previous theme is replaced rather than stacked, and the trailing newlines are normalised so that
   // re-installing the same theme produces a byte-identical stylesheet.
-  const bare = `${withDefaults.replace(THEME_BLOCK, '').replace(/\n+$/, '')}\n`
+  const bare = `${withTheme.replace(THEME_BLOCK, '').replace(/\n+$/, '')}\n`
   const palette = theme ? themeCss(theme) : ''
   return palette ? `${bare}\n${palette}` : bare
 }

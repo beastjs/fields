@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { helloWorld } from '../src/playground/examples';
-import { addSection, planPageInstall, STUDIO_STYLESHEET } from '../src/playground/studio/page';
-import { builtInThemes, INHERIT_THEME, isSafeToken, themeById, themeCss, THEME_BASE } from '../src/playground/studio/themes';
+import { addSection, planPageInstall, readProjectThemeId, STUDIO_STYLESHEET } from '../src/playground/studio/page';
+import { builtInThemes, INHERIT_THEME, installedThemeCss, isSafeToken, themeById, themeCss, themeIdFromCss, THEME_BASE } from '../src/playground/studio/themes';
 import type { ThemeDocument } from '../src/playground/studio/themes';
 import { builtInPresets } from './built-in-presets';
 
@@ -19,6 +19,13 @@ test('a theme emits the Tailwind variables its utilities already compile against
   expect(css).toContain('--spacing: 0.25rem;');
   expect(css).toContain('--font-sans: ui-sans-serif, system-ui, sans-serif;');
   expect(css).toContain(':root {');
+  expect(themeIdFromCss(css)).toBe('midnight');
+});
+
+test('the installed theme block can be forwarded to the persistent application preview', () => {
+  const css = themeCss(midnight);
+  expect(installedThemeCss({ '/src/App.btsx': 'div Hello', '/src/style.css': `@import "tailwindcss";\n${css}\nbody { margin: 0; }` })).toBe(css);
+  expect(installedThemeCss({ '/src/style.css': '@import "tailwindcss";\nbody { margin: 0; }' })).toBe('');
 });
 
 test('a theme with a dark variant scopes it, and one without emits no dark rule', () => {
@@ -74,6 +81,7 @@ test('installing writes the chosen theme last, and switching replaces it instead
   expect(css.indexOf('Design Studio theme')).toBeGreaterThan(css.indexOf('Design Studio sections'));
 
   const project = { ...helloWorld, files: { ...helloWorld.files, ...themed.files } };
+  expect(readProjectThemeId(project)).toBe('midnight');
   const sunrise = builtInThemes.find(theme => theme.themeId === 'sunrise')!;
   const swapped = stylesheetOf(planPageInstall(project, blocks, presets, sunrise).files);
   expect(swapped).toContain('/* Design Studio theme: Sunrise */');
@@ -84,6 +92,7 @@ test('installing writes the chosen theme last, and switching replaces it instead
   const bare = stylesheetOf(planPageInstall(project, blocks, presets, INHERIT_THEME).files);
   expect(bare).not.toContain('--radius-3xl');
   expect(bare).toContain('Design Studio sections');
+  expect(readProjectThemeId({ ...project, files: { ...project.files, '/src/style.css': bare } })).toBeUndefined();
 });
 
 test('re-installing the same theme is a no-op, so the button reads as up to date', () => {
@@ -91,4 +100,21 @@ test('re-installing the same theme is a no-op, so the button reads as up to date
   const first = planPageInstall(helloWorld, blocks, presets, midnight);
   const project = { ...helloWorld, files: { ...helloWorld.files, ...first.files } };
   expect(planPageInstall(project, blocks, presets, midnight).files).toEqual({});
+});
+
+test('applying a theme upgrades section styles installed before page theming existed', () => {
+  const blocks = addSection([], 'hero-centered', presets).blocks;
+  const install = planPageInstall(helloWorld, blocks, presets, midnight);
+  const legacyCss = install.files['/src/style.css'].replace(THEME_BASE, '') + '\n.custom { opacity: 0.8; }\n';
+  const project = { ...helloWorld, files: { ...helloWorld.files, ...install.files, '/src/style.css': legacyCss } };
+
+  const upgrade = planPageInstall(project, blocks, presets, midnight);
+  expect(Object.keys(upgrade.files)).toEqual(['/src/style.css']);
+  const css = stylesheetOf(upgrade.files);
+  expect(css).toContain(THEME_BASE.trim());
+  expect(css).toContain('.custom { opacity: 0.8; }');
+  expect(css.match(/Design Studio sections/g)).toHaveLength(1);
+  expect(css.match(/\[data-page\]/g)).toHaveLength(1);
+  const upgraded = { ...project, files: { ...project.files, ...upgrade.files } };
+  expect(planPageInstall(upgraded, blocks, presets, midnight).files).toEqual({});
 });

@@ -4,6 +4,7 @@ import { compileProject } from '../src/playground/compiler';
 import { helloWorld } from '../src/playground/examples';
 import { pageRecipes, searchTemplates, sectionKinds, sectionTemplate, sectionTemplates, templatesOf } from '../src/playground/studio/catalog';
 import { addSection, composePage, pagePreviewProject, planPageInstall, readPage, recipeBlocks, sectionFile, swapPreset } from '../src/playground/studio/page';
+import { presetsFor } from '../src/playground/studio/presets';
 import { builtInPresets, builtInRecipes } from './built-in-presets';
 
 const presets = builtInPresets;
@@ -53,6 +54,16 @@ test('search matches kinds, keywords, and template text', () => {
   expect(new Set(searchTemplates('logos').map(template => template.kind))).toEqual(new Set(['partners']));
   expect(searchTemplates('pricing table').map(template => template.id)).toEqual(['pricing-compare']);
   expect(searchTemplates('zzz')).toEqual([]);
+});
+
+test('Convex catalog rows are narrowed to registered section kinds without breaking lookup caching', () => {
+  const rows = [
+    { presetId: 'hero-valid', kind: 'hero', title: 'Hero', description: '', wireframe: [], keywords: [], version: 1 },
+    { presetId: 'unknown-kind', kind: 'unknown', title: 'Unknown', description: '', wireframe: [], keywords: [], version: 1 }
+  ];
+  const lookup = presetsFor(rows, undefined);
+  expect(lookup.summaries.map(summary => summary.presetId)).toEqual(['hero-valid']);
+  expect(presetsFor(rows, undefined)).toBe(lookup);
 });
 
 test('sections insert in story order, repeat with numbered names, and swap templates in place', () => {

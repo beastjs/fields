@@ -68,9 +68,9 @@ PaneSurface(layout={layout} pane='chat' label='AI chat' className='flex flex-col
     if !state.messages.length
       div(className='chat-welcome mt-2.5 mb-3')
         div(className='relative size-16 aspect-square flex items-center justify-center scale-110')
-          span(className='absolute text-2xl scale-105 text-orange-200/80 blur-sm animate-spin light:text-indigo-300/80') ✦
+          span(className='absolute text-2xl scale-105 text-brand/80 blur-sm animate-spin light:text-indigo-300/80') ✦
           span(className='absolute text-xl text-brand') ✦
-          span(className='absolute text-xl scale-90 text-orange-200 blur-[2px] animate-pulse light:text-indigo-300') ✦
+          span(className='absolute text-xl scale-90 text-brand blur-[2px] animate-pulse light:text-indigo-300') ✦
           ThinkingOrb(state='composing' size={64} speed={0.1515})
 
         h2(className='mt-[9px] mb-[11px] text-[18px] font-medium leading-[1.3] tracking-[-0.5px] text-fg') Fast Builder

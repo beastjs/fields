@@ -116,6 +116,23 @@ test('mode changes restart in one notification and stay outside saved project st
   session.dispose();
 });
 
+test('a Design Studio theme preview is ephemeral and does not compile or enter saved project state', () => {
+  const worker = new FakeWorker();
+  const session = new PlaygroundSession({ project, createWorker: () => worker });
+  const before = session.exportWorkspace();
+  const states: ReturnType<typeof session.getSnapshot>[] = [];
+  const unsubscribe = session.subscribe(() => states.push(session.getSnapshot()));
+  session.setStudioThemePreview(':root { --studio-bg: red; }');
+  expect(states).toHaveLength(1);
+  expect(states[0].studioThemeCss).toContain('--studio-bg: red');
+  expect(session.exportWorkspace()).toEqual(before);
+  expect(worker.request).toBeUndefined();
+  session.setStudioThemePreview(undefined);
+  expect(session.getSnapshot().studioThemeCss).toBeUndefined();
+  unsubscribe();
+  session.dispose();
+});
+
 test('recommendations compile before mutation and reject intervening edits', async () => {
   const workers: FakeWorker[] = [];
   const session = new PlaygroundSession({ project, createWorker: () => { const worker = new FakeWorker(); workers.push(worker); return worker; } });

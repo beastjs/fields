@@ -21,6 +21,21 @@ All notable changes to `play` will be recorded here.
   rendered identically to their original templates. See
   docs/design-studio-presets.md.
 
+- Design Mode. Hover the preview to inspect a section, then drag its padding,
+  margin or size directly on the page. Edits are non-destructive overrides keyed
+  by node id: the shared preset is never touched and clearing an override
+  restores it exactly. Dragging writes classes straight into the frame for
+  pointer-speed feedback and commits to the document on release. Inline text
+  editing, a per-node reset, and a page-wide reset are included. Stamped node ids
+  are namespaced per block, so an edit in one section cannot reach another, and a
+  section already installed can be edited again because its file parses back to
+  the same nodes.
+
+- The preview reports a finished build even when the document is hidden.
+  `requestAnimationFrame` does not fire in a hidden tab, so switching away while
+  a build ran left the host waiting until it gave up with "Preview did not
+  start"; a timer now guarantees the report either way.
+
 - Theme selector. A theme is a set of design tokens stored in Convex and applied
   as CSS custom properties, so switching one swaps a single `<style>` node in the
   preview rather than triggering a rebuild. Because Tailwind v4 compiles its

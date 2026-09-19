@@ -1,6 +1,7 @@
 import { applyOverrides } from './ir/overrides'
 import { renderPreset } from './ir/render'
 import { inflatePreset } from './ir/storage'
+import { sectionKinds } from './kinds'
 import type { StoredPreset } from './ir/storage'
 import type { NodeOverride, PresetDocument } from './ir/types'
 import type { SectionKindId } from './types'
@@ -109,9 +110,15 @@ export function searchPresets(summaries: readonly PresetSummary[], query: string
  */
 let cached: { summaries: unknown; documents: unknown; lookup: PresetLookup } | undefined
 
-export function presetsFor(summaries: readonly PresetSummary[] | undefined, documents: readonly { document: unknown }[] | undefined): PresetLookup {
+type PresetSummaryRow = Omit<PresetSummary, 'kind'> & { kind: string }
+
+const isPresetSummary = (summary: PresetSummaryRow): summary is PresetSummary =>
+  sectionKinds.some(kind => kind.id === summary.kind)
+
+export function presetsFor(summaries: readonly PresetSummaryRow[] | undefined, documents: readonly { document: unknown }[] | undefined): PresetLookup {
   if (cached && cached.summaries === summaries && cached.documents === documents) return cached.lookup
-  const lookup = presetLookup(summaries ?? EMPTY, documents ? inflateAll(documents) : [])
+  // Convex stores `kind` as a string; only registered application kinds may enter the typed studio model.
+  const lookup = presetLookup(summaries?.filter(isPresetSummary) ?? EMPTY, documents ? inflateAll(documents) : [])
   cached = { summaries, documents, lookup }
   return lookup
 }

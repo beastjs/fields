@@ -75,6 +75,25 @@ export const THEME_START = '/* Design Studio theme'
 export const THEME_END = '/* end Design Studio theme */'
 /** The theme block a previous install wrote, so choosing another replaces it instead of stacking. */
 export const THEME_BLOCK = /\/\* Design Studio theme[\s\S]*?\/\* end Design Studio theme \*\/\n?/
+const THEME_ID = /^\/\* Design Studio theme id: (\S+) \*\/$/m
+
+/** The generated theme block installed in a project's stylesheets, ready to overlay in a live preview. */
+export function installedThemeCss(files: Readonly<Record<string, string>>): string {
+  for (const [path, source] of Object.entries(files)) {
+    if (!path.endsWith('.css')) continue
+    const block = source.match(THEME_BLOCK)?.[0]
+    if (block) return block
+  }
+  return ''
+}
+
+/** The stable id recorded inside generated theme CSS, independent of the selector UI or display name. */
+export function themeIdFromCss(css: string): string | undefined {
+  const encoded = css.match(THEME_ID)?.[1]
+  if (!encoded) return undefined
+  try { return decodeURIComponent(encoded) || undefined }
+  catch { return undefined }
+}
 
 /**
  * The stylesheet for a theme.
@@ -88,7 +107,8 @@ export function themeCss(theme: ThemeDocument): string {
   const dark = theme.dark ? declarations(theme.dark) : []
   // A theme that declares nothing writes nothing, so choosing Inherit leaves the stylesheet as it was.
   if (!base.length && !dark.length) return ''
-  const blocks = [`${THEME_START}: ${theme.name.replace(/[^\w\s-]/g, '')} */`]
+  const encodedId = encodeURIComponent(theme.themeId).replace(/\*/g, '%2A')
+  const blocks = [`${THEME_START}: ${theme.name.replace(/[^\w\s-]/g, '')} */`, `/* Design Studio theme id: ${encodedId} */`]
   if (base.length) blocks.push(`:root {\n${base.join('\n')}\n}`)
   if (dark.length) blocks.push(`:root[data-theme='dark'] {\n${dark.join('\n')}\n}`)
   blocks.push(THEME_END)

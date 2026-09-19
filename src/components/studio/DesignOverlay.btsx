@@ -1,6 +1,7 @@
 import { useRef, useState } from 'octane'
 import { Icon } from '@/lib/icons'
 import type { DesignNode } from '../../playground/preview'
+import type { SizeStyle, SpacingStyle } from '../../playground/studio/ir/types'
 
 module
   /** Which handle is being dragged, and which way it grows. */
@@ -9,12 +10,10 @@ module
     | 'margin-top' | 'margin-right' | 'margin-bottom' | 'margin-left'
     | 'size'
 
-  export interface DesignEdit {
-    /** `spacing` values are Tailwind steps; `size` values are pixels. */
-    group: 'spacing' | 'size'
-    field: string
-    value: number
-  }
+  /** `spacing` values are Tailwind steps; `size` values are pixels. */
+  export type DesignEdit =
+    | { group: 'spacing'; field: keyof SpacingStyle; value: number }
+    | { group: 'size'; field: keyof SizeStyle; value: number }
 
   interface OverlayProps {
     selected?: DesignNode
@@ -28,7 +27,7 @@ module
     onDismiss: () => void
   }
 
-  const SPACING_FIELD: Record<string, string> = {
+  const SPACING_FIELD: Record<Exclude<Handle, 'size'>, keyof SpacingStyle> = {
     'pad-top': 'pt', 'pad-right': 'pr', 'pad-bottom': 'pb', 'pad-left': 'pl',
     'margin-top': 'mt', 'margin-right': 'mr', 'margin-bottom': 'mb', 'margin-left': 'ml'
   }
