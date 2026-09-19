@@ -1,9 +1,15 @@
 import type { CompilerWorker } from './coordinator';
 import { PROTOCOL_VERSION, type CompilationProject, type CompilationResult, type WorkerResponse } from './contracts';
-import { Preview, type ResolvedPreviewEvent } from './preview';
+import { Preview, type DesignNode, type ResolvedPreviewEvent } from './preview';
 import type { Theme } from './theme';
 
 export type TemplatePreviewStatus = { state: 'compiling' | 'ready' } | { state: 'error'; message: string };
+/** What Design Mode reports back from the visible frame. */
+export type DesignEvent =
+  | { type: 'hover'; node: DesignNode }
+  | { type: 'select'; node: DesignNode }
+  | { type: 'out' }
+  | { type: 'text'; nodeId: string; text: string };
 type Reveal = { selector: string; highlight: boolean };
 
 /**
@@ -22,6 +28,9 @@ export class TemplatePreview {
   private pendingReveal?: Reveal;
   /** When true, compatible rebuilds update the running app in place instead of reloading it. */
   hot = false;
+  /** Called with what Design Mode reports; only the visible frame is ever inspected. */
+  onDesign?: (event: DesignEvent) => void;
+  private designing = false;
 
   constructor(private frames: HTMLIFrameElement[], theme: Theme, createWorker: () => CompilerWorker, private onStatus: (status: TemplatePreviewStatus) => void, private title = 'Preview') {
     this.previews = frames.map((frame, index) => new Preview(frame, event => this.receive(index, event), theme));
@@ -48,6 +57,19 @@ export class TemplatePreview {
 
   setTheme(theme: Theme) { for (const preview of this.previews) preview.setTheme(theme); }
 
+  /** Applies a theme's custom properties to both frames; no rebuild, so the page repaints in place. */
+  setTokens(css: string) { for (const preview of this.previews) preview.setTokens(css); }
+
+  /** Both frames inspect, so a rebuild that swaps frames stays in Design Mode. */
+  setDesigning(enabled: boolean) {
+    this.designing = enabled;
+    for (const preview of this.previews) preview.setDesigning(enabled);
+  }
+
+  applyDesignStyle(nodeId: string, className: string) { this.previews[this.front].applyDesignStyle(nodeId, className); }
+  measureNode(nodeId: string) { this.previews[this.front].measureNode(nodeId); }
+  editText(nodeId: string, editing: boolean) { this.previews[this.front].editText(nodeId, editing); }
+
   dispose() {
     this.request++;
     this.worker.terminate();
@@ -62,6 +84,14 @@ export class TemplatePreview {
   }
 
   private receive(index: number, event: ResolvedPreviewEvent) {
+    if (event.type.startsWith('design-')) {
+      // Only the frame the person can actually see reports; the standby frame is inert.
+      if (index !== this.front || !this.designing) return;
+      if (event.type === 'design-out') this.onDesign?.({ type: 'out' });
+      else if (event.type === 'design-text-change') this.onDesign?.({ type: 'text', nodeId: event.nodeId!, text: event.text! });
+      else this.onDesign?.({ type: event.type === 'design-hover' ? 'hover' : 'select', node: event.node! });
+      return;
+    }
     if (event.type === 'runtime-error' && (index === this.incoming || (index === this.front && this.incoming === undefined))) {
       // A failed incoming build leaves the last good page visible.
       if (index === this.incoming) this.incoming = undefined;

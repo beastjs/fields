@@ -1,7 +1,7 @@
 // Tailwind class strings shared by several playground components.
 
 export const primaryButton =
-  'px-[13px] py-2 rounded-[4px] text-[11px] font-semibold border border-[#ff844c] bg-brand text-[#1b1b1b] hover:bg-brand-hover light:rounded-lg light:border-brand light:text-white light:shadow-elevation'
+  'px-[13px] py-2 rounded-[4px] text-[11px] font-semibold border border-brand bg-brand text-[#1b1b1b] hover:bg-brand-hover light:rounded-lg light:border-brand light:text-white light:shadow-elevation'
 export const secondaryButton =
   'px-[13px] py-2 rounded-[4px] text-[11px] border border-edge bg-control text-fg hover:bg-edge light:rounded-lg light:border-transparent light:bg-panel light:shadow-elevation light:hover:bg-surface-hover'
 export const eyebrowLabel = 'font-code text-[9px] text-dim tracking-[0.15em]'

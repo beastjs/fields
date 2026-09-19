@@ -8,6 +8,7 @@ import type { PlaygroundSession, SessionSnapshot } from '../../playground/sessio
 import NativeSelect, {NativeSelectOption} from "../ui/native-select.btsx";
 import { cn } from '@/lib/utils'
 import {Icon} from "@/lib/icons";
+import Checkbox from "../ui/checkbox.btsx";
 
 module
   interface ChatComposerProps { chat: ChatController; session: PlaygroundSession, auto: boolean, toggleAuto: VoidFunction }
@@ -66,17 +67,18 @@ form(className='shrink-0 border-t border-edge bg-editor p-3 chat-short:p-2' onSu
   div(className='w-full flex items-center justify-between')
     div(className='flex items-center gap-1')
       label(className='mb-[9px] flex flex-wrap items-center gap-[5px] text-[8px] text-dim [&_input]:m-0 [&_input]:size-[11px] [&_input]:accent-brand')
+        Checkbox(checked={includeFile.state.value} onChange={(v: boolean) => includeFile.handleChange(!v)})
         input(type='checkbox' checked={includeFile.state.value} onChange={event => includeFile.handleChange(event.currentTarget.checked)})
-        code(className='max-w-full overflow-hidden text-ellipsis rounded-[3px] border border-edge bg-surface-hover px-[5px] py-[3px] font-code text-[8px] text-[#c5ac8c] light:text-brand' title={project.activeFile}) #{fileLabel(project.activeFile)}
+        code(className='max-w-full overflow-hidden text-ellipsis rounded-[3px] border border-edge bg-surface-hover px-[5px] py-[3px] font-code text-[8px] text-brand-hover' title={project.activeFile}) #{fileLabel(project.activeFile)}
       div(className='mb-[9px] flex flex-wrap items-center gap-1 empty:hidden')
         if visible.length < 2
           each file in visible key file
             span(className='inline-flex max-w-full items-center rounded-[3px] border border-edge bg-surface-hover' title={file})
-              code(className='truncate py-[3px] pl-[5px] font-code text-[8px] text-[#c5ac8c]') #{fileLabel(file)}
+              code(className='truncate py-[3px] pl-[5px] font-code text-[8px] text-brand') #{fileLabel(file)}
               button(className='border-0 bg-none px-[5px] text-[10px] leading-none text-dim hover:text-fg' type='button' onClick={() => removeFile(file)} aria-label={'Remove ' + file + ' from chat'}) ×
         else
           span(className='inline-flex max-w-full items-center rounded-[3px] border border-edge bg-surface-hover' title={visible[0]})
-            code(className='truncate py-[3px] pl-[5px] font-code text-[8px] text-[#c5ac8c]') #{fileLabel(visible[0])}
+            code(className='truncate py-[3px] pl-[5px] font-code text-[8px] text-brand') #{fileLabel(visible[0])}
               button(className='border-0 bg-none px-[5px] text-[10px] leading-none text-dim hover:text-fg' type='button' onClick={() => removeFile(visible[0])} aria-label={'Remove ' + visible[0] + ' from chat'}) ×
 
             code +
@@ -95,7 +97,7 @@ form(className='shrink-0 border-t border-edge bg-editor p-3 chat-short:p-2' onSu
       input#auto-apply(type='checkbox' checked={auto} onChange={toggleAuto})
       span(className='select-none') Auto-apply
 
-  div(className='overflow-hidden rounded-md border border-edge-strong bg-inset shadow-[inset_0_1px_3px_#15151515] focus-within:border-accent light:rounded-xl light:border-edge light:bg-panel light:shadow-elevation light:focus-within:border-brand/50')
+  div(className='overflow-hidden rounded-md border border-edge-strong bg-inset shadow-[inset_0_1px_3px_#15151515] focus-within:border-brand-hover light:rounded-xl light:border-edge light:bg-panel light:shadow-elevation light:focus-within:border-brand/50')
     label(className='sr-only' for='chat-prompt') Message AI
     textarea#chat-prompt(value={prompt.state.value} onInput={event => prompt.handleChange(event.currentTarget.value)} onKeyDown={keydown} placeholder='Ask about your code…' rows={3} maxlength='32000' className='block max-h-[170px] min-h-[70px] w-full resize-none border-0 bg-muted p-[11px] text-[11px] leading-[1.7] text-fg decoration-none outline-none placeholder:text-dim focus-visible:outline-none chat-short:min-h-[42px] chat-short:p-[7px]')
     div(className='flex items-center justify-between gap-2 pr-[7px] pl-2.5 chat-short:justify-end chat-short:pb-[5px]')

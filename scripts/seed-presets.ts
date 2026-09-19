@@ -19,6 +19,7 @@ import { renderPreset } from '../src/playground/studio/ir/render'
 import { parseStoredPreset } from '../src/playground/studio/ir/schema'
 import { MAX_STORED_DEPTH, depthOf, flattenPreset, inflatePreset } from '../src/playground/studio/ir/storage'
 import type { SectionKindId } from '../src/playground/studio/types'
+import { builtInThemes } from '../src/playground/studio/themes'
 
 const BATCH = 5
 
@@ -85,6 +86,9 @@ function run(name: string, args: unknown) {
 const presets = build()
 const recipes = pageRecipes.map(recipe => ({ recipeId: recipe.id, title: recipe.title, description: recipe.description, presetIds: recipe.templates }))
 
+// `Inherit` is the absence of a theme, so it is offered by the client rather than stored.
+const themes = builtInThemes.filter(theme => theme.themeId !== 'inherit')
+
 const known = new Set(presets.map(preset => preset.presetId))
 for (const recipe of recipes) {
   const missing = recipe.presetIds.filter(id => !known.has(id))
@@ -93,10 +97,10 @@ for (const recipe of recipes) {
 
 const bytes = JSON.stringify(presets).length
 const deepest = Math.max(...presets.map(preset => depthOf(preset.document)))
-console.info(`Parsed ${presets.length} presets (${Math.round(bytes / 1024)} KB, deepest ${deepest} of ${MAX_STORED_DEPTH - 2} levels) and ${recipes.length} recipes.`)
+console.info(`Parsed ${presets.length} presets (${Math.round(bytes / 1024)} KB, deepest ${deepest} of ${MAX_STORED_DEPTH - 2} levels), ${recipes.length} recipes and ${themes.length} themes.`)
 
 if (out) {
-  await writeFile(out, `${JSON.stringify({ presets, recipes }, null, 2)}\n`)
+  await writeFile(out, `${JSON.stringify({ presets, recipes, themes }, null, 2)}\n`)
   console.info(`Wrote ${out}.`)
 } else if (dryRun) {
   console.info('Dry run: every preset parsed, flattened, validated, and round-tripped. Nothing was pushed.')
@@ -111,5 +115,6 @@ if (out) {
     console.info(`  ${Math.min(at + BATCH, presets.length)}/${presets.length} presets`)
   }
   run('presets:seedRecipes', { recipes })
-  console.info(`Seeded ${inserted} new and ${updated} updated presets, and ${recipes.length} recipes.`)
+  run('presets:seedThemes', { themes })
+  console.info(`Seeded ${inserted} new and ${updated} updated presets, ${recipes.length} recipes and ${themes.length} themes.`)
 }

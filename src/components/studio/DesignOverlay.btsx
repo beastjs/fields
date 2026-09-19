@@ -1,0 +1,186 @@
+import { useRef, useState } from 'octane'
+import { Icon } from '@/lib/icons'
+import type { DesignNode } from '../../playground/preview'
+
+module
+  /** Which handle is being dragged, and which way it grows. */
+  export type Handle =
+    | 'pad-top' | 'pad-right' | 'pad-bottom' | 'pad-left'
+    | 'margin-top' | 'margin-right' | 'margin-bottom' | 'margin-left'
+    | 'size'
+
+  export interface DesignEdit {
+    /** `spacing` values are Tailwind steps; `size` values are pixels. */
+    group: 'spacing' | 'size'
+    field: string
+    value: number
+  }
+
+  interface OverlayProps {
+    selected?: DesignNode
+    hovered?: DesignNode
+    /** The preview's scale, so the overlay lands on the same pixels the person sees. */
+    scale: number
+    edited: boolean
+    onEdit: (edits: DesignEdit[], live: boolean) => void
+    onEditText: () => void
+    onReset: () => void
+    onDismiss: () => void
+  }
+
+  const SPACING_FIELD: Record<string, string> = {
+    'pad-top': 'pt', 'pad-right': 'pr', 'pad-bottom': 'pb', 'pad-left': 'pl',
+    'margin-top': 'mt', 'margin-right': 'mr', 'margin-bottom': 'mb', 'margin-left': 'ml'
+  }
+  /** Dragging away from the box grows the value; this is the sign that makes each edge read that way. */
+  const GROWS: Record<string, { axis: 'x' | 'y'; sign: number }> = {
+    'pad-top': { axis: 'y', sign: 1 }, 'pad-bottom': { axis: 'y', sign: -1 },
+    'pad-left': { axis: 'x', sign: 1 }, 'pad-right': { axis: 'x', sign: -1 },
+    'margin-top': { axis: 'y', sign: -1 }, 'margin-bottom': { axis: 'y', sign: 1 },
+    'margin-left': { axis: 'x', sign: -1 }, 'margin-right': { axis: 'x', sign: 1 }
+  }
+  const CURSOR: Record<string, string> = {
+    'pad-top': 'ns-resize', 'pad-bottom': 'ns-resize', 'margin-top': 'ns-resize', 'margin-bottom': 'ns-resize',
+    'pad-left': 'ew-resize', 'pad-right': 'ew-resize', 'margin-left': 'ew-resize', 'margin-right': 'ew-resize',
+    size: 'nwse-resize'
+  }
+  const MAX_STEP = 96
+  const round = (value: number) => Math.round(value * 10) / 10
+  const px = (value: number) => `${value}px`
+
+props { selected, hovered, scale, edited, onEdit, onEditText, onReset, onDismiss }: OverlayProps
+setup
+  const drag = useRef<{ handle: Handle; x: number; y: number; from: { width: number; height: number; spacing: number } } | null>(null);
+  const [active, setActive] = useState<Handle | undefined>(undefined);
+
+  const startOf = (node: DesignNode, handle: Handle) => {
+    if (handle === 'size') return { width: node.rect.width, height: node.rect.height, spacing: 0 };
+    const side = handle.split('-')[1] as 'top' | 'right' | 'bottom' | 'left';
+    const from = handle.startsWith('pad') ? node.padding[side] : node.margin[side];
+    return { width: 0, height: 0, spacing: from };
+  };
+
+  const begin = (handle: Handle) => (event: PointerEvent) => {
+    if (!selected) return;
+    event.preventDefault();
+    event.stopPropagation();
+    // Capture keeps the drag alive past the handle's edges; it throws if the pointer is already gone.
+    try { (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId); } catch { /* drag still tracks */ }
+    drag.current = { handle, x: event.clientX, y: event.clientY, from: startOf(selected, handle) };
+    setActive(handle);
+  };
+
+  const move = (event: PointerEvent) => {
+    const state = drag.current;
+    if (!state || !selected) return;
+    // The preview is scaled to fit, so pointer travel is divided back into the preview's own pixels.
+    const dx = (event.clientX - state.x) / scale;
+    const dy = (event.clientY - state.y) / scale;
+
+    if (state.handle === 'size') {
+      onEdit([
+        { group: 'size', field: 'w', value: Math.max(16, Math.round(state.from.width + dx)) },
+        { group: 'size', field: 'h', value: Math.max(16, Math.round(state.from.height + dy)) }
+      ], true);
+      return;
+    }
+    const { axis, sign } = GROWS[state.handle];
+    const next = state.from.spacing + sign * (axis === 'x' ? dx : dy);
+    // Spacing is expressed in the theme's own step, so the value stays meaningful when the theme changes density.
+    const steps = Math.min(MAX_STEP, Math.max(0, Math.round((next / selected.step) * 2) / 2));
+    onEdit([{ group: 'spacing', field: SPACING_FIELD[state.handle], value: steps }], true);
+  };
+
+  const end = (event: PointerEvent) => {
+    if (!drag.current) return;
+    try { (event.currentTarget as HTMLElement).releasePointerCapture?.(event.pointerId); } catch { /* already released */ }
+    drag.current = null;
+    setActive(undefined);
+    // Commit: the same values again, now written to the document rather than straight to the frame.
+    onEdit([], false);
+  };
+
+  const frame = (node: DesignNode) => ({
+    left: px(node.rect.x * scale),
+    top: px(node.rect.y * scale),
+    width: px(node.rect.width * scale),
+    height: px(node.rect.height * scale)
+  });
+  // A band lies along one edge: padding inside the box, margin outside it.
+  const band = (node: DesignNode, side: 'top' | 'right' | 'bottom' | 'left', kind: 'padding' | 'margin') => {
+    const size = (kind === 'padding' ? node.padding : node.margin)[side] * scale;
+    const inset = kind === 'padding' ? 0 : -size;
+    const vertical = side === 'top' || side === 'bottom';
+    return {
+      [side]: px(inset),
+      ...(vertical ? { left: px(0), right: px(0), height: px(Math.abs(size)) } : { top: px(0), bottom: px(0), width: px(Math.abs(size)) })
+    } as Record<string, string>;
+  };
+  const handleStyle = (node: DesignNode, handle: Handle) => {
+    if (handle === 'size') return { right: px(-5), bottom: px(-5), width: px(11), height: px(11), cursor: CURSOR.size };
+    const side = handle.split('-')[1] as 'top' | 'right' | 'bottom' | 'left';
+    const kind = handle.startsWith('pad') ? 'padding' : 'margin';
+    const size = (kind === 'padding' ? node.padding : node.margin)[side] * scale;
+    const offset = kind === 'padding' ? Math.max(0, size - 3) : -size - 3;
+    const vertical = side === 'top' || side === 'bottom';
+    return {
+      [side]: px(offset),
+      ...(vertical ? { left: px(0), right: px(0), height: px(7) } : { top: px(0), bottom: px(0), width: px(7) }),
+      cursor: CURSOR[handle]
+    } as Record<string, string>;
+  };
+  const label = (node: DesignNode) => `${node.tag} · ${Math.round(node.rect.width)} × ${Math.round(node.rect.height)}`;
+  const padSummary = (node: DesignNode) =>
+    `padding ${round(node.padding.top / node.step)} ${round(node.padding.right / node.step)} ${round(node.padding.bottom / node.step)} ${round(node.padding.left / node.step)}`;
+
+div(className='pointer-events-none absolute inset-0 z-10 overflow-hidden' aria-hidden='true')
+  if hovered && (!selected || hovered.nodeId !== selected.nodeId)
+    div(className='absolute rounded-[2px] outline outline-brand/45' style={frame(hovered)})
+      span(className='absolute -top-[17px] left-0 rounded-[3px] bg-brand/85 px-1.5 py-px font-code text-[9px] whitespace-nowrap text-white') #{label(hovered)}
+  if selected
+    div
+      div(className='absolute' style={frame(selected)})
+        div(className='absolute inset-0 rounded-[2px] outline outline-2 outline-brand')
+        each side in ['top', 'right', 'bottom', 'left'] key 'p' + side
+          div(className='absolute bg-brand/20' style={band(selected, side, 'padding')})
+        each side in ['top', 'right', 'bottom', 'left'] key 'm' + side
+          div(className='absolute bg-warning/20' style={band(selected, side, 'margin')})
+
+        each handle in ['pad-top', 'pad-right', 'pad-bottom', 'pad-left'] key handle
+          div(
+            ~ className={'pointer-events-auto absolute rounded-full transition-colors hover:bg-brand/70 ' + (active === handle ? 'bg-brand' : 'bg-brand/35')}
+            ~ style={handleStyle(selected, handle)}
+            ~ onPointerDown={begin(handle)}
+            ~ onPointerMove={move}
+            ~ onPointerUp={end}
+            ~ onPointerCancel={end}
+            ~ )
+        each handle in ['margin-top', 'margin-right', 'margin-bottom', 'margin-left'] key handle
+          div(
+            ~ className={'pointer-events-auto absolute rounded-full transition-colors hover:bg-warning/70 ' + (active === handle ? 'bg-warning' : 'bg-warning/35')}
+            ~ style={handleStyle(selected, handle)}
+            ~ onPointerDown={begin(handle)}
+            ~ onPointerMove={move}
+            ~ onPointerUp={end}
+            ~ onPointerCancel={end}
+            ~ )
+        div(
+          ~ className={'pointer-events-auto absolute rounded-full border-2 border-brand transition-colors ' + (active === 'size' ? 'bg-brand' : 'bg-panel')}
+          ~ style={handleStyle(selected, 'size')}
+          ~ onPointerDown={begin('size')}
+          ~ onPointerMove={move}
+          ~ onPointerUp={end}
+          ~ onPointerCancel={end}
+          ~ )
+
+      div(className='pointer-events-auto absolute flex items-center gap-1 rounded-[5px] border border-edge-strong bg-panel px-1.5 py-1 shadow-elevation' style={{ left: px(selected.rect.x * scale), top: px(Math.max(2, selected.rect.y * scale - 30)) }})
+        span(className='font-code text-[9px] whitespace-nowrap text-fg') #{label(selected)}
+        span(className='font-code text-[9px] whitespace-nowrap text-faint') #{padSummary(selected)}
+        if selected.count > 1
+          span(className='rounded-full bg-warning/15 px-1.5 py-px text-[9px] whitespace-nowrap text-warning' title='This section repeats this node, so the edit applies to every copy.') ×#{selected.count}
+        if selected.editable
+          button(className='rounded-[3px] px-1.5 py-px text-[9px] text-fg-secondary hover:bg-control hover:text-fg' type='button' onClick={onEditText}) Edit text
+        if edited
+          button(className='rounded-[3px] px-1.5 py-px text-[9px] text-warning hover:bg-control' type='button' title='Restore this section to its preset' onClick={onReset}) Reset
+        button(className='flex size-4 items-center justify-center rounded-[3px] text-faint hover:bg-control hover:text-fg' type='button' aria-label='Deselect' onClick={onDismiss})
+          Icon(name='close-small' className='size-3')

@@ -57,6 +57,97 @@ function bootstrap(channel: string, build: number) {
       send('console', { level, args: args.slice(0, 30).map(describe), timestamp: Date.now() });
     };
   }
+  /**
+   * Design Mode's agent.
+   *
+   * It only runs while the host turns it on, and it does two jobs: report the box under the pointer, and apply a
+   * class change straight to the DOM while a handle is being dragged. The second is what makes dragging feel
+   * direct — the authoritative rebuild lands afterwards, debounced, from the host.
+   */
+  let designing = false;
+  let probe: HTMLElement | undefined;
+  /** One Tailwind spacing step in pixels, which a theme's `--spacing` changes. */
+  const spacingStep = () => {
+    if (!probe) {
+      probe = document.createElement('div');
+      probe.style.cssText = 'position:absolute;top:0;left:0;visibility:hidden;height:0;pointer-events:none;width:var(--spacing,0.25rem)';
+      probe.setAttribute('data-studio-probe', '');
+      document.body.append(probe);
+    }
+    return probe.getBoundingClientRect().width || 4;
+  };
+  const sides = (style: CSSStyleDeclaration, prefix: string, suffix = '') => ({
+    top: parseFloat(style.getPropertyValue(`${prefix}-top${suffix}`)) || 0,
+    right: parseFloat(style.getPropertyValue(`${prefix}-right${suffix}`)) || 0,
+    bottom: parseFloat(style.getPropertyValue(`${prefix}-bottom${suffix}`)) || 0,
+    left: parseFloat(style.getPropertyValue(`${prefix}-left${suffix}`)) || 0
+  });
+  const measure = (element: Element) => {
+    const box = element.getBoundingClientRect();
+    const style = getComputedStyle(element);
+    return {
+      nodeId: (element as HTMLElement).dataset.node!,
+      tag: element.tagName.toLowerCase(),
+      rect: { x: box.x, y: box.y, width: box.width, height: box.height },
+      padding: sides(style, 'padding'),
+      margin: sides(style, 'margin'),
+      border: sides(style, 'border', '-width'),
+      step: spacingStep(),
+      // Only a node whose children are all text can be edited in place without losing structure.
+      editable: element.childElementCount === 0 && (element.textContent ?? '').trim().length > 0,
+      count: document.querySelectorAll(`[data-node="${(element as HTMLElement).dataset.node}"]`).length
+    };
+  };
+  const nodesOf = (nodeId: string) => document.querySelectorAll<HTMLElement>(`[data-node="${CSS.escape(nodeId)}"]`);
+  const nodeAt = (target: EventTarget | null) => (target instanceof Element ? target.closest<HTMLElement>('[data-node]') : null);
+
+  let hovered: string | undefined;
+  let selected: HTMLElement | undefined;
+  const onMove = (event: PointerEvent) => {
+    const element = nodeAt(event.target);
+    if (!element) { if (hovered) { hovered = undefined; send('design-out'); } return; }
+    if (element.dataset.node === hovered) return;
+    hovered = element.dataset.node;
+    send('design-hover', { node: measure(element) });
+  };
+  const onDown = (event: PointerEvent) => {
+    const element = nodeAt(event.target);
+    if (!element) return;
+    event.preventDefault();
+    event.stopPropagation();
+    selected = element;
+    send('design-select', { node: measure(element) });
+  };
+  // A link or button inside a section must not navigate while its box is being edited.
+  const swallow = (event: Event) => { if (designing) { event.preventDefault(); event.stopPropagation(); } };
+  const track = () => {
+    if (selected?.isConnected) send('design-select', { node: measure(selected) });
+  };
+  const setDesigning = (on: boolean) => {
+    if (on === designing) return;
+    designing = on;
+    const options = { capture: true } as const;
+    if (on) {
+      document.addEventListener('pointermove', onMove, options);
+      document.addEventListener('pointerdown', onDown, options);
+      document.addEventListener('click', swallow, options);
+      document.addEventListener('submit', swallow, options);
+      addEventListener('scroll', track, { passive: true });
+      addEventListener('resize', track);
+      document.documentElement.style.cursor = 'crosshair';
+    } else {
+      document.removeEventListener('pointermove', onMove, options);
+      document.removeEventListener('pointerdown', onDown, options);
+      document.removeEventListener('click', swallow, options);
+      document.removeEventListener('submit', swallow, options);
+      removeEventListener('scroll', track);
+      removeEventListener('resize', track);
+      document.documentElement.style.cursor = '';
+      hovered = undefined;
+      selected = undefined;
+    }
+  };
+
   const report = (error: unknown, position?: { url: string; line: number; column: number }) => {
     const message = error instanceof Error ? error.message : describe(error);
     const stack = error instanceof Error ? error.stack : undefined;
@@ -118,6 +209,47 @@ function bootstrap(channel: string, build: number) {
     if (event.source !== parent || message?.version !== 1 || message.channel !== channel) return;
     if (message.type === 'theme' && (message.theme === 'dark' || message.theme === 'light')) {
       document.documentElement.dataset.theme = message.theme;
+      return;
+    }
+    if (message.type === 'design' && typeof message.enabled === 'boolean') {
+      setDesigning(message.enabled);
+      return;
+    }
+    if (message.type === 'design-style' && typeof message.nodeId === 'string' && typeof message.className === 'string') {
+      // Applied straight to the DOM so a drag reads at pointer speed; the host rebuilds from the document after.
+      for (const element of nodesOf(message.nodeId)) element.className = message.className;
+      if (selected?.isConnected) send('design-select', { node: measure(selected) });
+      return;
+    }
+    if (message.type === 'design-measure' && typeof message.nodeId === 'string') {
+      const element = nodesOf(message.nodeId)[0];
+      if (element) send('design-select', { node: measure(element) });
+      return;
+    }
+    if (message.type === 'design-text' && typeof message.nodeId === 'string' && typeof message.editing === 'boolean') {
+      const element = nodesOf(message.nodeId)[0];
+      if (!element) return;
+      if (!message.editing) { element.removeAttribute('contenteditable'); return; }
+      element.setAttribute('contenteditable', 'plaintext-only');
+      element.focus();
+      getSelection()?.selectAllChildren(element);
+      const finish = () => {
+        element.removeAttribute('contenteditable');
+        element.removeEventListener('blur', finish);
+        send('design-text-change', { nodeId: message.nodeId, text: (element.textContent ?? '').slice(0, 4000) });
+      };
+      element.addEventListener('blur', finish, { once: true });
+      return;
+    }
+    if (message.type === 'tokens' && typeof message.css === 'string' && message.css.length <= 20000) {
+      // A theme is only custom properties, so swapping this node repaints the page without touching the build.
+      let node = document.querySelector('style[data-studio-tokens]');
+      if (!node) {
+        node = document.createElement('style');
+        node.setAttribute('data-studio-tokens', '');
+        document.head.append(node);
+      }
+      node.textContent = message.css;
       return;
     }
     if (message.type === 'reveal' && typeof message.selector === 'string') {

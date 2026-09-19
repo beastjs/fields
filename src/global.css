@@ -212,7 +212,7 @@
   --faint: #828282;
   /*--brand: #e8a471;*/
   --brand: #8acfd1;
-  --brand-hover: #ff7a39;
+  --brand-hover: oklch(0.8095 0.0694 198.19 / 90.01%);
   --warning: #e9b747;
   --selection: #75503b;
   --syntax-keyword: #baa6c4;
@@ -236,7 +236,7 @@
 /* Light: neutral grey ground, white cards with hairline edges and soft lift, near-black type, one indigo accent. */
 :root[data-theme='light'] {
   color-scheme: light;
-  --canvas: #f0f0f0;
+  --canvas: oklch(0.9384 0 236);
   --panel: #ffffff;
   --panel-deep: #f8f8f9;
   --inset: #f2f2f3;

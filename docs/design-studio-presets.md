@@ -126,15 +126,93 @@ Section *kinds* stay in code. A kind implies a component name and a stage in the
 page's story that `studio/page.ts` depends on at build time, so adding one is a
 code change; adding a preset is not.
 
+## How the studio reads them
+
+Composing and installing a page is synchronous — `page.ts` diffs a section's
+source against the project, and the preview needs every block resolved before it
+can build — so the studio loads what it needs and passes the rest of the code a
+`PresetLookup` (`studio/presets.ts`) that answers from what is loaded.
+
+Summaries drive the library: they carry the wireframe and the words, and nothing
+there needs a tree. Trees are fetched only for the presets a page actually uses.
+Search filters the loaded summaries rather than calling the server, since the
+whole catalog is already in hand and a round trip per keystroke would be slower;
+the `search_catalog` index is there for when team presets make the catalog large.
+
+`Page.btsx` records which preset each section came from:
+
+```
+// Composed in Design Studio. Reorder sections there, or edit this file by hand.
+// presets: Topbar=topbar-default, Hero=hero-default, Footer=footer-default
+```
+
+That marker is what makes the rest work. Reading a page back needs no documents —
+the ids are known before anything loads, which is how the studio knows what to
+fetch. It also replaced the old approach of identifying a section by matching its
+file against every template's source, which would have meant loading the whole
+catalog to read one page.
+
+A block therefore carries both its `presetId` and an `edited` flag, set when the
+project's file no longer matches the preset. Edited wins: the preview shows the
+file, the install leaves it alone, and it is never removed. Choosing a new design
+clears the flag, and the install warns before replacing an edit. A preset that has
+not loaded yet reads as edited, so the preview shows the project's own file rather
+than nothing, and corrects itself when the document arrives.
+
+The section taxonomy stays in code (`studio/kinds.ts`), split out from
+`catalog.ts` so the built-in template sources — seed material only — are not
+pulled into the app bundle. Nothing in the app imports `catalog.ts`.
+
+## Themes
+
+A theme is only custom properties. Tailwind v4 compiles its utilities against
+variables — `p-4` is `calc(var(--spacing) * 4)`, `rounded-lg` is
+`var(--radius-lg)`, `text-xl` is `var(--text-xl)` — so once those utilities are in
+the compiled stylesheet, changing the variables repaints everything without
+touching a class name. Switching a theme sends one `tokens` message to the
+preview, which swaps a single `<style>` node. No rebuild, no recompile, and the
+44 presets are untouched.
+
+Sections stay monochrome and derive colour from `currentColor`, so setting the
+page's colour and background carries the palette through every `current/15` tint.
+That is why a theme can change the whole product's look without a preset knowing
+themes exist.
+
+`themes.ts` maps token groups onto the variables Tailwind already uses:
+
+| Token | Becomes | Effect |
+| --- | --- | --- |
+| `color.bg` / `.fg` / `.accent` | `--studio-bg` / `-fg` / `-accent` | page colour, inherited by every section |
+| `color.<other>` | `--color-<key>` | makes `bg-<key>` and friends resolve |
+| `radius.<step>` | `--radius-<step>` | every `rounded-*` at once |
+| `spacing.base` | `--spacing` | every padding, margin and gap — density |
+| `font.sans` | `--font-sans`, `--studio-font` | the page's typeface |
+
+Token values are validated before they reach CSS: a key must be lowercase
+alphanumeric and a value may not contain `;`, `{`, `}`, `<`, `>`, `@`, a backslash
+or a comment opener. Anything else is dropped rather than escaped, because themes
+can come from a team's own record. `tests/studio-themes.test.ts` feeds a hostile
+theme through and asserts exactly one rule survives.
+
+Theme CSS is emitted **unlayered**, while the studio's defaults sit in
+`@layer base`. Unlayered rules beat any layer regardless of specificity, so a
+theme overrides the defaults without having to match `:root[data-theme='light']`
+selector for selector.
+
+Installing writes the chosen theme last in the project stylesheet, between
+`/* Design Studio theme: … */` and `/* end Design Studio theme */`. Switching
+replaces that block rather than stacking, and choosing **Inherit** removes it,
+leaving no stale variables. Re-installing the same theme is byte-identical, so the
+button correctly reads as up to date.
+
 ## Still to come
 
-- The studio reads presets from Convex instead of the bundled catalog. This is
-  the remaining half of the migration: `studio/page.ts` resolves templates
-  synchronously today (`blockSource`, `planPageInstall`, `readPage` all compare a
-  project's files against template sources), so it needs a loaded-preset cache
-  before the bundled catalog can be retired.
-- Themes as Tailwind v4 `@theme` custom properties, so switching a theme updates
-  one `<style>` node in the preview instead of recompiling.
 - Design Mode: an inspector in the preview bootstrap that reports the hovered
   node's id and box, an overlay drawn in host DOM over the iframe, and edits that
   land as non-destructive per-node overrides on the page document.
+- A persisted page document. The composition and the chosen theme are still
+  component state today, so they only become durable when a page is added to the
+  project.
+- Accent colour is defined (`--studio-accent`) but no preset uses it yet, because
+  nothing marks which element is a primary action. Promoting that into the preset
+  content model is the natural next step.

@@ -18,8 +18,25 @@ All notable changes to `play` will be recorded here.
   Convex's 16-level nesting limit at any section depth, and attributes are stored
   as an ordered array so they survive Convex normalising object key order. All 44
   presets were verified end-to-end: fetched back from the deployment, rebuilt, and
-  rendered identically to their original templates. The studio still reads the
-  bundled catalog; see docs/design-studio-presets.md.
+  rendered identically to their original templates. See
+  docs/design-studio-presets.md.
+
+- Theme selector. A theme is a set of design tokens stored in Convex and applied
+  as CSS custom properties, so switching one swaps a single `<style>` node in the
+  preview rather than triggering a rebuild. Because Tailwind v4 compiles its
+  utilities against variables, a theme repaints colour, corner radius, spacing
+  density and typeface across every section without editing a single preset.
+  Ships Inherit, Midnight, Paper, Terminal and Sunrise. Installing writes the
+  chosen theme into the project stylesheet, replaceably; token values that could
+  escape a CSS declaration are dropped rather than escaped.
+
+- Design Studio reads its catalog from Convex. The library, recipes and every
+  section's design now come from the seeded presets rather than bundled
+  TypeScript, which takes the built-in template sources out of the app bundle
+  (-69 KB raw, -15 KB gzipped). `Page.btsx` records which preset each section came
+  from, so reading a page back no longer matches section files against every
+  template's source, and a section keeps its preset link through a hand edit — the
+  edit still wins in the preview, the install, and removal.
 
 - Design Studio page composer: 40 monochrome, theme-agnostic section templates
   across 14 kinds (topbar, hero, partners marquee, stats, features, guides,

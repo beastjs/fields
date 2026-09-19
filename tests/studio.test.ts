@@ -3,7 +3,10 @@ import { init } from 'es-module-lexer';
 import { compileProject } from '../src/playground/compiler';
 import { helloWorld } from '../src/playground/examples';
 import { pageRecipes, searchTemplates, sectionKinds, sectionTemplate, sectionTemplates, templatesOf } from '../src/playground/studio/catalog';
-import { addSection, composePage, pagePreviewProject, planPageInstall, readPage, recipeBlocks, sectionFile, swapTemplate } from '../src/playground/studio/page';
+import { addSection, composePage, pagePreviewProject, planPageInstall, readPage, recipeBlocks, sectionFile, swapPreset } from '../src/playground/studio/page';
+import { builtInPresets, builtInRecipes } from './built-in-presets';
+
+const presets = builtInPresets;
 
 const withFiles = (project: typeof helloWorld, files: Record<string, string>, removes: string[] = []) => {
   const next = { ...project.files, ...files };
@@ -37,7 +40,7 @@ test('section templates are monotone and self-contained so they fit any theme an
 test('every section template compiles in a page preview with Tailwind utilities and studio styles', async () => {
   await init();
   for (const template of sectionTemplates) {
-    const result = await compileProject(pagePreviewProject(helloWorld, addSection([], template.id).blocks));
+    const result = await compileProject(pagePreviewProject(helloWorld, addSection([], template.id, presets).blocks, presets));
     expect({ id: template.id, diagnostics: result.diagnostics }).toEqual({ id: template.id, diagnostics: [] });
     const css = result.assets.find(asset => asset.id === '/src/style.css')!.content;
     expect({ id: template.id, utilities: /currentcolor/.test(css), studio: css.includes('@keyframes studio-marquee') })
@@ -53,21 +56,21 @@ test('search matches kinds, keywords, and template text', () => {
 });
 
 test('sections insert in story order, repeat with numbered names, and swap templates in place', () => {
-  let { blocks } = addSection([], 'footer-simple');
-  ({ blocks } = addSection(blocks, 'hero-centered'));
-  ({ blocks } = addSection(blocks, 'topbar-marketing'));
-  ({ blocks } = addSection(blocks, 'features-grid'));
-  const repeat = addSection(blocks, 'features-bento');
+  let { blocks } = addSection([], 'footer-simple', presets);
+  ({ blocks } = addSection(blocks, 'hero-centered', presets));
+  ({ blocks } = addSection(blocks, 'topbar-marketing', presets));
+  ({ blocks } = addSection(blocks, 'features-grid', presets));
+  const repeat = addSection(blocks, 'features-bento', presets);
   expect(repeat.name).toBe('Features2');
   expect(repeat.blocks.map(block => block.name)).toEqual(['Topbar', 'Hero', 'Features', 'Features2', 'Footer']);
-  expect(addSection(blocks, 'cta-banner', 0).blocks[0].name).toBe('CallToAction');
-  expect(swapTemplate(repeat.blocks, 'Hero', 'hero-split').find(block => block.name === 'Hero')?.templateId).toBe('hero-split');
+  expect(addSection(blocks, 'cta-banner', presets, 0).blocks[0].name).toBe('CallToAction');
+  expect(swapPreset(repeat.blocks, 'Hero', 'hero-split').find(block => block.name === 'Hero')?.presetId).toBe('hero-split');
 });
 
 test('installing a page on the starter replaces it and round-trips through Page.btsx', async () => {
   await init();
-  const blocks = recipeBlocks(pageRecipes[0]);
-  const install = planPageInstall(helloWorld, blocks);
+  const blocks = recipeBlocks(builtInRecipes[0].presetIds, presets);
+  const install = planPageInstall(helloWorld, blocks, presets);
   expect(install).toMatchObject({ replacesStarter: true, rendered: true, overwrites: [], removes: ['/src/Counter.btsx'] });
   expect(install.files['/src/App.btsx']).toBe("import Page from './Page.btsx'\n\nPage\n");
   expect(install.files['/src/style.css']).toStartWith('@import "tailwindcss";');
@@ -76,30 +79,31 @@ test('installing a page on the starter replaces it and round-trips through Page.
   const project = withFiles(helloWorld, install.files, install.removes);
   const result = await compileProject(project);
   expect(result.diagnostics).toEqual([]);
-  expect(readPage(project)).toEqual(blocks);
-  expect(planPageInstall(project, blocks)).toEqual({ files: {}, removes: [], overwrites: [], replacesStarter: false, rendered: true });
+  expect(readPage(project, presets)).toEqual(blocks);
+  expect(planPageInstall(project, blocks, presets)).toEqual({ files: {}, removes: [], overwrites: [], replacesStarter: false, rendered: true });
 });
 
 test('updating a page removes unused sections, keeps edited ones, and reports edits it replaces', () => {
-  const blocks = recipeBlocks(pageRecipes[1]);
-  const installed = planPageInstall(helloWorld, blocks);
+  const blocks = recipeBlocks(builtInRecipes[1].presetIds, presets);
+  const installed = planPageInstall(helloWorld, blocks, presets);
   const project = withFiles(helloWorld, installed.files, installed.removes);
   const edited = withFiles(project, { [sectionFile('Hero')]: '// mine\n' + project.files[sectionFile('Hero')], [sectionFile('Team')]: 'section(data-section=\'team\') Custom\n' });
 
-  const restored = readPage(edited);
-  expect(restored.find(block => block.name === 'Hero')?.templateId).toBeUndefined();
-  expect(pagePreviewProject(edited, restored).files[sectionFile('Hero')]).toStartWith('// mine');
+  const restored = readPage(edited, presets);
+  // The marker keeps the preset link through a hand edit; `edited` is what says the file now wins.
+  expect(restored.find(block => block.name === 'Hero')).toMatchObject({ presetId: 'hero-waitlist', edited: true });
+  expect(pagePreviewProject(edited, restored, presets).files[sectionFile('Hero')]).toStartWith('// mine');
 
   const withoutFaqAndTeam = restored.filter(block => block.name !== 'Faq' && block.name !== 'Team');
-  const trimmed = planPageInstall(edited, withoutFaqAndTeam);
+  const trimmed = planPageInstall(edited, withoutFaqAndTeam, presets);
   expect(trimmed.removes).toEqual([sectionFile('Faq')]);
   expect(trimmed.overwrites).toEqual([]);
   expect(trimmed.files).not.toHaveProperty(sectionFile('Hero'));
 
-  const swapped = planPageInstall(edited, swapTemplate(restored, 'Hero', 'hero-centered'));
+  const swapped = planPageInstall(edited, swapPreset(restored, 'Hero', 'hero-centered'), presets);
   expect(swapped.overwrites).toEqual([sectionFile('Hero')]);
   const handEditedPage = withFiles(edited, { '/src/Page.btsx': edited.files['/src/Page.btsx'] + '  p Hand-written\n' });
-  expect(planPageInstall(handEditedPage, withoutFaqAndTeam).overwrites).toEqual(['/src/Page.btsx']);
+  expect(planPageInstall(handEditedPage, withoutFaqAndTeam, presets).overwrites).toEqual(['/src/Page.btsx']);
 });
 
 test('installing into an existing app renders the page above its markup and adds studio styles once', () => {
@@ -108,17 +112,17 @@ test('installing into an existing app renders the page above its markup and adds
     '/src/App.btsx': 'setup const x = 1;\n\nh1 Hello\n',
     '/src/theme.css': '@import "tailwindcss";\nbody { margin: 0 }\n',
   } };
-  const blocks = addSection([], 'hero-centered').blocks;
-  const install = planPageInstall(app, blocks);
+  const blocks = addSection([], 'hero-centered', presets).blocks;
+  const install = planPageInstall(app, blocks, presets);
   expect(install).toMatchObject({ replacesStarter: false, rendered: true, removes: [] });
   expect(install.files['/src/App.btsx']).toBe("import Page from './Page.btsx'\n\nsetup const x = 1;\n\nPage\nh1 Hello\n");
   expect(install.files['/src/theme.css']).toStartWith('@import "tailwindcss";\nbody { margin: 0 }\n\n/* Design Studio sections');
   expect(install.files).not.toHaveProperty('/src/main.ts');
-  const again = planPageInstall(withFiles(app, install.files), blocks);
+  const again = planPageInstall(withFiles(app, install.files), blocks, presets);
   expect(again.files).toEqual({});
 
   const bare = { ...app, files: { '/src/main.ts': app.files['/src/main.ts'], '/src/App.btsx': 'component Page\n  h1 Hello\n' } };
-  const partial = planPageInstall(bare, blocks);
+  const partial = planPageInstall(bare, blocks, presets);
   expect(partial.rendered).toBe(false);
   expect(partial.files['/src/main.ts']).toBe("import App from './App.btsx';\nimport './style.css';\n");
   expect(composePage([])).toContain("div(data-page='home')");

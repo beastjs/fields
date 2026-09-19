@@ -3,6 +3,7 @@ import { compileProject } from '../src/playground/compiler';
 import { helloWorld } from '../src/playground/examples';
 import { sectionTemplates } from '../src/playground/studio/catalog';
 import { addSection, pagePreviewProject, sectionFile } from '../src/playground/studio/page';
+import { builtInPresets } from './built-in-presets';
 import { toClasses, toStyle } from '../src/playground/studio/ir/classes';
 import { parsePreset } from '../src/playground/studio/ir/parse';
 import { nodeIndex, renderPreset, walk } from '../src/playground/studio/ir/render';
@@ -45,8 +46,8 @@ test('node ids are unique within a document and stable across parses', () => {
 
 test('rendered sections still compile as part of a page', async () => {
   for (const template of sectionTemplates) {
-    const { blocks, name } = addSection([], template.id);
-    const project = pagePreviewProject(helloWorld, blocks);
+    const { blocks, name } = addSection([], template.id, builtInPresets);
+    const project = pagePreviewProject(helloWorld, blocks, builtInPresets);
     project.files[sectionFile(name)] = renderPreset(documentOf(template));
     const result = await compileProject(project);
     expect({ id: template.id, diagnostics: result.diagnostics }).toEqual({ id: template.id, diagnostics: [] });

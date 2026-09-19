@@ -4,11 +4,32 @@ import { RuntimeSourceMapper, type PreviewModuleURL, type RuntimePosition, type 
 import { planHotUpdate } from './hot-update';
 import type { Theme } from './theme';
 
+/** One node's box as Design Mode measured it, in the preview's own CSS pixels. */
+export interface DesignSides { top: number; right: number; bottom: number; left: number }
+export interface DesignNode {
+  nodeId: string;
+  tag: string;
+  rect: { x: number; y: number; width: number; height: number };
+  padding: DesignSides;
+  margin: DesignSides;
+  border: DesignSides;
+  /** One Tailwind spacing step in pixels, which the active theme's `--spacing` sets. */
+  step: number;
+  /** The node holds only text, so it can be edited in place without losing structure. */
+  editable: boolean;
+  /** How many times this node is rendered; more than one means it sits inside an `each`. */
+  count: number;
+}
+
 export interface PreviewEvent {
   version: 1;
   channel: string;
   build: number;
-  type: 'ready' | 'rendered' | 'reload-required' | 'module-manifest' | 'console' | 'runtime-error';
+  type: 'ready' | 'rendered' | 'reload-required' | 'module-manifest' | 'console' | 'runtime-error'
+    | 'design-hover' | 'design-select' | 'design-out' | 'design-text-change';
+  node?: DesignNode;
+  nodeId?: string;
+  text?: string;
   update?: 'reload' | 'hot';
   level?: string;
   args?: string[];
@@ -18,13 +39,33 @@ export interface PreviewEvent {
   modules?: PreviewModuleURL[];
   position?: RuntimePosition;
 }
+const finite = (value: unknown) => typeof value === 'number' && Number.isFinite(value);
+const isSides = (value: unknown) => {
+  const sides = value as DesignSides;
+  return !!sides && finite(sides.top) && finite(sides.right) && finite(sides.bottom) && finite(sides.left);
+};
+/** The frame is sandboxed but not trusted, so every measurement is checked before the overlay positions on it. */
+function isDesignNode(value: unknown): value is DesignNode {
+  const node = value as DesignNode;
+  if (!node || typeof node !== 'object') return false;
+  if (typeof node.nodeId !== 'string' || !node.nodeId || node.nodeId.length > 64) return false;
+  if (typeof node.tag !== 'string' || node.tag.length > 32) return false;
+  const rect = node.rect;
+  if (!rect || !finite(rect.x) || !finite(rect.y) || !finite(rect.width) || !finite(rect.height)) return false;
+  if (!isSides(node.padding) || !isSides(node.margin) || !isSides(node.border)) return false;
+  return finite(node.step) && node.step > 0 && typeof node.editable === 'boolean' && Number.isSafeInteger(node.count);
+}
+
 /** Host-derived frames are never trusted from the wire. */
 export interface ResolvedPreviewEvent extends PreviewEvent { frames?: RuntimeStackFrame[] }
 export function isPreviewEvent(value: unknown, channel: string, build: number): value is PreviewEvent {
   if (!value || typeof value !== 'object') return false;
   const event = value as PreviewEvent;
   if (event.version !== 1 || event.channel !== channel || event.build !== build) return false;
-  if (event.type === 'ready' || event.type === 'reload-required') return true;
+  if (event.type === 'ready' || event.type === 'reload-required' || event.type === 'design-out') return true;
+  if (event.type === 'design-hover' || event.type === 'design-select') return isDesignNode(event.node);
+  if (event.type === 'design-text-change') return typeof event.nodeId === 'string' && event.nodeId.length <= 64 &&
+    typeof event.text === 'string' && event.text.length <= 4000;
   if (event.type === 'rendered') return event.update === undefined || event.update === 'reload' || event.update === 'hot';
   if (event.type === 'module-manifest') return Array.isArray(event.modules) && event.modules.length <= 1000 &&
     event.modules.every(module => module && typeof module.id === 'string' && module.id.length <= 2048 &&
@@ -51,6 +92,8 @@ export class Preview {
   private updates = 0;
   private waiting = false;
   private accepting = false;
+  private tokens = '';
+  private designing = false;
   constructor(private iframe: HTMLIFrameElement, private onEvent: (event: ResolvedPreviewEvent) => void, private theme: Theme = 'dark', private hostedURL?: string) {
     iframe.setAttribute('sandbox', 'allow-scripts');
     iframe.referrerPolicy = 'no-referrer';
@@ -77,6 +120,8 @@ export class Preview {
     if (event.data.type === 'ready' && this.result) {
       this.waiting = false;
       this.setTheme(this.theme);
+      if (this.tokens) this.setTokens(this.tokens);
+      if (this.designing) this.setDesigning(true);
       this.iframe.contentWindow?.postMessage({ version: 1, channel: this.channel, build: this.build, type: 'load', modules: this.result.modules, entry: this.result.entry }, '*');
     }
     if (event.data.type === 'rendered' || event.data.type === 'runtime-error') {
@@ -121,6 +166,29 @@ export class Preview {
         message: this.hostedURL ? 'Hosted preview did not start. Check the configured endpoint and reload, or choose Local preview.' : 'Preview did not start. Reload to try again.' });
     }, 10000);
   }
+  /** Turns the frame's inspector on or off; re-sent after every load so a rebuild stays in Design Mode. */
+  setDesigning(enabled: boolean) {
+    this.designing = enabled;
+    this.post({ type: 'design', enabled });
+  }
+
+  /** Applies a class list straight to the node in the frame, for the length of a drag. */
+  applyDesignStyle(nodeId: string, className: string) { this.post({ type: 'design-style', nodeId, className }); }
+
+  measureNode(nodeId: string) { this.post({ type: 'design-measure', nodeId }); }
+
+  editText(nodeId: string, editing: boolean) { this.post({ type: 'design-text', nodeId, editing }); }
+
+  private post(fields: Record<string, unknown>) {
+    this.iframe.contentWindow?.postMessage({ version: 1, channel: this.channel, ...fields }, '*');
+  }
+
+  /** The theme's custom properties, re-sent after every load so a rebuilt page keeps its palette. */
+  setTokens(css: string) {
+    this.tokens = css;
+    this.iframe.contentWindow?.postMessage({ version: 1, channel: this.channel, type: 'tokens', css }, '*');
+  }
+
   setTheme(theme: Theme) {
     this.theme = theme;
     this.iframe.contentWindow?.postMessage({ version: 1, channel: this.channel, type: 'theme', theme }, '*');

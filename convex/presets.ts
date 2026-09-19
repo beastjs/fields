@@ -303,3 +303,29 @@ export const seedRecipes = internalMutation({
     return { inserted, updated }
   }
 })
+
+export const seedThemes = internalMutation({
+  args: {
+    themes: v.array(v.object({
+      themeId: v.string(),
+      name: v.string(),
+      description: v.string(),
+      tokens: themeTokensValidator,
+      dark: v.optional(themeTokensValidator)
+    }))
+  },
+  returns: v.object({ inserted: v.number(), updated: v.number() }),
+  handler: async (ctx, args) => {
+    const now = Date.now()
+    let inserted = 0
+    let updated = 0
+    for (const theme of args.themes) {
+      const fields = { ...theme, status: 'published' as const, updatedAt: now }
+      const existing = await ctx.db.query('themes').withIndex('by_themeId', q => q.eq('themeId', theme.themeId)).unique()
+      if (existing && existing.teamId) throw new ConvexError(`"${theme.themeId}" is owned by a team.`)
+      if (existing) { await ctx.db.patch(existing._id, fields); updated++ }
+      else { await ctx.db.insert('themes', { ...fields, createdAt: now }); inserted++ }
+    }
+    return { inserted, updated }
+  }
+})

@@ -3,8 +3,9 @@ import { MAX_REFERENCE_CHARS, MAX_REFERENCES } from '../src/chat/contracts';
 import { chatReferences, relatedFiles } from '../src/chat/project-context';
 import { helloWorld } from '../src/playground/examples';
 import { addSection, planPageInstall } from '../src/playground/studio/page';
+import { builtInPresets } from './built-in-presets';
 
-const withPage = { ...helloWorld, files: { ...helloWorld.files, ...planPageInstall(helloWorld, addSection([], 'topbar-marketing').blocks).files } };
+const withPage = { ...helloWorld, files: { ...helloWorld.files, ...planPageInstall(helloWorld, addSection([], 'topbar-marketing', builtInPresets).blocks, builtInPresets).files } };
 
 test('related files are the active file imports and importers, including newly added components', () => {
   expect(relatedFiles(withPage, '/src/App.btsx').sort()).toEqual(['/src/Page.btsx', '/src/main.ts']);

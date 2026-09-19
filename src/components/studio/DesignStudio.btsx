@@ -3,9 +3,21 @@ import { Icon, type IconName } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { useTheme } from '../theme/theme-context'
 import type { SessionProps } from '../types'
-import { pageRecipes, sectionKind, sectionTemplate } from '../../playground/studio/catalog'
-import type { PageRecipe, SectionKindId } from '../../playground/studio/catalog'
-import { addSection, blockSource, composePage, PAGE_FILE, pagePreviewProject, planPageInstall, readPage, recipeBlocks, samePage, sectionFile, swapTemplate } from '../../playground/studio/page'
+import { api } from '../../../convex/_generated/api'
+import { useConvexQuery } from '@/hooks/use-convex-query'
+import { sectionKind } from '../../playground/studio/kinds'
+import { presetsFor } from '../../playground/studio/presets'
+import type { PresetRecipe } from '../../playground/studio/presets'
+import type { SectionKindId } from '../../playground/studio/types'
+import { addSection, blockDocument, blockSource, composePage, PAGE_FILE, pagePresetIds, pagePreviewProject, planPageInstall, readNodeId, readPage, recipeBlocks, samePage, sectionFile, swapPreset } from '../../playground/studio/page'
+import { clearNodeOverride, mergeStyle, overrideCount, setNodeOverride } from '../../playground/studio/ir/overrides'
+import { nodeIndex } from '../../playground/studio/ir/render'
+import { toClasses } from '../../playground/studio/ir/classes'
+import type { Style } from '../../playground/studio/ir/types'
+import type { DesignNode } from '../../playground/preview'
+import DesignOverlay, { type DesignEdit } from './DesignOverlay.btsx'
+import { INHERIT_THEME, themeById, themeCss } from '../../playground/studio/themes'
+import type { ThemeDocument } from '../../playground/studio/themes'
 import type { PageBlock } from '../../playground/studio/page'
 import { TemplatePreview, type TemplatePreviewStatus } from '../../playground/template-preview'
 import { dialogPanel, eyebrowLabel, iconButton, primaryButton, secondaryButton } from '../ui/styles'
@@ -45,29 +57,62 @@ setup
   const [codeFile, setCodeFile] = useState<'section' | 'page'>('section');
   const [status, setStatus] = useState<TemplatePreviewStatus>({ state: 'compiling' });
   const [copied, setCopied] = useState(false);
+  const [themeId, setThemeId] = useState<string>(INHERIT_THEME.themeId);
+  const [designing, setDesigning] = useState(false);
+  const [hoveredNode, setHoveredNode] = useState<DesignNode | undefined>(undefined);
+  const [selectedNode, setSelectedNode] = useState<DesignNode | undefined>(undefined);
+  // The edit in flight during a drag, committed to the document on release.
+  const pendingEdit = useRef<{ name: string; nodeId: string; patch: Style } | undefined>(undefined);
 
+  // Presets live in Convex. Summaries drive the library; trees are fetched only for what this page references,
+  // including what the project was last composed from, so the install can tell an edited file from an untouched one.
+  const catalog = useConvexQuery(api.presets.catalog, open ? {} : 'skip');
+  const recipeRows = useConvexQuery(api.presets.recipes, open ? {} : 'skip');
+  // The page's marker names its presets, so what to fetch is known before anything has loaded.
+  const needed = [...new Set([...blocks.flatMap(block => (block.presetId ? [block.presetId] : [])), ...(open ? pagePresetIds(state.project) : [])])].sort();
+  const documentRows = useConvexQuery(api.presets.documents, open && needed.length ? { presetIds: needed } : 'skip');
+  const presets = presetsFor(catalog, documentRows);
   // Only diff against the project while the studio is open; the session changes on every keystroke.
-  const saved = open ? readPage(state.project) : [];
+  const saved = open ? readPage(state.project, presets) : [];
+  const recipes: PresetRecipe[] = recipeRows ?? [];
+  const themeRows = useConvexQuery(api.presets.themes, open ? {} : 'skip');
+  // A theme is only custom properties, so the whole list is small enough to hold and switching costs no rebuild.
+  const themes: ThemeDocument[] = [INHERIT_THEME, ...(themeRows ?? [])];
+  const pageTheme = themeById(themes, themeId);
+  const catalogLoading = open && catalog === undefined;
+  // Composing and installing need every referenced tree in hand; until then the studio waits rather than
+  // writing a page with sections missing.
+  const ready = open && presets.loaded(needed);
+
   const dirty = open && !samePage(blocks, saved);
-  const install = open && blocks.length ? planPageInstall(state.project, blocks) : undefined;
+  const install = ready && blocks.length ? planPageInstall(state.project, blocks, presets, pageTheme) : undefined;
   const upToDate = install !== undefined && Object.keys(install.files).length === 0 && install.removes.length === 0;
   const focused = blocks.find(block => block.name === selected) ?? blocks[0];
-  const code = !focused ? '' : codeFile === 'page' ? composePage(blocks) : blockSource(state.project, focused);
+  const code = !focused ? '' : codeFile === 'page' ? composePage(blocks) : blockSource(state.project, focused, presets);
   const codePath = !focused ? '' : codeFile === 'page' ? PAGE_FILE : sectionFile(focused.name);
   const width = devices.find(candidate => candidate.id === device)!.width;
   const scale = stageSize.width ? Math.min(1, stageSize.width / width) : 1;
-  const frameStyle = stageSize.height ? { width: width + 'px', height: stageSize.height / scale + 'px', transform: 'scale(' + scale + ')' } : { width: '100%', height: '100%' };
+  // An identity transform would still promote the frame to its own layer, so it is left off at 100%.
+  const frameStyle = stageSize.height
+    ? { width: width + 'px', height: stageSize.height / scale + 'px', ...(scale === 1 ? {} : { transform: 'scale(' + scale + ')' }) }
+    : { width: '100%', height: '100%' };
   const frameClass = 'absolute top-0 left-0 m-0 origin-top-left rounded-[6px] border border-edge shadow-elevation data-[front=false]:pointer-events-none data-[front=false]:opacity-0';
   const targetOf = (kind: SectionKindId) => (focused?.kind === kind ? focused : blocks.find(block => block.kind === kind));
+  const designLabel = (block: PageBlock) => (block.presetId === undefined ? undefined : presets.summary(block.presetId)?.title) ?? 'Edited in code';
 
+  const editedNodes = blocks.reduce((total, block) => total + overrideCount(block.overrides), 0);
+  const clearDesign = () => setBlocks(blocks.map(block => ({ ...block, overrides: undefined })));
   const sectionWrites = install ? Object.keys(install.files).filter(path => path.startsWith('/src/sections/')).length : 0;
   const cleanups = install ? install.removes.filter(path => path.startsWith('/src/sections/')).length : 0;
-  const installNote = !blocks.length ? 'Add sections from the library or start from a recipe. Nothing changes in your project until you add the page.'
+  const installNote = !ready && blocks.length ? 'Loading the sections this page uses…'
+    : !blocks.length ? 'Add sections from the library or start from a recipe. Nothing changes in your project until you add the page.'
     : upToDate ? 'Your project already has this page. Edit the sections in code, or change the page here.'
     : [
       install?.replacesStarter ? 'Replaces the starter app with your page.' : saved.length ? 'Updates Page.btsx.' : 'Adds Page.btsx and renders it at the top of App.btsx.',
       sectionWrites ? `Writes ${plural(sectionWrites, 'section file')} to src/sections.` : '',
       cleanups ? `Removes ${plural(cleanups, 'unused section')}.` : '',
+      pageTheme.themeId === INHERIT_THEME.themeId ? '' : `Writes the ${pageTheme.name} theme into your stylesheet.`,
+      editedNodes ? `Includes ${plural(editedNodes, 'Design Mode edit')}.` : '',
       install?.rendered === false ? 'App.btsx could not be updated automatically, so import Page and render it where it belongs.' : ''
     ].filter(Boolean).join(' ');
   const overwriteNote = install?.overwrites.length ? `Replaces your edits to ${install.overwrites.map(fileLabel).join(', ')}.` : '';
@@ -87,17 +132,21 @@ setup
     setBlocks(next);
     if (focus) { setSelected(focus); pendingReveal.current = { name: focus, highlight: true }; }
   };
-  const addAnother = (templateId: string) => {
-    const target = targetOf(sectionTemplate(templateId)!.kind);
+  const addAnother = (presetId: string) => {
+    const summary = presets.summary(presetId);
+    if (!summary) return;
+    const target = targetOf(summary.kind);
     const at = target ? blocks.findIndex(block => block.name === target.name) + 1 : undefined;
-    const added = addSection(blocks, templateId, at);
+    const added = addSection(blocks, presetId, presets, at);
     change(added.blocks, added.name);
   };
-  const chooseDesign = (templateId: string) => {
-    const target = targetOf(sectionTemplate(templateId)!.kind);
-    if (!target) return addAnother(templateId);
-    if (target.templateId === templateId) return select(target.name);
-    change(swapTemplate(blocks, target.name, templateId), target.name);
+  const chooseDesign = (presetId: string) => {
+    const summary = presets.summary(presetId);
+    if (!summary) return;
+    const target = targetOf(summary.kind);
+    if (!target) return addAnother(presetId);
+    if (target.presetId === presetId) return select(target.name);
+    change(swapPreset(blocks, target.name, presetId), target.name);
   };
   const remove = (name: string) => {
     const index = blocks.findIndex(block => block.name === name);
@@ -108,15 +157,77 @@ setup
     // Removing a section reloads the preview; land back where the section was.
     if (neighbor) pendingReveal.current = { name: neighbor, highlight: false };
   };
-  const startRecipe = (recipe: PageRecipe) => {
-    const next = recipeBlocks(recipe);
+  // A stamped id carries the block it came from, so clicking a node in any section edits that section.
+  const targetNode = selectedNode && readNodeId(selectedNode.nodeId);
+  const targetBlock = targetNode && blocks.find(block => block.name === targetNode.name);
+  const styleOf = () => {
+    if (!targetBlock || !targetNode) return undefined;
+    const document = blockDocument(state.project, targetBlock, presets);
+    const node = document && nodeIndex(document).get(targetNode.nodeId);
+    return node?.type === 'element' ? node.style : undefined;
+  };
+  const patchOf = (edits: DesignEdit[]): Style => {
+    const style: Style = {};
+    for (const edit of edits) {
+      // Spacing stays in the theme's steps; a dimension is an explicit pixel value.
+      if (edit.group === 'spacing') (style.spacing ??= {} as Record<string, number>)[edit.field] = edit.value;
+      else (style.size ??= {} as Record<string, string>)[edit.field] = `[${edit.value}px]`;
+    }
+    return style;
+  };
+  const applyEdit = (edits: DesignEdit[], live: boolean) => {
+    if (!targetNode || !targetBlock || !selectedNode) return;
+    if (live) {
+      const patch = patchOf(edits);
+      pendingEdit.current = { name: targetNode.name, nodeId: targetNode.nodeId, patch };
+      // Straight to the frame so the drag reads at pointer speed; the document catches up on release.
+      preview.current?.applyDesignStyle(selectedNode.nodeId, toClasses(mergeStyle(styleOf(), patch)));
+      return;
+    }
+    const pending = pendingEdit.current;
+    pendingEdit.current = undefined;
+    if (!pending) return;
+    setBlocks(blocks.map(block => (block.name === pending.name
+      ? { ...block, overrides: setNodeOverride(block.overrides, pending.nodeId, { style: pending.patch }) }
+      : block)));
+  };
+  const resetNode = () => {
+    if (!targetNode) return;
+    setBlocks(blocks.map(block => (block.name === targetNode.name
+      ? { ...block, overrides: clearNodeOverride(block.overrides, targetNode.nodeId) }
+      : block)));
+  };
+  const receiveDesign = (event: { type: string; node?: DesignNode; nodeId?: string; text?: string }) => {
+    if (event.type === 'hover') setHoveredNode(event.node);
+    else if (event.type === 'out') setHoveredNode(undefined);
+    else if (event.type === 'select') {
+      setSelectedNode(event.node);
+      // Follow the selection in the outline and the library, so the panels agree with the preview.
+      const owner = event.node && readNodeId(event.node.nodeId);
+      if (owner && owner.name !== selected) setSelected(owner.name);
+    } else if (event.type === 'text' && event.nodeId) {
+      const owner = readNodeId(event.nodeId);
+      if (!owner) return;
+      setBlocks(current => current.map(block => (block.name === owner.name
+        ? { ...block, overrides: setNodeOverride(block.overrides, owner.nodeId, { text: [{ kind: 'literal', value: event.text ?? '' }] }) }
+        : block)));
+    }
+  };
+  const toggleDesigning = () => {
+    const next = !designing;
+    setDesigning(next);
+    if (!next) { setSelectedNode(undefined); setHoveredNode(undefined); }
+  };
+
+  const startRecipe = (recipe: PresetRecipe) => {
+    const next = recipeBlocks(recipe.presetIds, presets);
     change(next, next[0]?.name);
     setOpenKind(next[0]?.kind);
   };
   const discard = () => { setBlocks(saved); setSelected(saved[0]?.name); };
 
   const show = () => {
-    const page = readPage(state.project);
+    const page = readPage(state.project, presets);
     setBlocks(page);
     setSelected(page[0]?.name);
     setOpenKind(page[0]?.kind ?? 'topbar');
@@ -150,21 +261,24 @@ setup
     if (!open || !frame.current || !standby.current) return;
     const instance = new TemplatePreview([frame.current, standby.current], theme, () => new Worker(new URL('../../playground/compiler.worker.ts', import.meta.url), { type: 'module' }), setStatus, 'Page preview');
     instance.hot = true;
+    instance.onDesign = receiveDesign;
     preview.current = instance;
     return () => { instance.dispose(); preview.current = null; };
   }, [open]);
   // Rebuild shortly after the page settles, so a drag or a burst of clicks compiles once.
   useEffect(() => {
-    if (!open || !blocks.length) return;
+    if (!open || !blocks.length || !ready) return;
     setStatus({ state: 'compiling' });
     const timer = setTimeout(() => {
       const focus = pendingReveal.current;
       pendingReveal.current = undefined;
       const index = focus === undefined ? -1 : blocks.findIndex(block => block.name === focus.name);
-      preview.current?.show(pagePreviewProject(state.project, blocks), index >= 0 ? { selector: blockSelector(index), highlight: focus!.highlight } : undefined);
+      const built = pagePreviewProject(state.project, blocks, presets, designing);
+      console.info('[studio-debug]', JSON.stringify(Object.fromEntries(Object.entries(built.files).map(([k, v]) => [k, v.length]))), 'ready=' + ready, 'designing=' + designing);
+      preview.current?.show(built, index >= 0 ? { selector: blockSelector(index), highlight: focus!.highlight } : undefined);
     }, 140);
     return () => clearTimeout(timer);
-  }, [open, blocks]);
+  }, [open, blocks, ready, designing]);
   useEffect(() => {
     if (!open || !stage.current) return;
     const observer = new ResizeObserver(([entry]) => {
@@ -175,6 +289,10 @@ setup
     return () => observer.disconnect();
   }, [open]);
   useEffect(() => { preview.current?.setTheme(theme); }, [theme]);
+  useEffect(() => { preview.current?.setTokens(themeCss(pageTheme)); }, [open, themeId, themeRows]);
+  useEffect(() => { preview.current?.setDesigning(designing); }, [open, designing]);
+  // The preview must carry `data-node` to be inspectable, so entering or leaving Design Mode rebuilds it once.
+  useEffect(() => { if (open && blocks.length) setStatus({ state: 'compiling' }); }, [designing]);
   useEffect(() => { setCopied(false); }, [code]);
 
 button(className='bg-background dark:bg-muted/50 hover:dark:bg-muted py-1.5 px-3 rounded-2xl transition-colors duration-180 ease-out' type='button' title={compact ? 'Open Design Studio' : undefined} onClick={event => { event.currentTarget.focus(); show(); }})
@@ -183,14 +301,33 @@ button(className='bg-background dark:bg-muted/50 hover:dark:bg-muted py-1.5 px-3
     if !compact
       span(className='font-sans text-muted-foreground text-sm -tracking-[0.02em] truncate capitalize') Design Studio
 dialog(className={cn(dialogPanel, 'h-[min(920px,calc(100dvh-24px))] w-[min(1440px,calc(100vw-24px))] max-h-none overflow-hidden p-0 open:grid grid-rows-[auto_minmax(0,1fr)_auto] light:rounded-2xl')} ref={dialog} aria-labelledby='design-studio-title')
-  header(className='flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-edge-strong px-5 py-3')
-    div(className='min-w-0')
-      span(className={eyebrowLabel}) WEB APP
+  header(className='flex flex-wrap items-center justify-between gap-x-6 border-b border-edge-strong px-5 py-3')
+    div(className='min-w-0 -space-y-1.5')
       div(className='flex flex-wrap items-baseline gap-x-3')
-        h2#design-studio-title(className='text-[19px] font-medium tracking-[-0.4px]') Design Studio
-        p(className='text-[11px] text-dim') Compose a page from ready-made sections, then add it to your project.
+        h2#design-studio-title(className='text-xl font-medium tracking-[-0.4px]') Design Studio
+      span(className='font-serif script text-brand text-sm') for web apps
     div(className='flex items-center gap-2')
       span(className='hidden font-code text-[10px] text-faint sm:inline' title='Preview width and zoom') #{width}px · #{Math.round(scale * 100)}%
+      button(
+        ~ type='button'
+        ~ aria-pressed={designing}
+        ~ disabled={!blocks.length || view === 'code'}
+        ~ title='Hover the preview to inspect a section, then drag its padding, margin or size'
+        ~ className='flex items-center gap-1.5 rounded-[6px] border border-edge px-2 py-1 text-[10px] text-dim transition-colors hover:text-fg disabled:opacity-40 aria-pressed:border-brand aria-pressed:bg-brand/15 aria-pressed:text-fg'
+        ~ onClick={toggleDesigning}
+        ~ )
+        Icon(name='layout' className='size-3' )
+        span Design Mode
+      label(className='flex items-center gap-1.5 text-[10px] text-dim')
+        span(className='sr-only') Theme
+        select(
+          ~ className='rounded-[6px] border border-edge bg-inset px-2 py-1 text-[11px] text-fg outline-none focus-visible:border-brand'
+          ~ value={themeId}
+          ~ title={pageTheme.description}
+          ~ onChange={event => setThemeId(event.currentTarget.value)}
+          ~ )
+          each option in themes key option.themeId
+            option(value={option.themeId}) #{option.name}
       div(className='flex gap-0.5 rounded-[6px] border border-edge bg-inset p-0.5' role='radiogroup' aria-label='Preview size')
         each option in devices key option.id
           button(
@@ -199,7 +336,7 @@ dialog(className={cn(dialogPanel, 'h-[min(920px,calc(100dvh-24px))] w-[min(1440p
             ~ aria-checked={device === option.id}
             ~ aria-label={option.label}
             ~ title={option.label}
-            ~ className='flex size-7 items-center justify-center rounded-[4px] text-dim hover:text-fg aria-checked:bg-control aria-checked:text-fg aria-checked:shadow-xs'
+            ~ className='flex size-7 items-center justify-center rounded-[4px] text-dim hover:text-fg aria-checked:bg-control aria-checked:text-brand aria-checked:shadow-xs'
             ~ onClick={() => setDevice(option.id)}
             ~ )
             Icon(name={option.icon} className='size-3.5')
@@ -207,7 +344,7 @@ dialog(className={cn(dialogPanel, 'h-[min(920px,calc(100dvh-24px))] w-[min(1440p
 
   div(className='grid min-h-0 grid-cols-[300px_minmax(0,1fr)_252px] max-[1180px]:grid-cols-[280px_minmax(0,1fr)] max-[1180px]:grid-rows-[minmax(0,1fr)_minmax(0,42%)] max-[760px]:flex max-[760px]:flex-col max-[760px]:overflow-auto')
     aside(className='flex min-h-0 flex-col border-r border-edge bg-panel-deep max-[1180px]:row-start-1 max-[760px]:order-2 max-[760px]:h-[70dvh] max-[760px]:shrink-0 max-[760px]:border-r-0 max-[760px]:border-b' aria-label='Section library')
-      SectionLibrary(blocks={blocks} targetOf={targetOf} openKind={openKind} onOpenKind={setOpenKind} onUse={chooseDesign} onAdd={addAnother})
+      SectionLibrary(blocks={blocks} presets={presets} targetOf={targetOf} openKind={openKind} onOpenKind={setOpenKind} onUse={chooseDesign} onAdd={addAnother})
     main(className='flex min-h-0 min-w-0 flex-col bg-canvas max-[1180px]:col-start-2 max-[1180px]:row-span-2 max-[1180px]:row-start-1 max-[760px]:order-3 max-[760px]:h-[80dvh] max-[760px]:shrink-0')
       div(className='flex items-center justify-between gap-3 border-b border-edge bg-surface-toolbar px-2.5 py-1.5')
         div(className='flex gap-0.5' role='tablist' aria-label='Studio view')
@@ -221,36 +358,54 @@ dialog(className={cn(dialogPanel, 'h-[min(920px,calc(100dvh-24px))] w-[min(1440p
             button(className='shrink-0 rounded-[4px] px-2 py-1 text-[10px] text-fg-secondary hover:bg-control hover:text-fg' type='button' onClick={copyCode}) #{copied ? 'Copied ✓' : 'Copy'}
         else
           span(className='min-w-0 truncate font-code text-[10px] text-faint data-[state=error]:text-warning' role='status' data-state={blocks.length ? status.state : 'idle'})
-            | #{!blocks.length ? 'Empty page' : status.state === 'compiling' ? 'Building preview…' : status.state === 'error' ? status.message : focused ? sectionKind(focused.kind).label + ' · ' + (focused.templateId ? sectionTemplate(focused.templateId)?.title : 'Edited in code') : ''}
+            | #{!blocks.length ? (catalogLoading ? 'Loading sections…' : 'Empty page') : !ready ? 'Loading sections…' : status.state === 'compiling' ? 'Building preview…' : status.state === 'error' ? status.message : focused ? sectionKind(focused.kind).label + ' · ' + designLabel(focused) : ''}
       div(className='relative min-h-0 flex-1')
         div(className='absolute inset-3' ref={stage} hidden={view !== 'preview'})
           div(className='relative mx-auto h-full transition-[width] duration-300 ease-out' style={{ width: stageSize.width ? width * scale + 'px' : '100%' }})
             iframe(ref={frame} style={frameStyle} className={frameClass})
             iframe(ref={standby} style={frameStyle} className={frameClass})
+            if designing && ready
+              DesignOverlay(
+                ~ selected={selectedNode}
+                ~ hovered={hoveredNode}
+                ~ scale={scale}
+                ~ edited={!!targetNode && !!targetBlock?.overrides?.[targetNode.nodeId]}
+                ~ onEdit={applyEdit}
+                ~ onEditText={() => selectedNode && preview.current?.editText(selectedNode.nodeId, true)}
+                ~ onReset={resetNode}
+                ~ onDismiss={() => setSelectedNode(undefined)}
+                ~ )
           if !blocks.length
             div(className='absolute inset-0 flex flex-col items-center justify-center gap-5 rounded-[6px] border border-dashed border-edge-strong bg-canvas p-6 text-center')
               Icon(name='design' className='size-7 text-brand')
               div
                 p(className='text-[15px] font-medium text-fg') Start with a recipe, or pick sections one by one
                 p(className='mt-1 text-[11px] text-dim') Every section is a real Beast component styled with Tailwind, and it follows your theme.
-              div(className='grid w-full max-w-2xl gap-2 sm:grid-cols-2')
-                each recipe in pageRecipes key recipe.id
-                  button(type='button' className='grid gap-1 rounded-[6px] border border-edge bg-surface-recessed p-3 text-left hover:border-brand hover:bg-surface-hover' onClick={() => startRecipe(recipe)})
-                    span(className='flex items-baseline justify-between gap-2')
-                      span(className='text-[12px] text-fg') #{recipe.title}
-                      span(className='font-code text-[9px] text-faint') #{plural(recipe.templates.length, 'section')}
-                    span(className='text-[10px] leading-[1.5] text-dim') #{recipe.description}
+              if catalogLoading
+                p(className='text-[11px] text-dim' role='status') Loading the section catalog…
+              else
+                div(className='grid w-full max-w-2xl gap-2 sm:grid-cols-2')
+                  each recipe in recipes key recipe.recipeId
+                    button(type='button' className='grid gap-1 rounded-[6px] border border-edge bg-surface-recessed p-3 text-left hover:border-brand hover:bg-surface-hover' onClick={() => startRecipe(recipe)})
+                      span(className='flex items-baseline justify-between gap-2')
+                        span(className='text-[12px] text-fg') #{recipe.title}
+                        span(className='font-code text-[9px] text-faint') #{plural(recipe.presetIds.length, 'section')}
+                      span(className='text-[10px] leading-[1.5] text-dim') #{recipe.description}
+                  empty
+                    p(className='text-[11px] text-dim' role='status') No recipes are published yet.
         if view === 'code'
           pre(className='absolute inset-0 m-0 overflow-auto bg-inset p-4 font-code text-[11px]/[1.75] text-fg-secondary' aria-label={fileLabel(codePath)}) #{code}
     aside(className='flex min-h-0 flex-col border-l border-edge bg-panel-deep max-[1180px]:col-start-1 max-[1180px]:row-start-2 max-[1180px]:border-t max-[1180px]:border-l-0 max-[1180px]:border-r max-[760px]:order-1 max-[760px]:max-h-[45dvh] max-[760px]:shrink-0 max-[760px]:border-r-0 max-[760px]:border-b' aria-label='Page outline')
-      PageOutline(blocks={blocks} selected={focused?.name} onSelect={select} onReorder={next => setBlocks(next)} onRemove={remove} onRecipe={startRecipe})
+      PageOutline(blocks={blocks} presets={presets} recipes={recipes} selected={focused?.name} onSelect={select} onReorder={next => setBlocks(next)} onRemove={remove} onRecipe={startRecipe})
 
   footer(className='flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-t border-edge-strong px-5 py-3')
     p(className='min-w-0 flex-1 basis-80 text-[11px] leading-[1.6] text-dim' role='status')
       span #{installNote}
       if overwriteNote
         span(className='ml-1 text-warning') #{overwriteNote}
-    div(className='flex shrink-0 gap-[7px]')
+    div(className='flex shrink-0 items-center gap-[7px]')
+      if editedNodes
+        button(className='rounded-[5px] px-2 py-1 text-[10px] text-warning hover:bg-control' type='button' title='Drop every Design Mode edit and go back to the presets' onClick={clearDesign}) Reset #{plural(editedNodes, 'edit')}
       if dirty && saved.length
         button(className={secondaryButton} type='button' onClick={discard}) Discard changes
       else

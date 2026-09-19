@@ -12,6 +12,11 @@ import type { AttrValue, Node, PresetDocument, TextPart } from './types'
 export interface RenderOptions {
   /** Stamp `data-node` on every element so the preview can be inspected. */
   inspectable?: boolean
+  /**
+   * Namespaces the stamped ids. Node ids are unique within a preset but not across a page, so without this the
+   * same id names a node in every section and an edit would reach all of them.
+   */
+  nodePrefix?: string
 }
 
 const INDENT = '  '
@@ -54,7 +59,9 @@ function nodeLines(node: Node, depth: number, options: RenderOptions): string[] 
 
   const attrs: string[] = []
   // `data-node` goes first so a hand-edited attribute list stays recognisable next to the installed file.
-  if (options.inspectable && node.type === 'element') attrs.push(`data-node='${node.id}'`)
+  if (options.inspectable && node.type === 'element') {
+    attrs.push(`data-node='${options.nodePrefix ? `${options.nodePrefix}:` : ''}${node.id}'`)
+  }
   let placed = false
   for (const [name, value] of Object.entries(node.attrs ?? {})) {
     if (value.kind !== 'style') { attrs.push(attrText(name, value)); continue }
