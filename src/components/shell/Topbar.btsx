@@ -1,5 +1,5 @@
 import type { api } from '../../../convex/_generated/api'
-import { useEffect, useSyncExternalStore } from 'octane'
+import { useEffect, useState, useSyncExternalStore } from 'octane'
 import { useConvexAuth } from '@/hooks/use-convex'
 import { useConvexQuery } from '@/hooks/use-convex-query'
 import type { WorkspaceProps } from '../types'
@@ -11,6 +11,8 @@ import { Icon, IconName } from '@/lib/icons'
 import { useTheme } from '../theme/theme-context'
 import Switcher from '../ui/switcher.btsx'
 import DesignStudio from "../studio/DesignStudio.btsx";
+import ProjectSharing from "./ProjectSharing.btsx";
+import { signInWithGoogle } from '@/lib/firebase/auth';
 
 module
   interface TopbarProps extends WorkspaceProps {
@@ -47,6 +49,15 @@ setup
       : 'skip',
     'topbar-projects'
   );
+  const [isSigningIn, setIsSigningIn] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const signIn = async () => {
+    setIsSigningIn(true);
+    setAuthError(null);
+    try { await signInWithGoogle(); }
+    catch (error) { setAuthError(error instanceof Error ? error.message : 'Authentication failed.'); }
+    finally { setIsSigningIn(false); }
+  };
   const teams = teamsResult?.page.filter(({ team }) => team.archivedAt === undefined) ?? [];
   const projects = projectsResult?.page.filter(project => project.archivedAt === undefined) ?? [];
   const teamItems = teams.map(({ team }) => ({ id: team._id, icon: 'account' as IconName, label: team.name }));
@@ -99,18 +110,19 @@ setup
 div
   header(className='grid min-h-[54px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center justify-between gap-6 px-3 border-b border-seam bg-seam max-[1200px]:grid-cols-[minmax(0,1fr)_auto] max-[1200px]:gap-x-1 max-[1200px]:gap-y-0 max-[1200px]:pt-2 max-[760px]:gap-x-1.5 max-[760px]:px-2.5')
     div(className='flex min-w-0 items-center gap-1')
-      a(id='brand' className='mr-1 flex shrink-0 items-center text-inherit no-underline' href='/' aria-label='logo')
-        img(className='opacity-65 invert light:invert-0' src='/beast.svg' alt='' width='20' height='20')
+      a(id='brand' className='flex shrink-0 items-center text-inherit no-underline' href='/' aria-label='logo')
+        Icon(name='beast' className='opacity-65 size-6')
       Icon(name='chevron-down-tiny' className='size-3 opacity-60 -rotate-45')
       Switcher(
         ~  items={teamItems}
-        ~  title='Teams'
+        ~  title={auth.isAuthenticated ? 'Teams' : 'Account'}
         ~  activeId={cloudState.activeTeamId}
         ~  emptyLabel={auth.isAuthenticated ? 'Workspace' : 'Sign in'}
-        ~  busy={auth.isLoading || (auth.isAuthenticated && teamsResult === undefined)}
-        ~  createLabel={auth.isAuthenticated ? 'Create team' : undefined}
+        ~  busy={auth.isLoading || isSigningIn}
+        ~  createLabel={auth.isAuthenticated ? 'Create team' : 'Sign in with Google'}
+        ~  createLabelIcon={auth.isAuthenticated ? 'plus' : 'goog'}
         ~  onSelect={chooseTeam}
-        ~  onCreate={auth.isAuthenticated ? createTeam : undefined}
+        ~  onCreate={auth.isAuthenticated ? createTeam : signIn}
         ~ )
       Icon(name='slice' className='size-3 opacity-70 -rotate-6')
       Switcher(
@@ -127,11 +139,9 @@ div
     ViewToolbar(session={session} layout={layout} toggleArrangement={toggleArrangement})
     div(className='flex shrink-0 items-center justify-self-end gap-4 max-[760px]:gap-0.5')
       DesignStudio(session={session})
-      // ProjectSharing(session={session})
-      button(className='text-muted-foreground hover:text-foreground' type='button' aria-label='Light mode' aria-pressed={theme === 'light'} title={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'} onClick={toggleTheme})
-        Icon(name='share' className='size-4')
+      ProjectSharing(session={session})
       button(className='text-muted-foreground hover:text-accent light:hover:text-brand' type='button' aria-label='Light mode' aria-pressed={theme === 'light'} title={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'} onClick={toggleTheme})
         Icon(name='theme' className='size-4')
       button#run-build(className='text-muted-foreground hover:text-foreground' type='button' aria-label='Run project' onClick={session.run} title='Run project (⌘/Ctrl + Enter)')
         Icon(name='play' className='size-4')
-  p#save-notice(className='m-0 px-[22px] py-[9px] text-[11px] leading-[1.5] text-warning bg-[#30291e] border-b border-[#605031] [overflow-wrap:anywhere] light:bg-notice-surface light:text-notice light:border-notice-edge' role='status' hidden={!state.saveStatus.issue && !cloudState.error}) #{cloudState.error || state.saveStatus.issue}
+  p#save-notice(className='m-0 px-[22px] py-[9px] text-[11px] leading-[1.5] text-warning bg-[#30291e] border-b border-[#605031] [overflow-wrap:anywhere] light:bg-notice-surface light:text-notice light:border-notice-edge' role='status' hidden={!state.saveStatus.issue && !cloudState.error && !authError}) #{authError || cloudState.error || state.saveStatus.issue}

@@ -16,13 +16,14 @@ module
     emptyLabel: string
     busy?: boolean
     createLabel?: string
+    createLabelIcon?: IconName
     onSelect?: (item: SwitcherItem) => void
     onCreate?: () => void
     icon? IconName
   }
 
 component SwitcherRoot
-  props { items, title, activeId, emptyLabel, busy = false, createLabel, onSelect, onCreate, icon }: SwitcherProps
+  props { items, title, activeId, emptyLabel, busy = false, createLabel, createLabelIcon, onSelect, onCreate, icon }: SwitcherProps
   setup
     const activeItem = items.find(item => item.id === activeId) ?? items[0];
     const trigger = <Button/>;
@@ -38,20 +39,21 @@ component SwitcherRoot
     DropdownMenuContent(className="min-w-44 max-w-72 bg-background" align="start" side="bottom" sideOffset={4})
       DropdownMenuGroup
         DropdownMenuLabel(className="font-normal text-xs text-muted-foreground opacity-80") #{title}
-        DropdownMenuSeparator
+        if items.length
+          DropdownMenuSeparator
         each item in items key item.id
           DropdownMenuItem(onClick={() => onSelect?.(item)} disabled={item.id === activeItem?.id} className="gap-1 p-2 hover:bg-foreground/10!")
             div(className="flex size-6 items-center justify-center")
               Icon(name={item.icon} className='size-4')
             span(className='truncate pe-2') #{item.label}
         empty
-          DropdownMenuItem(disabled className='p-2 text-xs text-muted-foreground') #{emptyLabel}
+          DropdownMenuItem(disabled className='hidden p-2 text-xs text-muted-foreground') #{emptyLabel}
       if onCreate && createLabel
         DropdownMenuGroup
           DropdownMenuSeparator
-          DropdownMenuItem(onClick={onCreate} className="gap-2 p-2 text-muted-foreground hover:bg-muted-foreground/10! hover:text-accent")
+          DropdownMenuItem(onClick={onCreate} className="gap-1 p-2 text-muted-foreground hover:bg-muted-foreground/10! hover:text-accent")
             div(className="flex size-6 items-center justify-center rounded-md")
-              Icon(name='plus' className='size-3')
+              Icon(name={createLabelIcon ?? 'plus'} className='size-3.5')
             div(className="font-sans text-sm -tracking-[0.02em]") #{createLabel}
 
 props {...props}: SwitcherProps
