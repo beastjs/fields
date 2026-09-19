@@ -1,0 +1,27 @@
+import { Icon } from '@/lib/icons'
+import type { LandingActions } from './types'
+
+module
+  const reassurances = [
+    'Free — no card, no trial clock',
+    'Projects sync across your devices',
+    'Share a project with a link'
+  ]
+
+props { signIn, enter, isPending }: LandingActions
+
+section#get-started(className='px-5 py-20 max-[760px]:px-4 max-[760px]:py-14')
+  div(className='relative mx-auto max-w-4xl overflow-hidden rounded-2xl border border-edge-strong bg-panel px-8 py-14 text-center shadow-elevation max-[760px]:px-5 max-[760px]:py-10')
+    div(aria-hidden='true' className='pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,var(--brand),transparent_70%)] opacity-[0.11]')
+    div(className='relative flex flex-col items-center gap-5')
+      span(className='font-code text-[10px] tracking-[0.15em] text-dim uppercase') Get started
+      h2(className='max-w-xl text-[32px] leading-[1.15] font-medium tracking-[-0.02em] text-balance text-fg max-[760px]:text-[24px]') Your first component is one click away
+      p(className='max-w-lg text-[14px] leading-[1.7] text-pretty text-dim') Sign in to keep your projects in the cloud and share them with your team — or jump straight in and everything saves in this browser until you do.
+      div(className='flex flex-wrap items-center justify-center gap-2.5 pt-1')
+        button(className='rounded-xl border border-brand bg-brand px-5 py-3 text-[13px] font-semibold text-[#1b1b1b] transition-colors hover:bg-brand-hover disabled:cursor-default disabled:opacity-60 light:text-white light:shadow-elevation' type='button' disabled={isPending} onClick={signIn}) #{isPending ? 'Signing in…' : 'Sign in with Google'}
+        a(className='rounded-xl border border-edge-strong bg-control px-5 py-3 text-[13px] font-medium text-fg transition-colors hover:bg-surface-hover light:shadow-elevation' href='/playground' onClick={enter}) Open the playground →
+      ul(className='flex flex-wrap items-center justify-center gap-x-6 gap-y-2 pt-2 text-[12px] text-dim')
+        each item in reassurances key item
+          li(className='flex items-center gap-1.5')
+            Icon(name='check' className='size-3.5 shrink-0 text-brand')
+            span #{item}

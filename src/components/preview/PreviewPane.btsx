@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'octane'
+import { useQueryStates } from '@octanejs/nuqs'
+import { defaultPreviewZoom, previewQueryParsers, previewZooms } from '../../playground/panel-query'
 import { connectPreview } from '../../playground/preview-connection'
 import PaneSurface from '../layout/PaneSurface.btsx'
 import CollapseButton from '../layout/CollapseButton.btsx'
@@ -12,22 +14,70 @@ import { iconButton } from '../ui/styles'
 module
   const hostedURL = __HOSTED_PREVIEW_URL__;
   const viewports = [{ width: '100%', label: 'Desktop', symbol: 'desktop' }, { width: '768px', label: 'Tablet', symbol: 'tablet' }, { width: '375px', label: 'Mobile', symbol: 'smartphone' }] as const;
+  // Real portrait viewports, so a device frame keeps its own shape instead of stretching to the pane.
+  const devices: Record<string, { width: number; height: number }> = { '768px': { width: 768, height: 1024 }, '375px': { width: 375, height: 812 } };
+  const deviceGutter = 16;
+  const zoomOptions = previewZooms.map(percent => ({ id: String(percent), label: `${percent}%` }));
 
 props { session, layout }: WorkspaceProps
 setup
   const state = useSyncExternalStore(session.subscribe, session.getSnapshot);
+  // The toolbar lives in the URL, so a workspace link carries its viewport and zoom with it.
+  const [toolbar, setToolbar] = useQueryStates(previewQueryParsers, { history: 'replace', shallow: true, scroll: false });
+  const previewWidth = toolbar.preview ?? state.previewWidth;
+  const zoom = (toolbar.zoom ?? defaultPreviewZoom) / 100;
   const iframe = useRef<HTMLIFrameElement | null>(null);
   const surface = useRef<HTMLDivElement | null>(null);
+  const stage = useRef<HTMLDivElement | null>(null);
+  const canvas = useRef<HTMLDivElement | null>(null);
   const fullscreenButton = useRef<HTMLButtonElement | null>(null);
-  const [zoom, setZoom] = useState(1);
   const [fullscreen, setFullscreen] = useState(false);
   const [fullscreenPending, setFullscreenPending] = useState(false);
   const [fullscreenError, setFullscreenError] = useState('');
   const fullscreenSupported = Boolean(document.fullscreenEnabled && document.documentElement.requestFullscreen);
-  const canvasWidth = state.previewWidth === '100%'
-    ? `${zoom * 100}%`
-    : `${Number.parseInt(state.previewWidth, 10) * zoom}px`;
-  const unscaledSize = `${100 / zoom}%`;
+  const device = devices[previewWidth];
+  const paneBox = useRef<{ width: number; height: number } | null>(null);
+  // Sized straight from the resize callback, before the browser paints that frame. Routing it
+  // through state would leave the canvas a frame behind the pane and shiver on every drag.
+  const applyLayout = () => {
+    const stageElement = stage.current;
+    const canvasElement = canvas.current;
+    const frameElement = iframe.current;
+    if (!stageElement || !canvasElement || !frameElement) return;
+    if (!device) {
+      // The desktop frame is the pane itself at 1/zoom CSS pixels. Percentages follow a fractional
+      // pane exactly, and pinning its width instead would swing the emulated height with the pane's
+      // aspect, reflowing the app vertically through every frame of a sideways drag.
+      canvasElement.style.width = '';
+      canvasElement.style.height = '';
+      frameElement.style.width = `${100 / zoom}%`;
+      frameElement.style.height = `${100 / zoom}%`;
+      frameElement.style.transform = zoom === 1 ? 'none' : `scale(${zoom})`;
+      return;
+    }
+    const paneWidth = paneBox.current?.width || stageElement.offsetWidth;
+    const paneHeight = paneBox.current?.height || stageElement.offsetHeight;
+    if (!paneWidth || !paneHeight) return;
+    // A device keeps its own proportions, so its emulated size never moves with the pane. It gives
+    // up height rather than run edge to edge when the pane is too narrow to hold its full shape.
+    let drawnWidth = device.width * paneHeight / device.height;
+    let drawnHeight = paneHeight;
+    const widest = Math.max(1, paneWidth - deviceGutter * 2);
+    if (drawnWidth > widest) {
+      drawnWidth = widest;
+      drawnHeight = widest * device.height / device.width;
+    }
+    // Width is the only emulated dimension: zoom sets how many CSS pixels wide the app lays out.
+    const frameWidth = Math.max(1, Math.round(device.width / zoom));
+    const frameHeight = Math.max(1, Math.round(device.height / zoom));
+    // Cover the canvas outright. Half a pixel of overdraw is clipped; half a pixel short is a seam.
+    const scale = Math.max(drawnWidth / frameWidth, drawnHeight / frameHeight) + 0.5 / Math.max(frameWidth, frameHeight);
+    canvasElement.style.width = `${drawnWidth}px`;
+    canvasElement.style.height = drawnHeight < paneHeight - 0.5 ? `${drawnHeight}px` : '';
+    frameElement.style.width = `${frameWidth}px`;
+    frameElement.style.height = `${frameHeight}px`;
+    frameElement.style.transform = `scale(${scale})`;
+  };
   const toggleFullscreen = async () => {
     setFullscreenError('');
     setFullscreenPending(true);
@@ -55,33 +105,43 @@ setup
       if (document.fullscreenElement === element) void document.exitFullscreen().catch(() => {});
     };
   }, []);
+  useEffect(() => {
+    const stageElement = stage.current;
+    if (!stageElement) return;
+    applyLayout();
+    const observer = new ResizeObserver(([entry]) => {
+      // Fractional border box: a pane 404.34px tall rounded down to 404 leaves a hairline of panel
+      // under the frame that blinks in and out as a drag crosses pixel boundaries.
+      const box = entry.borderBoxSize?.[0];
+      paneBox.current = box
+        ? { width: box.inlineSize, height: box.blockSize }
+        : { width: stageElement.offsetWidth, height: stageElement.offsetHeight };
+      applyLayout();
+    });
+    observer.observe(stageElement);
+    return () => observer.disconnect();
+  }, [zoom, previewWidth]);
   useEffect(() => connectPreview(iframe.current!, session, hostedURL), [session]);
+  useEffect(() => { if (toolbar.preview) session.setPreviewWidth(toolbar.preview); }, [session, toolbar.preview]);
   const zoomSelect = 'min-w-[50px] bg-panel light:bg-transparent py-1 pr-0 pl-1.5 font-code text-[10px] text-fg-secondary';
-  const zoomOptions = [
-    {id: '0.5', label: '50%'},
-    {id: '0.75', label: '75%'},
-    {id: '1', label: '100%'},
-    {id: '1.25', label: '125%'},
-    {id: '1.5', label: '150%'},
-  ]
 
 PaneSurface(layout={layout} pane='preview' label='Application preview' className='flex flex-col bg-panel')
   div(className='@container/preview flex size-full min-h-0 flex-col bg-panel' ref={surface})
-    div(className='flex min-h-9 shrink-0 flex-wrap items-center gap-0 bg-panel px-1 py-[3px] [&_button:disabled]:cursor-default [&_button:disabled]:opacity-40 @max-[360px]/preview:gap-1.5')
-      div(className='flex items-center shrink-0 font-mono text-muted-foreground text-[11px]')
-        Icon(name='world' className='size-3.5 opacity-80')
+    div(className='flex min-h-9 shrink-0 flex-nowrap items-center gap-0 bg-panel px-1 py-[3px] [&_button:disabled]:cursor-default [&_button:disabled]:opacity-40 @max-[360px]/preview:gap-1.5')
+      div(className='flex min-w-0 items-center font-mono text-muted-foreground text-[11px]')
+        Icon(name='world' className='size-3.5 shrink-0 opacity-80')
         if hostedURL
           select(className={zoomSelect} aria-label='Preview mode' value={state.previewMode} onChange={event => session.setPreviewMode(event.currentTarget.value === 'hosted' ? 'hosted' : 'local')})
             option(value='local') Local preview
             option(value='hosted') Hosted preview
         else
-          span(className='opacity-80') local://preview/
+          span(className='truncate opacity-80') local://preview/
             span(className='lowercase') #{state.previewStatus}
-      ButtonGroup(className='ml-auto flex overflow-hidden border border-edge shadow-[inset_0_1px_var(--edge-strong)] light:gap-0.5 light:rounded-lg light:border-transparent light:divide-transparent light:bg-black/[0.045] light:p-0.5 light:shadow-none' role='group' aria-label='Preview size')
+      ButtonGroup(className='ml-auto flex shrink-0 overflow-hidden border border-edge shadow-[inset_0_1px_var(--edge-strong)] light:gap-0.5 light:rounded-lg light:border-transparent light:divide-transparent light:bg-black/[0.045] light:p-0.5 light:shadow-none' role='group' aria-label='Preview size')
         each viewport in viewports key viewport.width
-          button(type='button' className={cn('flex h-[26px] w-[30px] items-center justify-center bg-panel text-[14px] text-faint light:h-[24px] light:rounded-md light:bg-transparent light:hover:text-fg', state.previewWidth === viewport.width && 'bg-[linear-gradient(var(--canvas),var(--panel))] text-brand light:bg-panel light:bg-none light:text-fg light:shadow-elevation')} data-width={viewport.width} aria-label={viewport.label + ' preview'} aria-pressed={state.previewWidth === viewport.width} title={viewport.label} onClick={() => session.setPreviewWidth(viewport.width)})
+          button(type='button' className={cn('flex h-[26px] w-[30px] items-center justify-center bg-panel text-[14px] text-faint light:h-[24px] light:rounded-md light:bg-transparent light:hover:text-fg', previewWidth === viewport.width && 'bg-[linear-gradient(var(--canvas),var(--panel))] text-accent light:bg-panel light:bg-none light:text-fg light:shadow-elevation')} data-width={viewport.width} aria-label={viewport.label + ' preview'} aria-pressed={previewWidth === viewport.width} title={viewport.label} onClick={() => { session.setPreviewWidth(viewport.width); void setToolbar({ preview: viewport.width === '100%' ? null : viewport.width }); }})
             Icon(name={viewport.symbol} className='size-3')
-        NativeSelect(className={zoomSelect} aria-label='Preview zoom' value={String(zoom)} onChange={event => setZoom(Number(event.currentTarget.value))})
+        NativeSelect(className={zoomSelect} aria-label='preview-zoom' title={device ? `Preview zoom · ${Math.round(device.width / zoom)}px wide viewport` : 'Preview zoom'} value={String(Math.round(zoom * 100))} onChange={event => { const percent = previewZooms.find(value => String(value) === event.currentTarget.value); if (percent) void setToolbar({ zoom: percent === defaultPreviewZoom ? null : percent }); }})
           each option in zoomOptions key option.id
             NativeSelectOption(value={option.id}) #{option.label}
         button#reload-preview(className='flex h-[26px] w-[30px] items-center justify-center bg-panel text-[14px] text-faint light:h-[24px] light:rounded-md light:bg-transparent light:hover:text-fg' type='button' aria-label='Reload preview' title='Reload preview' onClick={session.reloadPreview})
@@ -94,9 +154,9 @@ PaneSurface(layout={layout} pane='preview' label='Application preview' className
     if state.previewMode === 'hosted'
       p(className='m-0 px-3 py-1.5 text-[10px] text-fg-secondary') Hosted preview · Failure containment depends on your browser. No CPU or memory quotas.
 
-    div(className='preview-stage relative min-h-0 flex-1 overflow-x-auto overflow-y-hidden')
-      div(className='preview-canvas relative mx-auto h-full shrink-0 overflow-hidden' style={{ width: canvasWidth }})
-        iframe#preview-frame(className='absolute top-0 left-0 block shrink-0 origin-top-left border-0 bg-panel' ref={iframe} title='Application preview' sandbox='allow-scripts' style={{ width: unscaledSize, height: unscaledSize, transform: `scale(${zoom})` }} data-build-revision={state.previewBuild?.revision})
+    div(className='preview-stage relative flex min-h-0 flex-1 items-center justify-center overflow-hidden' ref={stage})
+      div(className='preview-canvas relative size-full shrink-0 overflow-hidden' ref={canvas})
+        iframe#preview-frame(className='absolute top-0 left-0 block size-full shrink-0 origin-top-left border-0 bg-panel' ref={iframe} title='Application preview' sandbox='allow-scripts' data-build-revision={state.previewBuild?.revision})
       div#preview-overlay(className='absolute inset-0 flex flex-col items-center justify-center bg-panel p-6 text-center text-dim' role='status' hidden={state.hasPreview || state.previewFailed})
         span(className='mb-3.5 text-[40px] text-brand') ◈
         strong(className='text-[14px] font-medium') #{state.compileFailed ? 'Your code needs a small fix' : 'Preparing your preview'}

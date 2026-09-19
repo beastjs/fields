@@ -2,6 +2,37 @@ import type { SectionTemplate } from '../types'
 
 export const topbarTemplates: SectionTemplate[] = [
   {
+    id: 'topbar-default',
+    kind: 'topbar',
+    title: 'Default',
+    description: 'The standard signed-out header: brand, a few links, and a sign-in / get-started pair that collapses into a menu on phones.',
+    wireframe: ['logo title gap xs xs xs gap ghost btn'],
+    source: `import { useState } from 'octane'
+
+setup
+  const links = ['Product', 'Docs', 'Changelog'];
+  const [open, setOpen] = useState(false);
+
+header(data-section='topbar' className='sticky top-0 z-20 border-b border-current/10 bg-current/5 backdrop-blur-xl')
+  nav(className='mx-auto flex h-16 max-w-6xl items-center gap-7 px-4')
+    a(href='#' className='flex shrink-0 items-center gap-2.5')
+      span(className='grid size-8 place-items-center rounded-xl border border-current/20 bg-current/10 text-[13px] font-bold') N
+      span(className='text-[15px] font-semibold tracking-tight') Nova
+    div(className='hidden items-center gap-7 text-sm text-current/60 md:flex')
+      each link in links key link
+        a(href='#' className='transition-colors hover:text-current') #{link}
+    div(className='ml-auto flex items-center gap-1.5 text-sm')
+      a(href='#' className='hidden rounded-lg px-3 py-2 text-current/70 transition-colors hover:bg-current/5 hover:text-current sm:block') Sign in
+      a(href='#' className='rounded-lg border border-current/20 bg-current/10 px-3.5 py-2 font-medium transition-colors hover:bg-current/15') Get started
+      button(type='button' aria-expanded={open} aria-label='Toggle menu' className='rounded-lg px-2 py-1.5 text-lg transition-colors hover:bg-current/5 md:hidden' onClick={() => setOpen(!open)}) #{open ? '✕' : '☰'}
+  if open
+    div(className='grid gap-1 border-t border-current/10 p-3 text-sm md:hidden')
+      each link in links key link
+        a(href='#' className='rounded-lg px-3 py-2 transition-colors hover:bg-current/5' onClick={() => setOpen(false)}) #{link}
+      a(href='#' className='rounded-lg px-3 py-2 transition-colors hover:bg-current/5 sm:hidden') Sign in
+`
+  },
+  {
     id: 'topbar-marketing',
     kind: 'topbar',
     title: 'Marketing',

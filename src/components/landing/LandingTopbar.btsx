@@ -1,0 +1,22 @@
+import { Icon } from '@/lib/icons'
+import { useTheme } from '../theme/theme-context'
+import type { LandingActions } from './types'
+
+props { signIn, enter, isPending }: LandingActions
+setup
+  const { theme, toggleTheme } = useTheme();
+  const themeLabel = theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme';
+
+header(className='sticky top-0 z-20 border-b border-edge bg-canvas/85 backdrop-blur-xl')
+  nav(className='mx-auto flex h-16 max-w-6xl items-center gap-7 px-5 max-[760px]:h-14 max-[760px]:gap-4 max-[760px]:px-4')
+    a(className='flex shrink-0 items-center gap-2.5 text-inherit no-underline' href='/' aria-label='Beast Playground home')
+      img(className='opacity-80 invert light:invert-0' src='/beast.svg' alt='' width='22' height='22')
+      span(className='text-[15px] font-medium tracking-[-0.01em] text-fg') Beast Playground
+    div(className='hidden items-center gap-6 text-[13px] text-dim md:flex')
+      a(className='transition-colors hover:text-fg' href='#overview') Overview
+      a(className='transition-colors hover:text-fg' href='#get-started') Get started
+    div(className='ml-auto flex shrink-0 items-center gap-1.5')
+      button(className='flex size-8 items-center justify-center rounded-lg text-dim transition-colors hover:bg-surface-hover hover:text-fg' type='button' aria-label={themeLabel} title={themeLabel} onClick={toggleTheme})
+        Icon(name='theme' className='size-4')
+      a(className='rounded-lg px-3 py-2 text-[13px] text-fg-secondary transition-colors hover:bg-surface-hover hover:text-fg max-[620px]:hidden' href='/playground' onClick={enter}) Open the playground
+      button(className='rounded-lg border border-edge-strong bg-control px-3.5 py-2 text-[13px] font-medium text-fg transition-colors hover:bg-surface-hover disabled:cursor-default disabled:opacity-60 light:shadow-elevation' type='button' disabled={isPending} onClick={signIn}) #{isPending ? 'Signing in…' : 'Sign in'}

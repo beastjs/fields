@@ -1,6 +1,7 @@
-import { createParser } from '@octanejs/nuqs/server';
+import { createParser, parseAsNumberLiteral, parseAsStringLiteral } from '@octanejs/nuqs/server';
 import { isWorkbenchPaneId, workbenchPaneIds } from './panes';
 import type { WorkbenchPaneId } from './panes';
+import type { PreviewWidth } from './project-storage';
 
 export interface PanelQuery {
   dock: number[] | null
@@ -38,4 +39,13 @@ export const panelQueryParsers = {
   rows: percentageParser(2),
   panes: percentageParser(4),
   order: paneOrderParser,
+};
+
+/** Preview toolbar state. Both are nullable: an absent param means "use the default". */
+export const previewWidths = ['100%', '768px', '375px'] as const satisfies readonly PreviewWidth[];
+export const previewZooms = [50, 67, 75, 80, 90, 100, 110, 125, 150] as const;
+export const defaultPreviewZoom = 75;
+export const previewQueryParsers = {
+  preview: parseAsStringLiteral(previewWidths),
+  zoom: parseAsNumberLiteral(previewZooms),
 };

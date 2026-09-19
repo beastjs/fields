@@ -6,11 +6,16 @@ import type { PaneId, WorkbenchPaneId } from './panes'
 export { paneDefinitions }
 export type { PaneId, WorkbenchPaneId }
 
+/** Mobile layout breakpoint, matching Tailwind's `md` so the pane carousel and the view toolbar swap at the same width. */
+export const NARROW_MEDIA_QUERY = '(max-width: 767.98px)'
+
 type Visibility = Record<PaneId, boolean>
 type LayoutSnapshot = Visibility & {
   order: readonly WorkbenchPaneId[]
   arrangeOrder: readonly WorkbenchPaneId[]
   arranging: boolean
+  /** Narrow viewports show every pane as a slide of a carousel instead of a resizable dock. */
+  narrow: boolean
 }
 type Geometry = { panes: number[]; rows: number[] }
 type PaneSizes = Record<WorkbenchPaneId, number>
@@ -18,12 +23,14 @@ type PaneSizes = Record<WorkbenchPaneId, number>
 const ref = <T>() => ({ current: null as T | null })
 const sameOrder = (a: readonly WorkbenchPaneId[], b: readonly WorkbenchPaneId[]) =>
   a.length === b.length && a.every((id, index) => id === b[index])
-const copyDefaultOrder = () => [...workbenchPaneIds]
+const defaultPaneOrder = ['chat', 'preview', 'editor', 'files'] as const satisfies readonly WorkbenchPaneId[]
+const defaultRows = [100, 0]
+const copyDefaultOrder = () => [...defaultPaneOrder]
 const defaultSizes = (narrow: boolean): PaneSizes => ({
-  files: narrow ? 0 : 14,
-  editor: narrow ? 50 : 43,
-  preview: narrow ? 50 : 43,
-  chat: 0,
+  files: 0,
+  editor: 0,
+  preview: narrow ? 100 : 68,
+  chat: narrow ? 0 : 32,
 })
 /** Layout owns pane geometry and ordering only. Project and runtime lifetimes are independent. */
 export class WorkspaceLayout {
@@ -38,7 +45,7 @@ export class WorkspaceLayout {
     workspace: ref<GroupImperativeHandle>(),
     dock: ref<GroupImperativeHandle>()
   }
-  readonly workspaceDefaults = { workbench: 76, 'view-output': 24 }
+  readonly workspaceDefaults = { workbench: defaultRows[0], 'view-output': defaultRows[1] }
   readonly initialLayouts: { workspace: Layout; dock: Layout }
   private geometry: Geometry
   private order: WorkbenchPaneId[]
@@ -61,7 +68,9 @@ export class WorkspaceLayout {
   }
 
   setNarrow = (narrow: boolean) => {
+    if (this.viewportNarrow === narrow) return
     this.viewportNarrow = narrow
+    this.publish(this.createSnapshot(this.geometry, this.order))
   }
   getSnapshot = () => this.snapshot
   subscribe = (listener: () => void) => {
@@ -114,7 +123,7 @@ export class WorkspaceLayout {
       split: null,
       panes: sameSizes(this.geometry.panes, defaults.panes) ? null : this.geometry.panes,
       rows: sameSizes(this.geometry.rows, defaults.rows) ? null : this.geometry.rows,
-      order: sameOrder(this.order, workbenchPaneIds) ? null : [...this.order]
+      order: sameOrder(this.order, defaultPaneOrder) ? null : [...this.order]
     })
   }
   connectPersistence = (persist: (query: PanelQuery) => void) => {
@@ -234,27 +243,16 @@ export class WorkspaceLayout {
       : copyDefaultOrder()
   }
   private resolve(query: PanelQuery | undefined, order: readonly WorkbenchPaneId[]): Geometry {
-    if (query?.panes) {
-      return {
-        panes: [...query.panes],
-        rows: query.rows && query.rows[0] >= 30 ? [...query.rows] : [76, 24]
-      }
-    }
+    const rows = query?.rows && query.rows[0] >= 30 ? [...query.rows] : [...defaultRows]
+    if (query?.panes) return { panes: [...query.panes], rows }
 
-    const dock = query?.dock && query.dock[1] >= 35
-      ? query.dock
-      : [this.narrow ? 0 : 14, this.narrow ? 100 : 86, 0]
+    // dock/split are the older URL shape; without them the defaults above stand.
+    const dock = query?.dock && query.dock[1] >= 35 ? query.dock : null
     const split = query?.split ?? [50, 50]
-    const sizes: PaneSizes = {
-      files: dock[0],
-      editor: dock[1] * split[0] / 100,
-      preview: dock[1] * split[1] / 100,
-      chat: dock[2]
-    }
-    return {
-      panes: this.sizesForOrder(sizes, order),
-      rows: query?.rows && query.rows[0] >= 30 ? [...query.rows] : [76, 24]
-    }
+    const sizes: PaneSizes = dock
+      ? { files: dock[0], editor: dock[1] * split[0] / 100, preview: dock[1] * split[1] / 100, chat: dock[2] }
+      : defaultSizes(this.narrow)
+    return { panes: this.sizesForOrder(sizes, order), rows }
   }
   private sizesByPane(): PaneSizes {
     const sizes = {} as PaneSizes
@@ -278,19 +276,24 @@ export class WorkspaceLayout {
     }
   }
   private createSnapshot(geometry: Geometry, order: readonly WorkbenchPaneId[]): LayoutSnapshot {
-    const visible = {
-      files: false,
-      editor: false,
-      preview: false,
-      output: geometry.rows[1] > 0,
-      chat: false
-    }
-    order.forEach((id, index) => { visible[id] = geometry.panes[index] > 0 })
+    // A carousel slide is never collapsed, only scrolled off-screen, so narrow viewports report
+    // every pane visible. PaneSurface would otherwise render the off-screen slides inert and hidden.
+    const visible: Visibility = this.viewportNarrow
+      ? { files: true, editor: true, preview: true, output: true, chat: true }
+      : {
+          files: false,
+          editor: false,
+          preview: false,
+          output: geometry.rows[1] > 0,
+          chat: false
+        }
+    if (!this.viewportNarrow) order.forEach((id, index) => { visible[id] = geometry.panes[index] > 0 })
     return {
       ...visible,
       order,
       arrangeOrder: this.arrangeOrder ?? order,
-      arranging: this.arrangeOrder !== null
+      arranging: this.arrangeOrder !== null,
+      narrow: this.viewportNarrow
     }
   }
 }

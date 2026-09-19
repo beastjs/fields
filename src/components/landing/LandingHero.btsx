@@ -1,0 +1,73 @@
+import { Icon, type IconName } from '@/lib/icons'
+import type { LandingActions } from './types'
+
+module
+  type Tone = 'kw' | 'tag' | 'attr' | 'fn' | 'num' | 'str' | 'plain'
+  // Syntax colours come from the editor's own theme variables, so the snippet follows the theme toggle.
+  const tones: Record<Tone, string> = {
+    kw: 'text-[var(--syntax-keyword)]',
+    tag: 'text-[var(--syntax-tag)]',
+    attr: 'text-[var(--syntax-attribute)]',
+    fn: 'text-[var(--syntax-function)]',
+    num: 'text-[var(--syntax-number)]',
+    str: 'text-[var(--syntax-string)]',
+    plain: 'text-fg-secondary'
+  }
+  /** The component rendered in the mock preview beside it. Kept short enough to read at a glance. */
+  const snippet: [string, Tone][][] = [
+    [['setup', 'kw']],
+    [['  const [count, setCount] = ', 'plain'], ['useState', 'fn'], ['(', 'plain'], ['0', 'num'], [');', 'plain']],
+    [],
+    [['button', 'tag'], ['(', 'plain'], ['onClick', 'attr'], ['=', 'plain'], ['{() => setCount(count + ', 'plain'], ['1', 'num'], [')}', 'plain'], [')', 'plain']],
+    [['  span ', 'tag'], ['Clicked ', 'str'], ['#{count}', 'plain'], [' times', 'str']]
+  ]
+  const panes: { icon: IconName; label: string; note: string }[] = [
+    { icon: 'editor', label: 'Editor', note: 'Diagnostics as you type' },
+    { icon: 'browser', label: 'Preview', note: 'Isolated, hot-updated' },
+    { icon: 'logs', label: 'Output', note: 'Compiled Octane code' },
+    { icon: 'sparkle', label: 'Chat', note: 'Iterate with an agent' }
+  ]
+
+props { signIn, enter, isPending }: LandingActions
+
+section#overview(className='relative overflow-hidden px-5 pt-20 pb-4 max-[760px]:px-4 max-[760px]:pt-12')
+  div(aria-hidden='true' className='pointer-events-none absolute inset-x-0 top-0 h-[560px] bg-[radial-gradient(ellipse_70%_100%_at_50%_0%,var(--brand),transparent_70%)] opacity-[0.13]')
+  div(className='relative mx-auto flex max-w-3xl flex-col items-center gap-6 text-center')
+    span(className='inline-flex items-center gap-2 rounded-full border border-edge bg-panel-deep py-1 pr-3 pl-1.5 font-code text-[10px] tracking-[0.12em] text-dim uppercase')
+      span(className='rounded-full bg-brand/15 px-2 py-0.5 text-brand') Beta
+      span Beast + Octane, in the browser
+    h1(className='text-[46px] leading-[1.04] font-medium tracking-[-0.03em] text-balance text-fg max-[760px]:text-[32px]') Write Beast components. Watch them run instantly.
+    p(className='max-w-xl text-[15px] leading-[1.7] text-pretty text-dim') A playground for the Beast language with no install and no build step — a real editor with diagnostics, the compiled Octane output, and an isolated live preview, side by side.
+    div(className='flex flex-wrap items-center justify-center gap-2.5 pt-1')
+      button(className='rounded-xl border border-brand bg-brand px-5 py-3 text-[13px] font-semibold text-[#1b1b1b] transition-colors hover:bg-brand-hover disabled:cursor-default disabled:opacity-60 light:text-white light:shadow-elevation' type='button' disabled={isPending} onClick={signIn}) #{isPending ? 'Signing in…' : 'Sign in with Google'}
+      a(className='rounded-xl border border-edge-strong bg-control px-5 py-3 text-[13px] font-medium text-fg transition-colors hover:bg-surface-hover light:shadow-elevation' href='/playground' onClick={enter}) Open the playground →
+    p(className='font-code text-[11px] leading-[1.6] text-faint') Sign in to keep projects in the cloud. Or start now — your work saves in this browser.
+
+  div(className='relative mx-auto mt-16 max-w-5xl max-[760px]:mt-10')
+    div(className='overflow-hidden rounded-2xl border border-edge-strong bg-panel shadow-elevation')
+      div(className='flex items-center gap-2 border-b border-edge bg-surface-toolbar px-3.5 py-2.5')
+        div(className='flex gap-1.5')
+          each dot in [1, 2, 3] key dot
+            span(aria-hidden='true' className='size-2.5 rounded-full bg-edge-strong')
+        span(className='ml-1.5 font-code text-[10px] text-faint') src/Counter.btsx
+        span(className='ml-auto flex items-center gap-1.5 font-code text-[10px] text-dim')
+          span(aria-hidden='true' className='size-1.5 rounded-full bg-brand')
+          span Built in 12ms
+      div(className='grid grid-cols-2 max-[620px]:grid-cols-1')
+        pre(className='m-0 overflow-x-auto border-r border-edge bg-editor px-4 py-4 font-code text-[11px]/[1.85] max-[620px]:border-r-0 max-[620px]:border-b' aria-label='A Beast component')
+          each line, index in snippet key index
+            div(className='min-h-[1.85em]')
+              each part, position in line key position
+                span(className={tones[part[1]]}) #{part[0]}
+        div(className='flex min-h-[172px] items-center justify-center bg-canvas p-4')
+          div(className='flex flex-col items-center gap-2.5')
+            span(className='rounded-lg border border-edge-strong bg-control px-4 py-2 text-[13px] text-fg shadow-elevation') Clicked 3 times
+            span(className='font-code text-[9px] tracking-[0.12em] text-faint uppercase') Live preview
+
+  ul(className='relative mx-auto mt-10 grid max-w-5xl grid-cols-4 gap-2.5 max-[900px]:grid-cols-2 max-[760px]:mt-8')
+    each pane in panes key pane.label
+      li(className='flex items-start gap-2.5 rounded-xl border border-edge bg-panel-deep px-3.5 py-3')
+        Icon(name={pane.icon} className='mt-0.5 size-4 shrink-0 text-brand')
+        span(className='min-w-0')
+          span(className='block text-[13px] text-fg') #{pane.label}
+          span(className='block text-[11px] leading-[1.5] text-dim') #{pane.note}

@@ -2,6 +2,33 @@ import type { SectionTemplate } from '../types'
 
 export const heroTemplates: SectionTemplate[] = [
   {
+    id: 'hero-default',
+    kind: 'hero',
+    title: 'Default',
+    description: 'The standard opening: an announcement pill, a bold headline, a primary and secondary action, and a row of reassurances.',
+    wireframe: ['^ pill', '^ head', '^ long', '^ btn ghost', '^ xs xs xs'],
+    source: `setup
+  const reassurances = ['Free to start', 'No credit card', 'Set up in minutes'];
+
+section(data-section='hero' className='relative overflow-hidden px-4 py-24 sm:py-32')
+  div(aria-hidden='true' className='pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,currentColor,transparent_65%)] opacity-[0.08]')
+  div(className='relative mx-auto flex max-w-3xl flex-col items-center gap-7 text-center')
+    span(className='inline-flex items-center gap-2 rounded-full border border-current/15 bg-current/5 py-1 pr-3 pl-1 text-xs text-current/70')
+      span(className='rounded-full bg-current/10 px-2 py-0.5 font-medium text-current') New
+      span Nova 2.0 is out today
+    h1(className='text-4xl font-semibold tracking-tight text-balance sm:text-6xl') Everything you need to ship your next idea
+    p(className='max-w-xl text-lg text-pretty text-current/70') Nova gives you the workspace, the tools, and the momentum to get from a rough sketch to something real — in an afternoon.
+    div(className='flex flex-wrap items-center justify-center gap-3')
+      a(href='#' className='rounded-xl border border-current/25 bg-current/15 px-6 py-3 font-medium transition-colors hover:bg-current/20') Get started free
+      a(href='#' className='rounded-xl border border-current/15 px-6 py-3 text-current/80 transition-colors hover:bg-current/5') Take the tour →
+    ul(className='flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-current/60')
+      each item in reassurances key item
+        li(className='flex items-center gap-1.5')
+          span(aria-hidden='true') ✓
+          span #{item}
+`
+  },
+  {
     id: 'hero-centered',
     kind: 'hero',
     title: 'Centered launch',

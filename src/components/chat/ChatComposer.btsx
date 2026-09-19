@@ -58,7 +58,7 @@ setup
 
 form(className='shrink-0 border-t border-edge bg-editor p-3 chat-short:p-2' onSubmit={submit})
   if !state.messages.length
-    div(className='mb-3 flex rounded-[4px] overflow-hidden border border-edge-strong bg-surface-hover chat-short:hidden [&>button]:px-[9px] [&>button]:py-2 [&>button]:text-left [&>button]:text-[9px] [&>button]:text-fg-secondary [&>button]:hover:bg-control [&>button]:hover:text-fg')
+    div(className='hidden mb-3 _flex rounded-[4px] overflow-hidden border border-edge-strong bg-surface-hover chat-short:hidden [&>button]:px-[9px] [&>button]:py-2 [&>button]:text-left [&>button]:text-[9px] [&>button]:text-fg-secondary [&>button]:hover:bg-control [&>button]:hover:text-fg')
       button(type='button' onClick={() => prompt.handleChange('Fix errors on active file.')})
         Icon(name='fix' className='size-4')
       button(type='button' onClick={() => prompt.handleChange('Improve active file.')})
@@ -95,9 +95,9 @@ form(className='shrink-0 border-t border-edge bg-editor p-3 chat-short:p-2' onSu
       input#auto-apply(type='checkbox' checked={auto} onChange={toggleAuto})
       span(className='select-none') Auto-apply
 
-  div(className='overflow-hidden rounded-md border border-edge-strong bg-inset shadow-[inset_0_1px_3px_#15151515] focus-within:border-[#b67546] light:rounded-xl light:border-edge light:bg-panel light:shadow-elevation light:focus-within:border-brand/50')
+  div(className='overflow-hidden rounded-md border border-edge-strong bg-inset shadow-[inset_0_1px_3px_#15151515] focus-within:border-accent light:rounded-xl light:border-edge light:bg-panel light:shadow-elevation light:focus-within:border-brand/50')
     label(className='sr-only' for='chat-prompt') Message AI
-    textarea#chat-prompt(value={prompt.state.value} onInput={event => prompt.handleChange(event.currentTarget.value)} onKeyDown={keydown} placeholder='Ask about your code…' rows={3} maxlength='32000' className='block max-h-[170px] min-h-[70px] w-full resize-none border-0 bg-none p-[11px] text-[11px] leading-[1.7] text-fg decoration-none outline-none placeholder:text-dim focus-visible:outline-none chat-short:min-h-[42px] chat-short:p-[7px]')
+    textarea#chat-prompt(value={prompt.state.value} onInput={event => prompt.handleChange(event.currentTarget.value)} onKeyDown={keydown} placeholder='Ask about your code…' rows={3} maxlength='32000' className='block max-h-[170px] min-h-[70px] w-full resize-none border-0 bg-muted p-[11px] text-[11px] leading-[1.7] text-fg decoration-none outline-none placeholder:text-dim focus-visible:outline-none chat-short:min-h-[42px] chat-short:p-[7px]')
     div(className='flex items-center justify-between gap-2 pr-[7px] pl-2.5 chat-short:justify-end chat-short:pb-[5px]')
       span(className='font-code text-[8px]/[1.6] text-faint chat-short:hidden') Enter to send · Shift Enter for a new line
       if state.busy

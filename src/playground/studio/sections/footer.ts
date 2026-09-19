@@ -2,6 +2,44 @@ import type { SectionTemplate } from '../types'
 
 export const footerTemplates: SectionTemplate[] = [
   {
+    id: 'footer-default',
+    kind: 'footer',
+    title: 'Default',
+    description: 'The standard closing bar: brand and tagline beside three link columns, with copyright and social links on the bottom row.',
+    wireframe: ['logo gap xs xs xs', 'long gap xs xs xs', 'wide'],
+    source: `setup
+  const columns = [
+    { title: 'Product', links: ['Features', 'Pricing', 'Changelog'] },
+    { title: 'Company', links: ['About', 'Blog', 'Careers'] },
+    { title: 'Legal', links: ['Privacy', 'Terms', 'Security'] }
+  ];
+  const socials = ['X', 'GitHub', 'LinkedIn'];
+
+footer(data-section='footer' className='border-t border-current/10 px-4 pt-14 pb-8')
+  div(className='mx-auto max-w-6xl')
+    div(className='grid gap-10 md:grid-cols-[2fr_3fr]')
+      div(className='flex flex-col gap-3')
+        a(href='#' className='flex w-fit items-center gap-2.5')
+          span(className='grid size-8 place-items-center rounded-xl border border-current/20 bg-current/10 text-[13px] font-bold') N
+          span(className='text-[15px] font-semibold tracking-tight') Nova
+        p(className='max-w-xs text-sm text-current/60') The calm workspace for people who would rather be building.
+      nav(aria-label='Footer' className='grid grid-cols-3 gap-6')
+        each column in columns key column.title
+          div
+            h3(className='text-sm font-semibold') #{column.title}
+            ul(className='mt-4 grid gap-2.5 text-sm text-current/60')
+              each link in column.links key link
+                li
+                  a(href='#' className='transition-colors hover:text-current') #{link}
+    div(className='mt-12 flex flex-col items-center justify-between gap-4 border-t border-current/10 pt-6 text-sm text-current/60 sm:flex-row')
+      p © #{new Date().getFullYear()} Nova Labs, Inc.
+      ul(className='flex gap-5')
+        each social in socials key social
+          li
+            a(href='#' className='transition-colors hover:text-current') #{social}
+`
+  },
+  {
     id: 'footer-columns',
     kind: 'footer',
     title: 'Link columns',

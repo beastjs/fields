@@ -63,11 +63,10 @@ PaneSurface(layout={layout} pane='chat' label='AI chat' className='flex flex-col
       button(className={iconButton} type='button' title='AI settings' aria-label='AI settings' onClick={() => setSettingsOpen(true)})
         Icon(name='settings' className='size-3.5')
       CollapseButton(layout={layout} pane='chat')
-  button(className='flex w-full min-w-0 items-center gap-2 border-0 border-b border-control bg-editor px-1.5 py-1 text-left' type='button' onClick={() => setSettingsOpen(true)} aria-label='Configure AI provider and model')
+  // button(className='flex w-full min-w-0 items-center gap-2 border-0 border-b border-control bg-editor px-1.5 py-1 text-left' type='button' onClick={() => setSettingsOpen(true)} aria-label='Configure AI provider and model')
   div(className='min-h-0 flex-1 overflow-auto px-[15px] py-[17px]' ref={scroller} onScroll={scroll} role='log' aria-label='Chat messages' aria-live='polite')
     if !state.messages.length
       div(className='chat-welcome mt-2.5 mb-3')
-
         div(className='relative size-16 aspect-square flex items-center justify-center scale-110')
           span(className='absolute text-2xl scale-105 text-orange-200/80 blur-sm animate-spin light:text-indigo-300/80') ✦
           span(className='absolute text-xl text-brand') ✦

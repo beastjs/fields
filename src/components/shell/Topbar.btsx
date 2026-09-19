@@ -49,7 +49,7 @@ setup
   );
   const teams = teamsResult?.page.filter(({ team }) => team.archivedAt === undefined) ?? [];
   const projects = projectsResult?.page.filter(project => project.archivedAt === undefined) ?? [];
-  const teamItems = teams.map(({ team }) => ({ id: team._id, icon: 'add-user' as IconName, label: team.name }));
+  const teamItems = teams.map(({ team }) => ({ id: team._id, icon: 'account' as IconName, label: team.name }));
   const projectItems = projects.map(project => ({ id: project._id, icon: 'folder' as IconName, label: project.name }));
   const activeProject = projects.find(project => project._id === cloudState.activeProjectId);
   const selectProject = (project: typeof projects[number]) => void cloud.selectProject({ projectId: project._id, teamId: project.teamId, name: project.name });
@@ -99,7 +99,7 @@ setup
 div
   header(className='grid min-h-[54px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center justify-between gap-6 px-3 border-b border-seam bg-seam max-[1200px]:grid-cols-[minmax(0,1fr)_auto] max-[1200px]:gap-x-1 max-[1200px]:gap-y-0 max-[1200px]:pt-2 max-[760px]:gap-x-1.5 max-[760px]:px-2.5')
     div(className='flex min-w-0 items-center gap-1')
-      a(className='mr-1 flex shrink-0 items-center text-inherit no-underline' href='/' aria-label='Team')
+      a(id='brand' className='mr-1 flex shrink-0 items-center text-inherit no-underline' href='/' aria-label='logo')
         img(className='opacity-65 invert light:invert-0' src='/beast.svg' alt='' width='20' height='20')
       Icon(name='chevron-down-tiny' className='size-3 opacity-60 -rotate-45')
       Switcher(
@@ -112,12 +112,12 @@ div
         ~  onSelect={chooseTeam}
         ~  onCreate={auth.isAuthenticated ? createTeam : undefined}
         ~ )
-      Icon(name='slice' className='size-3 opacity-40 -rotate-6')
+      Icon(name='slice' className='size-3 opacity-70 -rotate-6')
       Switcher(
         ~ items={projectItems}
         ~  title='Projects'
         ~  activeId={cloudState.activeProjectId}
-        ~   emptyLabel={auth.isAuthenticated ? 'No projects yet' : 'Local project'}
+        ~   emptyLabel={auth.isAuthenticated ? 'No projects yet' : 'New project'}
         ~   busy={cloudState.isSwitching || (auth.isAuthenticated && Boolean(cloudState.activeTeamId) && projectsResult === undefined)}
         ~   createLabel={auth.isAuthenticated && cloudState.activeTeamId ? 'Create project' : undefined}
         ~   onSelect={chooseProject}

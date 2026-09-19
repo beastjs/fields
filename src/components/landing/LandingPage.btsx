@@ -1,0 +1,37 @@
+import { useState } from 'octane'
+import type { MouseEvent } from 'octane'
+import { signInWithGoogle } from '../../lib/firebase/auth'
+import { navigateTo } from '../../playground/route'
+import LandingTopbar from './LandingTopbar.btsx'
+import LandingHero from './LandingHero.btsx'
+import LandingCallToAction from './LandingCallToAction.btsx'
+import LandingFooter from './LandingFooter.btsx'
+
+setup
+  const [isPending, setIsPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // Signing in swaps the shell over to the workspace, so the success path just leaves this mounted
+  // until the auth state lands; only a failure has to hand control back.
+  const signIn = () => {
+    setIsPending(true);
+    setError(null);
+    signInWithGoogle().catch((cause: unknown) => {
+      setError(cause instanceof Error ? cause.message : 'Sign-in failed. Please try again.');
+      setIsPending(false);
+    });
+  };
+  // Leave modified clicks to the browser so "open in new tab" still works on a real /playground link.
+  const enter = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+    event.preventDefault();
+    navigateTo('playground');
+  };
+
+div(className='landing h-dvh overflow-x-hidden overflow-y-auto bg-canvas text-fg')
+  LandingTopbar(signIn={signIn} enter={enter} isPending={isPending})
+  main
+    LandingHero(signIn={signIn} enter={enter} isPending={isPending})
+    LandingCallToAction(signIn={signIn} enter={enter} isPending={isPending})
+  LandingFooter(enter={enter})
+  if error
+    div(className='sticky bottom-4 z-30 mx-auto w-fit max-w-[calc(100%-32px)] rounded-xl border border-notice-edge bg-notice-surface px-4 py-2.5 text-[12px] text-notice shadow-elevation' role='alert') #{error}

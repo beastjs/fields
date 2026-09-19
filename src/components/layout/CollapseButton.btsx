@@ -15,4 +15,4 @@ setup
     shell?.querySelector<HTMLButtonElement>('[data-view="' + pane + '"]')?.focus();
   };
 
-button(className={cn('size-[23px] shrink-0 rounded-[4px] border border-transparent bg-transparent text-[16px] leading-none text-dim hover:bg-edge hover:text-fg disabled:cursor-default disabled:opacity-30', className)} type='button' disabled={disabled} onClick={collapse} aria-label={'Collapse ' + label} title={disabled ? 'Keep one workbench pane open' : 'Collapse ' + label}) −
+button(className={cn('max-md:hidden size-[23px] shrink-0 rounded-[4px] border border-transparent bg-transparent text-[16px] leading-none text-dim hover:bg-edge hover:text-fg disabled:cursor-default disabled:opacity-30', className)} type='button' disabled={disabled} onClick={collapse} aria-label={'Collapse ' + label} title={disabled ? 'Keep one workbench pane open' : 'Collapse ' + label}) −

@@ -1,24 +1,39 @@
-import { useEffect, useMemo } from 'octane'
+import { useEffect, useMemo, useSyncExternalStore } from 'octane'
 import { useQueryStates } from '@octanejs/nuqs'
+import { useConvexAuth } from '@/hooks/use-convex'
 import { panelQueryParsers } from '../../playground/panel-query'
+import { getRoute, subscribeToRoute } from '../../playground/route'
 import { createPlaygroundApp } from '../../playground/app'
-import { WorkspaceLayout } from '../../playground/workspace-layout'
+import { NARROW_MEDIA_QUERY, WorkspaceLayout } from '../../playground/workspace-layout'
 import Topbar from './Topbar.btsx'
 import Statusbar from './Statusbar.btsx'
 import Workspace from '../layout/Workspace.btsx'
 import ThemeProvider from '../theme/ThemeProvider.btsx'
+import LandingPage from '../landing/LandingPage.btsx'
 
 setup
   const [query, setQuery] = useQueryStates(panelQueryParsers, { history: 'replace', shallow: true, scroll: false });
   const playground = useMemo(() => createPlaygroundApp(), []);
   const { session, cloud } = playground;
-  const layout = useMemo(() => new WorkspaceLayout(matchMedia('(max-width: 760px)').matches, query), []);
+  const layout = useMemo(() => new WorkspaceLayout(matchMedia(NARROW_MEDIA_QUERY).matches, query), []);
+  const route = useSyncExternalStore(subscribeToRoute, getRoute);
+  const auth = useConvexAuth();
+  // `/playground` is the workspace either way, so only `/` has to wait on auth — and waiting there
+  // beats flashing the landing page at somebody who is already signed in.
+  const showSplash = route === 'landing' && auth.isLoading;
+  const showLanding = route === 'landing' && !auth.isLoading && !auth.isAuthenticated;
   useEffect(() => { session.start(); return () => session.dispose(); }, [session]);
   useEffect(() => layout.connectPersistence(value => { void setQuery(value); }), [layout, setQuery]);
   useEffect(() => layout.restore(query), [layout, query.dock, query.split, query.rows, query.panes, query.order]);
 
 ThemeProvider(session={session})
-  main(className='playground grid h-dvh w-full min-h-0 overflow-hidden grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_27px] px-[3px] bg-seam *:min-w-0')
-    Topbar(session={session} layout={layout} cloud={cloud})
-    Workspace(session={session} layout={layout})
-    Statusbar(session={session})
+  if showSplash
+    div(className='grid h-dvh w-full place-items-center bg-canvas' role='status' aria-label='Loading')
+      img(className='size-7 animate-thinking opacity-70 invert light:invert-0' src='/beast.svg' alt='' width='28' height='28')
+  elseif showLanding
+    LandingPage
+  else
+    main(className='playground grid h-dvh w-full min-h-0 overflow-hidden grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_27px] px-[3px] bg-seam *:min-w-0')
+      Topbar(session={session} layout={layout} cloud={cloud})
+      Workspace(session={session} layout={layout})
+      Statusbar(session={session})

@@ -1,10 +1,12 @@
-import { createElement, useEffect, useState, useSyncExternalStore } from 'octane'
+import { createElement, useEffect, useRef, useState, useSyncExternalStore } from 'octane'
 import { Group, Panel, Separator } from '@octanejs/resizable-panels'
 import Sortable, { SortableContent, SortableItem } from '@/lib/dnd/sortable.btsx'
 import type { DragDropProviderProps } from '@octanejs/dnd-kit'
 import { isWorkbenchPaneId, paneDefinitions } from '../../playground/panes'
-import type { WorkbenchPaneId } from '../../playground/panes'
+import type { PaneId, WorkbenchPaneId } from '../../playground/panes'
+import { NARROW_MEDIA_QUERY } from '../../playground/workspace-layout'
 import type { WorkspaceProps, NavigateToSource } from '../types'
+import { Icon } from '@/lib/icons'
 import FilesPane from '../files/FilesPane.btsx'
 import EditorPane from '../editor/EditorPane.btsx'
 import PreviewPane from '../preview/PreviewPane.btsx'
@@ -12,7 +14,8 @@ import OutputPane from '../output/OutputPane.btsx'
 import ChatPane from '../chat/ChatPane.btsx'
 
 module
-  const paneLabel = (id: WorkbenchPaneId) => paneDefinitions.find(pane => pane.id === id)!.label;
+  const paneLabel = (id: PaneId) => paneDefinitions.find(pane => pane.id === id)!.label;
+  const paneIcon = (id: PaneId) => paneDefinitions.find(pane => pane.id === id)!.icon;
   const resizeLabel = (left: WorkbenchPaneId, right: WorkbenchPaneId) => {
     if (left === 'files' && right === 'editor') return 'Resize files';
     if (left === 'editor' && right === 'preview') return 'Resize editor and preview';
@@ -47,6 +50,19 @@ module
   };
   const settleOnEnd: NonNullable<DragDropProviderProps['onDragEnd']> = event => setLift(event.operation.source?.element, null);
 
+component PaneContent
+  props { pane, session, layout, navigate }: WorkspaceProps & { pane: PaneId; navigate: NavigateToSource }
+  if pane === 'files'
+    FilesPane(session={session} layout={layout} navigate={navigate})
+  elseif pane === 'editor'
+    EditorPane(session={session} layout={layout})
+  elseif pane === 'preview'
+    PreviewPane(session={session} layout={layout})
+  elseif pane === 'output'
+    OutputPane(session={session} layout={layout} navigate={navigate})
+  else
+    ChatPane(layout={layout} session={session})
+
 props { session, layout }: WorkspaceProps
 setup
   const [narrow, setNarrow] = useState(layout.narrow);
@@ -56,59 +72,92 @@ setup
     layout.expand('editor');
     session.openFile(file, position, position !== undefined);
   };
+  // The carousel is a scroll-snap track, so swiping is the browser's own scrolling; the indicator
+  // only mirrors it and scrolls back. Output joins the workbench panes as a slide of its own,
+  // matching the view toolbar's pane list.
+  const carouselPanes: PaneId[] = [...renderedOrder, 'output'];
+  const track = useRef<HTMLDivElement | null>(null);
+  const [slide, setSlide] = useState(0);
+  const trackScroll = () => {
+    const element = track.current;
+    if (!element?.clientWidth) return;
+    const index = Math.round(element.scrollLeft / element.clientWidth);
+    setSlide(current => (current === index ? current : index));
+  };
+  const goToSlide = (index: number) => {
+    const element = track.current;
+    element?.scrollTo({ left: index * element.clientWidth, behavior: 'smooth' });
+  };
   const finishPaneDrag = (order: unknown[]) => {
     if (order.length === renderedOrder.length && order.every(item => typeof item === 'string' && isWorkbenchPaneId(item))) {
       layout.previewOrder(order as WorkbenchPaneId[]);
     }
   };
   useEffect(() => {
-    const media = matchMedia('(max-width: 760px)');
+    const media = matchMedia(NARROW_MEDIA_QUERY);
     const change = () => { layout.setNarrow(media.matches); setNarrow(media.matches); };
     media.addEventListener('change', change);
     return () => media.removeEventListener('change', change);
   }, [layout]);
 
 section(className='workspace relative isolate min-w-0 min-h-0 overflow-hidden before:pointer-events-none before:absolute before:inset-0 before:z-2 before:bg-[color-mix(in_srgb,var(--canvas)_84%,transparent)] before:opacity-0 before:backdrop-blur-[14px] before:backdrop-saturate-[0.72] before:transition-opacity before:duration-280 before:ease-[ease] data-[arranging=true]:before:opacity-100 has-[[data-separator=active]]:[&_iframe]:pointer-events-none' aria-label='Playground workspace' data-arranging={view.arranging})
-  Group(id='workspace-group' className='arranging:overflow-visible! arranging:[&>#workbench]:absolute! arranging:[&>#workbench]:inset-0 arranging:[&>#workbench]:z-3 arranging:[&>#workbench]:size-full! arranging:[&>#workbench]:max-w-none! arranging:[&>#workbench]:max-h-none! arranging:[&>#workbench]:flex-none! arranging:[&>#workbench]:overflow-visible!' orientation='vertical' disabled={view.arranging} groupRef={layout.groups.workspace} defaultLayout={layout.initialLayouts.workspace} onLayoutChange={layout.sync} onLayoutChanged={layout.commit})
-    Panel(id='workbench' minSize='30%' className={panelContainer + ' arranging:overflow-visible!'})
-      Sortable(value={[...renderedOrder]} orientation={view.arranging && narrow ? 'mixed' : narrow ? 'vertical' : 'horizontal'} onValueChange={finishPaneDrag} onDragStart={liftOnStart} onDragMove={liftOnMove} onDragEnd={settleOnEnd})
-        SortableContent(withoutSlot={true})
-          Group(id={'dock-group-' + view.order.join('-')} className={dockGroup} orientation={narrow ? 'vertical' : 'horizontal'} disabled={view.arranging} groupRef={layout.groups.dock} defaultLayout={layout.currentDockLayout()} onLayoutChange={layout.sync} onLayoutChanged={layout.commit})
-            each pane, index in renderedOrder key pane
-              SortableItem(
-                ~ id={'view-' + pane}
-                ~ value={pane}
-                ~ referenceProp='elementRef'
-                ~ asHandle={true}
-                ~ disabled={!view.arranging}
-                ~ tabIndex={view.arranging ? 0 : -1}
-                ~ role={view.arranging ? 'button' : 'region'}
-                ~ aria-label={view.arranging ? 'Move ' + paneLabel(pane) + ' pane' : paneLabel(pane)}
-                ~ render={createElement(Panel, {
-                ~   panelRef: layout.panels[pane],
-                ~   minSize: pane === 'files' ? (narrow ? '20%' : '9%') : pane === 'chat' ? (narrow ? '45%' : '24%') : '20%',
-                ~   maxSize: '100%',
-                ~   collapsible: true,
-                ~   collapsedSize: '0%',
-                ~   className: panelContainer + ' ' + paneCard,
-                ~ })}
-                ~ )
-                span(className='absolute top-2 left-2 z-10 rounded-md bg-[#090909] px-2 py-1 text-[11px] leading-none tracking-[-0.01em] text-[#f7f7f4] shadow-[0_4px_12px_#0004]' hidden={!view.arranging} aria-hidden='true') #{paneLabel(pane)}
-                if pane === 'files'
-                  FilesPane(session={session} layout={layout} navigate={navigate})
-                elseif pane === 'editor'
-                  EditorPane(session={session} layout={layout})
-                elseif pane === 'preview'
-                  PreviewPane(session={session} layout={layout})
-                else
-                  ChatPane(layout={layout} session={session})
-              if index < view.order.length - 1
-                Separator(
-                  ~ id={'resize-' + pane + '-' + renderedOrder[index + 1]}
-                  ~ className={separator + ' arranging:hidden'}
-                  ~ aria-label={resizeLabel(pane, renderedOrder[index + 1])}
-                  ~ disabled={view.arranging || (!view[pane] && !view[renderedOrder[index + 1]])}
+  if view.narrow
+    div(className='flex h-full min-h-0 flex-col')
+      div(
+        ~ className='flex min-h-0 flex-1 snap-x snap-mandatory overflow-x-auto overscroll-x-contain scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
+        ~ ref={track}
+        ~ onScroll={trackScroll}
+        ~ role='group'
+        ~ aria-label='Panes'
+        ~ )
+        each pane in carouselPanes key pane
+          div(className='h-full w-full shrink-0 snap-center px-[3px] pb-[3px]' role='group' aria-roledescription='slide' aria-label={paneLabel(pane)})
+            PaneContent(pane={pane} session={session} layout={layout} navigate={navigate})
+      nav(className='flex shrink-0 items-center justify-center gap-1 bg-seam pt-1 pb-0.5' aria-label='Panes')
+        each pane, index in carouselPanes key pane
+          button(
+            ~ type='button'
+            ~ className='flex size-8 items-center justify-center rounded-lg text-dim transition-colors aria-[current=true]:bg-control aria-[current=true]:text-fg'
+            ~ aria-current={index === slide}
+            ~ aria-label={'Show ' + paneLabel(pane)}
+            ~ title={paneLabel(pane)}
+            ~ onClick={() => goToSlide(index)}
+            ~ )
+            Icon(name={paneIcon(pane)} className='size-4')
+  else
+    Group(id='workspace-group' className='arranging:overflow-visible! arranging:[&>#workbench]:absolute! arranging:[&>#workbench]:inset-0 arranging:[&>#workbench]:z-3 arranging:[&>#workbench]:size-full! arranging:[&>#workbench]:max-w-none! arranging:[&>#workbench]:max-h-none! arranging:[&>#workbench]:flex-none! arranging:[&>#workbench]:overflow-visible!' orientation='vertical' disabled={view.arranging} groupRef={layout.groups.workspace} defaultLayout={layout.initialLayouts.workspace} onLayoutChange={layout.sync} onLayoutChanged={layout.commit})
+      Panel(id='workbench' minSize='30%' className={panelContainer + ' arranging:overflow-visible!'})
+        Sortable(value={[...renderedOrder]} orientation={view.arranging && narrow ? 'mixed' : narrow ? 'vertical' : 'horizontal'} onValueChange={finishPaneDrag} onDragStart={liftOnStart} onDragMove={liftOnMove} onDragEnd={settleOnEnd})
+          SortableContent(withoutSlot={true})
+            Group(id={'dock-group-' + view.order.join('-')} className={dockGroup} orientation={narrow ? 'vertical' : 'horizontal'} disabled={view.arranging} groupRef={layout.groups.dock} defaultLayout={layout.currentDockLayout()} onLayoutChange={layout.sync} onLayoutChanged={layout.commit})
+              each pane, index in renderedOrder key pane
+                SortableItem(
+                  ~ id={'view-' + pane}
+                  ~ value={pane}
+                  ~ referenceProp='elementRef'
+                  ~ asHandle={true}
+                  ~ disabled={!view.arranging}
+                  ~ tabIndex={view.arranging ? 0 : -1}
+                  ~ role={view.arranging ? 'button' : 'region'}
+                  ~ aria-label={view.arranging ? 'Move ' + paneLabel(pane) + ' pane' : paneLabel(pane)}
+                  ~ render={createElement(Panel, {
+                  ~   panelRef: layout.panels[pane],
+                  ~   minSize: pane === 'files' ? (narrow ? '20%' : '9%') : pane === 'chat' ? (narrow ? '45%' : '24%') : '20%',
+                  ~   maxSize: '100%',
+                  ~   collapsible: true,
+                  ~   collapsedSize: '0%',
+                  ~   className: panelContainer + ' ' + paneCard,
+                  ~ })}
                   ~ )
-    Separator(className={separator} aria-label='Resize output' disabled={view.arranging})
-    Panel(id='view-output' panelRef={layout.panels.output} minSize='12%' maxSize='70%' collapsible={true} collapsedSize='0%' className={panelContainer})
-      OutputPane(session={session} layout={layout} navigate={navigate})
+                  span(className='absolute top-2 left-2 z-10 rounded-md bg-[#090909] px-2 py-1 text-[11px] leading-none tracking-[-0.01em] text-[#f7f7f4] shadow-[0_4px_12px_#0004]' hidden={!view.arranging} aria-hidden='true') #{paneLabel(pane)}
+                  PaneContent(pane={pane} session={session} layout={layout} navigate={navigate})
+                if index < view.order.length - 1
+                  Separator(
+                    ~ id={'resize-' + pane + '-' + renderedOrder[index + 1]}
+                    ~ className={separator + ' arranging:hidden'}
+                    ~ aria-label={resizeLabel(pane, renderedOrder[index + 1])}
+                    ~ disabled={view.arranging || (!view[pane] && !view[renderedOrder[index + 1]])}
+                    ~ )
+      Separator(className={separator} aria-label='Resize output' disabled={view.arranging})
+      Panel(id='view-output' panelRef={layout.panels.output} minSize='12%' maxSize='70%' collapsible={true} collapsedSize='0%' className={panelContainer})
+        OutputPane(session={session} layout={layout} navigate={navigate})

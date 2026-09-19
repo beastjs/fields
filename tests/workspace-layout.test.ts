@@ -18,9 +18,9 @@ test('reordering keeps each pane size and persists the shareable order', () => {
 
   layout.reorder('chat', 'files');
 
-  expect(layout.getSnapshot().order).toEqual(['chat', 'files', 'editor', 'preview']);
-  expect(persisted?.order).toEqual(['chat', 'files', 'editor', 'preview']);
-  expect(persisted?.panes).toEqual([18, 14, 34, 34]);
+  expect(layout.getSnapshot().order).toEqual(['preview', 'editor', 'files', 'chat']);
+  expect(persisted?.order).toEqual(['preview', 'editor', 'files', 'chat']);
+  expect(persisted?.panes).toEqual([34, 34, 14, 18]);
   expect(layout.getSnapshot().chat).toBe(true);
   expect(layout.getSnapshot().files).toBe(true);
 });
@@ -35,8 +35,9 @@ test('restoring and resetting order updates the observable layout state', () => 
   expect(notifications).toBe(1);
 
   layout.reset();
-  expect(layout.getSnapshot().order).toEqual(['files', 'editor', 'preview', 'chat']);
-  expect(layout.getSnapshot().chat).toBe(false);
+  expect(layout.getSnapshot().order).toEqual(['chat', 'preview', 'editor', 'files']);
+  expect(layout.getSnapshot().chat).toBe(true);
+  expect(layout.getSnapshot().files).toBe(false);
   expect(notifications).toBe(2);
 });
 
@@ -64,7 +65,7 @@ test('arranging previews pane order and only persists it when finished', () => {
 
   expect(layout.getSnapshot().arranging).toBe(true);
   expect(layout.getSnapshot().arrangeOrder).toEqual(['chat', 'files', 'editor', 'preview']);
-  expect(layout.getSnapshot().order).toEqual(['files', 'editor', 'preview', 'chat']);
+  expect(layout.getSnapshot().order).toEqual(['chat', 'preview', 'editor', 'files']);
   expect(persisted).toBeUndefined();
 
   layout.finishArranging();

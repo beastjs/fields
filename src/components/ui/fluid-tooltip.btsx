@@ -75,7 +75,13 @@ module
   }
   interface FluidTooltipTriggerProps {
     children: ReactElement;
-    asChild?: boolean;
+    /**
+     * The element Base UI renders the trigger as, instead of a `<button>` of its own. Pass one
+     * whenever the trigger already has an interactive element, so it does not end up nested inside
+     * another button. `disabled` belongs on this element: T.Trigger consumes its own `disabled`
+     * prop for tooltip behaviour and never forwards it to the DOM.
+     */
+    render?: ReactElement;
     keepOpenOnClick?: boolean;
   }
   interface FluidTooltipContentProps {

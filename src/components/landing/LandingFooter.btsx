@@ -1,0 +1,19 @@
+import type { LandingActions } from './types'
+
+props { enter }: Pick<LandingActions, 'enter'>
+
+footer(className='border-t border-edge px-5 py-10 max-[760px]:px-4')
+  div(className='mx-auto flex max-w-6xl flex-col gap-8')
+    div(className='flex flex-wrap items-start justify-between gap-x-10 gap-y-6')
+      div(className='flex min-w-0 flex-col gap-2.5')
+        span(className='flex items-center gap-2.5')
+          img(className='opacity-80 invert light:invert-0' src='/beast.svg' alt='' width='20' height='20')
+          span(className='text-[14px] font-medium tracking-[-0.01em] text-fg') Beast Playground
+        p(className='max-w-xs text-[12px] leading-[1.6] text-dim') Write Beast components, inspect the Octane they compile to, and run them in an isolated browser preview.
+      nav(className='flex flex-wrap gap-x-8 gap-y-2 text-[12px]' aria-label='Footer')
+        a(className='text-dim transition-colors hover:text-fg' href='#overview') Overview
+        a(className='text-dim transition-colors hover:text-fg' href='#get-started') Get started
+        a(className='text-dim transition-colors hover:text-fg' href='/playground' onClick={enter}) Open the playground
+    div(className='flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-edge pt-6 font-code text-[10px] tracking-[0.1em] text-faint uppercase')
+      span © #{new Date().getFullYear()} Beast Playground
+      span Runs entirely in your browser
