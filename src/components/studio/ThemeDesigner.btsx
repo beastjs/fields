@@ -159,7 +159,7 @@ setup
    * Every call goes through here so one failure path covers all four. A missing key is reported as the setup step
    * it is, rather than as an error, because nothing about the studio is broken without it.
    */
-  const call = async <A,>(what: string, work: (loaded: Awaited<ReturnType<typeof workflows>>) => Promise<A>): Promise<A | undefined> => {
+  const call = async <A extends unknown>(what: string, work: (loaded: Awaited<ReturnType<typeof workflows>>) => Promise<A>): Promise<A | undefined> => {
     if (busy) return undefined;
     setBusy(what);
     setError('');

@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'octane'
 import { renderChatMarkdown } from '../../chat/markdown'
 import { chatResponseParts } from '../../chat/response-parts'
 import Accordion, { AccordionItem, AccordionTrigger, AccordionPanel } from '../ui/accordion.btsx'
-import type { ChatMessage } from '../../chat/controller'
+import type { ChatMessage as ChatMessageData } from '../../chat/controller'
 import { cn } from '@/lib/utils'
 import { secondaryButton } from '../ui/styles'
 
@@ -18,7 +18,7 @@ module
   const applyScope = 'rounded-full border border-edge px-1.5 py-px font-code text-fg-secondary';
   const messageState = 'ml-auto font-code text-[6px] tracking-[0.5px] text-faint';
   const applyErrorClass = 'chat-apply-error text-warning';
-  interface ChatMessageProps { message: ChatMessage; session: PlaygroundSession, auto: boolean, onAutoFailure?: (message: ChatMessage, error: string) => void, haltReason?: string }
+  interface ChatMessageProps { message: ChatMessageData; session: PlaygroundSession, auto: boolean, onAutoFailure?: (message: ChatMessageData, error: string) => void, haltReason?: string }
 props { message, session, auto, onAutoFailure, haltReason }: ChatMessageProps
 setup
   const parts = chatResponseParts(message.content);

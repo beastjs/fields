@@ -6,6 +6,15 @@ All notable changes to `play` will be recorded here.
 
 ### Added
 
+- `bun run typecheck` now type-checks `.btsx` components. `tsrx-tsc` only
+  recognises `.tsrx`, so components were previously seen only through the untyped
+  `*.btsx` ambient module. scripts/typecheck.ts compiles each component to TSRX in
+  a shadow tree under `.beast/typecheck`, overlays it on the project with
+  `rootDirs` and `paths` so component imports resolve to their real prop types, and
+  reports diagnostics at their `.btsx` line and column. The test/script check now
+  runs through `tsrx-tsc` too, because `@octanejs/resizable-panels` publishes
+  `.tsrx` types.
+
 - Section presets as JSON documents stored in Convex: a typed node tree whose
   layout, spacing, sizing and typography are fields rather than class strings,
   with unmodelled utilities, conditional class lists and `setup` behaviour
@@ -105,6 +114,19 @@ All notable changes to `play` will be recorded here.
   a phased implementation status report.
 - Compiler fixtures, filesystem/coordinator/protocol tests, and Chromium integration
   tests for rendering, edits, errors, recovery, imports, and preview isolation.
+
+### Fixed
+
+- Type errors the new check surfaced in components: a missing `:` in the
+  switcher props, a missing `VariantProps` import and mistyped `render`/`props` in
+  button-group, an `else null` branch in avatar that rendered a literal `<null>`
+  element, an unsupported `type` prop on the Base UI checkbox root, string-widened
+  side and handle lists in the design overlay, an unnarrowed `summary` in the
+  publish dialog, and the sortable overlay's `children`/`RenderProp` types. The
+  chat message's `ChatMessage` type import is aliased so it no longer shares the
+  component's name. Sortable prop types are exported at their declarations, and
+  the theme designer's `<A,>` generic is written `<A extends unknown>`, because
+  Octane's Volar compiler rejects the original forms.
 
 ### Changed
 

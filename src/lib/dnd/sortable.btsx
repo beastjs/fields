@@ -45,7 +45,7 @@ module
   type Orientation = 'vertical' | 'horizontal' | 'mixed'
   type DivProps = JSX.IntrinsicElements['div']
   type ButtonProps = JSX.IntrinsicElements['button']
-  type RenderProp = Parameters<typeof useRender<Record<string, unknown>>>[0]['render']
+  type RenderProp = useRender.RenderProp
   type ProviderHandler<Name extends 'onDragStart' | 'onDragMove' | 'onDragOver' | 'onDragEnd'> =
     NonNullable<DragDropProviderProps[Name]>
 
@@ -54,7 +54,7 @@ module
     getItemValue: (item: T) => UniqueIdentifier
   }
 
-  type SortableProps<T> = {
+  export type SortableProps<T> = {
     id?: string
     value: T[]
     children?: unknown
@@ -80,7 +80,7 @@ module
     flatCursor: boolean
   }
 
-  interface SortableContentProps extends Omit<DivProps, 'children'> {
+  export interface SortableContentProps extends Omit<DivProps, 'children'> {
     children?: unknown
     render?: RenderProp
     asChild?: boolean
@@ -88,7 +88,7 @@ module
     strategy?: unknown
   }
 
-  interface SortableItemProps extends Omit<DivProps, 'children' | 'id'> {
+  export interface SortableItemProps extends Omit<DivProps, 'children' | 'id'> {
     id?: string
     value: UniqueIdentifier
     children?: unknown
@@ -106,13 +106,13 @@ module
     disabled: boolean
   }
 
-  interface SortableItemHandleProps extends Omit<ButtonProps, 'children'> {
+  export interface SortableItemHandleProps extends Omit<ButtonProps, 'children'> {
     children?: unknown
     render?: RenderProp
     asChild?: boolean
   }
 
-  type SortableOverlayProps = Omit<DragOverlayProps<any, any>, 'children'> & {
+  export type SortableOverlayProps = Omit<DragOverlayProps<any, any>, 'children'> & {
     container?: HTMLElement | DocumentFragment | null
     children?: ((params: { value: UniqueIdentifier }) => unknown) | unknown
   }
@@ -292,8 +292,8 @@ component SortableOverlay
         ...overlayProps,
         className: cn(!context.flatCursor && 'cursor-grabbing', className),
         dropAnimation,
+        children: createElement(SortableOverlayContext.Provider, { value: true }, overlayChildren),
       },
-      createElement(SortableOverlayContext.Provider, { value: true }, overlayChildren),
     )
     const portal = container ? createPortal(overlay, container) : null
 
@@ -305,7 +305,6 @@ module
   const ItemHandle = SortableItemHandle
   const Overlay = SortableOverlay
   export { Content, Item, ItemHandle, Overlay, SortableContent, SortableItem, SortableItemHandle, SortableOverlay }
-  export type { SortableProps, SortableContentProps, SortableItemProps, SortableItemHandleProps, SortableOverlayProps }
 
 props { id: idProp,
   ~ value,

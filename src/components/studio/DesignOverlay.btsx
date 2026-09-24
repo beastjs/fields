@@ -27,6 +27,10 @@ module
     onDismiss: () => void
   }
 
+  const SIDES = ['top', 'right', 'bottom', 'left'] as const
+  const PADDING_HANDLES = ['pad-top', 'pad-right', 'pad-bottom', 'pad-left'] as const satisfies readonly Handle[]
+  const MARGIN_HANDLES = ['margin-top', 'margin-right', 'margin-bottom', 'margin-left'] as const satisfies readonly Handle[]
+
   const SPACING_FIELD: Record<Exclude<Handle, 'size'>, keyof SpacingStyle> = {
     'pad-top': 'pt', 'pad-right': 'pr', 'pad-bottom': 'pb', 'pad-left': 'pl',
     'margin-top': 'mt', 'margin-right': 'mr', 'margin-bottom': 'mb', 'margin-left': 'ml'
@@ -176,12 +180,12 @@ div(className='pointer-events-none absolute inset-0 z-10 overflow-hidden' aria-h
     div
       div(className='absolute' style={frame(selected)})
         div(className='absolute inset-0 rounded-[2px] outline outline-1 outline-brand')
-        each side in ['top', 'right', 'bottom', 'left'] key 'p' + side
+        each side in SIDES key 'p' + side
           div(className='absolute bg-brand/20' style={band(selected, side, 'padding')})
-        each side in ['top', 'right', 'bottom', 'left'] key 'm' + side
+        each side in SIDES key 'm' + side
           div(className='absolute bg-warning/20' style={band(selected, side, 'margin')})
 
-        each handle in ['pad-top', 'pad-right', 'pad-bottom', 'pad-left'] key handle
+        each handle in PADDING_HANDLES key handle
           div(
             ~ className='pointer-events-auto absolute bg-[#ffd6a8] bg-clip-content'
             ~ style={handleStyle(selected, handle)}
@@ -190,7 +194,7 @@ div(className='pointer-events-none absolute inset-0 z-10 overflow-hidden' aria-h
             ~ onPointerUp={end}
             ~ onPointerCancel={end}
             ~ )
-        each handle in ['margin-top', 'margin-right', 'margin-bottom', 'margin-left'] key handle
+        each handle in MARGIN_HANDLES key handle
           div(
             ~ className='pointer-events-auto absolute bg-[#57c4dc] bg-clip-content'
             ~ style={handleStyle(selected, handle)}
