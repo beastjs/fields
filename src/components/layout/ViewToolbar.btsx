@@ -33,7 +33,7 @@ setup
 
 div(className='hidden min-w-0 items-center gap-6 overflow-x-auto bg-seam p-0 md:flex md:gap-0.5 md:px-1.5' role='group' aria-label='Workspace views')
   FluidTooltip
-    ButtonGroup(className='dark:bg-muted/90 light:gap-0.5 light:rounded-[14px] light:border-transparent light:divide-transparent light:bg-muted light:p-1 dark:border-foreground/10 dark:divide-foreground/10')
+    ButtonGroup(className='dark:bg-muted/90 light:gap-0.5 light:rounded-[14px] light:border-transparent light:divide-transparent light:bg-panel-deep light:p-1 dark:border-foreground/10 dark:divide-foreground/10')
       each pane in toolbarPanes key pane.id
         FluidTooltipRoot(id={pane.id} sideOffset={16})
           FluidTooltipTrigger(

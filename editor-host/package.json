@@ -5,7 +5,7 @@
   "scripts": {
     "build": "cd .. && PUBLIC_CONVEX_URL=https://clean-pony-320.convex.cloud bun run build",
     "dev": "wrangler dev --local",
-    "deploy": "bun run build && wrangler deploy",
+    "deploy": "wrangler deploy",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

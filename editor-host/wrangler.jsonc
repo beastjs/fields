@@ -7,7 +7,10 @@
   // The editor at the apex. Published sites are the `play-hosting` Worker on `*.bigticket.ph`; see docs/hosting.md.
   "routes": [{ "pattern": "bigticket.ph", "custom_domain": true }],
   "workers_dev": true,
-  // `bun run build` (production Convex) writes ../dist. Only /api/* reaches the Worker; everything else is served
+  // Every `wrangler deploy` (and `wrangler dev`) rebuilds ../dist against production Convex first, so a stale dev
+  // build in dist/ can never ship. The URL is public; it is also in the browser bundle.
+  "build": { "command": "cd .. && PUBLIC_CONVEX_URL=https://clean-pony-320.convex.cloud bun run build" },
+  // ../dist holds that build. Only /api/* reaches the Worker; everything else is served
   // straight from assets, with unknown paths falling back to the app shell for client-side routes.
   "assets": {
     "directory": "../dist",
