@@ -12,6 +12,7 @@ import { useTheme } from '../theme/theme-context'
 import Switcher from '../ui/switcher.btsx'
 import DesignStudioPanel from "../studio/DesignStudio.btsx";
 import ProjectSharing from "./ProjectSharing.btsx";
+import ProjectPublishing from "./ProjectPublishing.btsx";
 import { signInWithGoogle } from '@/lib/firebase/auth';
 
 module
@@ -142,6 +143,8 @@ div
     ViewToolbar(session={session} layout={layout} toggleArrangement={toggleArrangement})
     div(className='flex shrink-0 items-center justify-self-end gap-4 max-[760px]:gap-0.5')
       DesignStudio(session={session})
+      if auth.isAuthenticated && cloudState.activeProjectId
+        ProjectPublishing(session={session} projectId={cloudState.activeProjectId} projectName={activeProject?.name ?? cloudState.activeProjectName ?? 'Project'})
       ProjectSharing(session={session})
       button(className='text-foreground/60 hover:text-accent light:hover:text-brand' type='button' aria-label='Light mode' aria-pressed={theme === 'light'} title={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'} onClick={toggleTheme})
         Icon(name='theme' className='size-4')

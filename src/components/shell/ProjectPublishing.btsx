@@ -1,0 +1,14 @@
+import { useState } from 'octane'
+import type { SessionProps } from '../types'
+import type { CloudProjectId } from '../../playground/cloud-project-persistence'
+import PublishDialog from './PublishDialog.btsx'
+import {Icon} from '@/lib/icons'
+
+props { session, projectId, projectName }: SessionProps & { projectId: CloudProjectId; projectName: string }
+setup
+  const [open, setOpen] = useState(false);
+
+button(className='text-foreground/60 hover:text-foreground' type='button' aria-label='Publish project' title='Publish project' onClick={() => setOpen(true)})
+  Icon(name='globe' className='size-4')
+if open
+  PublishDialog(session={session} projectId={projectId} projectName={projectName} onClose={() => setOpen(false)})

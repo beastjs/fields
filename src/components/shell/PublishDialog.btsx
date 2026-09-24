@@ -1,0 +1,172 @@
+import type { api } from '../../../convex/_generated/api'
+import type { Doc, Id } from '../../../convex/_generated/dataModel'
+import { useEffect, useRef, useState } from 'octane'
+import { useConvexQuery } from '@/hooks/use-convex-query'
+import { convexClient } from '@/lib/convex-client'
+import type { SessionProps } from '../types'
+import type { CloudProjectId } from '../../playground/cloud-project-persistence'
+import { buildSiteForPublishing } from '../../playground/publish-site'
+import { dialogPanel, dialogActions, dialogHeading, dialogTitle, eyebrowLabel, iconButton, primaryButton, secondaryButton, statusDot, transferDescription, transferLabel, transferNote } from '../ui/styles'
+
+module
+  const siteQuery = 'sites:getForProject' as unknown as typeof api.sites.getForProject
+  const suggestQuery = 'sites:suggest' as unknown as typeof api.sites.suggest
+  const availabilityQuery = 'sites:checkAvailability' as unknown as typeof api.sites.checkAvailability
+  const deploymentsQuery = 'sites:listDeployments' as unknown as typeof api.sites.listDeployments
+  const claimSlugMutation = 'sites:claimSlug' as unknown as typeof api.sites.claimSlug
+  const publishAction = 'publishing:publish' as unknown as typeof api.publishing.publish
+  const rollbackMutation = 'publishing:rollback' as unknown as typeof api.publishing.rollback
+  const unpublishMutation = 'publishing:unpublish' as unknown as typeof api.publishing.unpublish
+  const historyPage = { cursor: null, numItems: 8 }
+
+  type Phase = 'idle' | 'claiming' | 'building' | 'uploading' | 'restoring' | 'unpublishing'
+  const phaseLabels: Record<Phase, string> = {
+    idle: 'Publish', claiming: 'Saving address…', building: 'Compiling…', uploading: 'Uploading…',
+    restoring: 'Restoring…', unpublishing: 'Unpublishing…'
+  }
+  /** Convex errors carry their user-facing message in `data`. */
+  const messageOf = (error: unknown, fallback: string) => {
+    const data = (error as { data?: { message?: unknown } } | null)?.data
+    if (typeof data?.message === 'string') return data.message
+    return error instanceof Error && error.message ? error.message : fallback
+  }
+  const formatWhen = (time: number) => new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(time)
+  const formatSize = (bytes: number) => bytes < 1_000_000 ? `${Math.max(1, Math.round(bytes / 1000))} KB` : `${(bytes / 1_000_000).toFixed(1)} MB`
+  const describe = (deployment: Doc<'deployments'>) => {
+    if (deployment.status === 'failed') return `Failed — ${deployment.error ?? 'unknown error'}`
+    if (deployment.status === 'uploading') return 'Uploading…'
+    if (deployment.status === 'deleted') return 'Removed'
+    return `${deployment.fileCount ?? 0} files · ${formatSize(deployment.bytes ?? 0)}`
+  }
+  const disabledLook = ' disabled:opacity-50 disabled:cursor-not-allowed'
+  const statusRow = 'flex min-w-0 items-center gap-2 mb-5 px-3 py-2.5 border border-edge rounded-[4px] bg-surface-recessed text-[12px]'
+
+props { session, projectId, projectName, onClose }: SessionProps & { projectId: CloudProjectId; projectName: string; onClose: () => void }
+setup
+  const dialog = useRef<HTMLDialogElement | null>(null);
+  useEffect(() => { dialog.current?.showModal(); return () => dialog.current?.close(); }, []);
+
+  const summary = useConvexQuery(siteQuery, { projectId }, 'publish-site');
+  const suggestion = useConvexQuery(suggestQuery, { projectId }, 'publish-suggest');
+  const history = useConvexQuery(deploymentsQuery, { projectId, paginationOpts: historyPage }, 'publish-history');
+
+  // Untouched, the field shows the claimed slug, or else a suggestion; typing takes over.
+  const [draft, setDraft] = useState<string | null>(null);
+  const slug = (draft ?? summary?.site.slug ?? suggestion ?? '').trim().toLowerCase();
+  const [checkedSlug, setCheckedSlug] = useState('');
+  useEffect(() => {
+    const timer = setTimeout(() => setCheckedSlug(slug), 250);
+    return () => clearTimeout(timer);
+  }, [slug]);
+  const availability = useConvexQuery(availabilityQuery, checkedSlug ? { projectId, slug: checkedSlug } : 'skip', 'publish-availability');
+  const checked = availability && availability.slug === slug ? availability : undefined;
+
+  const [phase, setPhase] = useState<Phase>('idle');
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const busy = phase !== 'idle';
+  const live = summary?.live ?? null;
+  const deployments = history?.page ?? [];
+  const canPublish = !busy && Boolean(convexClient) && Boolean(checked?.available);
+
+  const run = async (next: Phase, work: () => Promise<string>) => {
+    if (!convexClient || busy) return;
+    setError('');
+    setNotice('');
+    setPhase(next);
+    try { setNotice(await work()); }
+    catch (failure) { setError(messageOf(failure, 'Something went wrong. Try again.')); }
+    finally { setPhase('idle'); }
+  };
+  const publish = () => run('claiming', async () => {
+    const client = convexClient!;
+    if (summary?.site.slug !== slug) await client.mutation(claimSlugMutation, { projectId, slug });
+    setPhase('building');
+    const site = await buildSiteForPublishing(session.exportWorkspace().project, projectName);
+    setPhase('uploading');
+    await client.action(publishAction, { projectId, files: site.files });
+    setDraft(null);
+    return 'Published. The new version can take up to a minute to reach every location.';
+  });
+  const restore = (deploymentId: Id<'deployments'>) => run('restoring', async () => {
+    await convexClient!.mutation(rollbackMutation, { deploymentId });
+    return 'Restored. It can take up to a minute to reach every location.';
+  });
+  const unpublish = () => {
+    if (!window.confirm(`Take ${projectName} offline? Its address stays reserved for this project.`)) return;
+    void run('unpublishing', async () => {
+      await convexClient!.mutation(unpublishMutation, { projectId });
+      return 'Unpublished. The site can take up to a minute to go offline everywhere.';
+    });
+  };
+
+dialog(className={dialogPanel} ref={dialog} aria-labelledby='publish-title' onCancel={onClose})
+  div(className={dialogHeading})
+    div
+      span(className={eyebrowLabel}) PUBLISH
+      h2#publish-title(className={dialogTitle}) #{projectName}
+    button(className={iconButton} type='button' aria-label='Close publishing' onClick={onClose}) ×
+  p(className={transferDescription}) Compiles the files in the editor, unsaved edits included, into a static site anyone can visit at its address.
+
+  if summary === undefined
+    div(className={statusRow})
+      span(className='text-dim') Loading…
+  elseif live
+    div(className={statusRow})
+      span(className={statusDot})
+      span(className='shrink-0') Live
+      if summary.url
+        a(className='min-w-0 truncate text-accent underline underline-offset-2 light:text-brand' href={summary.url} target='_blank' rel='noopener noreferrer') #{summary.url}
+      else
+        span(className='min-w-0 truncate text-dim') #{summary.site.slug} · no hosting domain set up yet
+      span(className='ml-auto shrink-0 text-dim text-[10px]') #{formatWhen(summary.site.publishedAt ?? live.createdAt)}
+  else
+    div(className={statusRow})
+      span(className='inline-block size-[5px] shrink-0 rounded-full bg-dim')
+      span(className='text-dim') Not published
+
+  label(className={transferLabel} for='publish-slug') Address
+  input#publish-slug(
+    ~ className='block w-full min-w-0 px-2.5 py-2 border border-edge-strong rounded-[4px] bg-inset text-fg font-code text-[12px] outline-none focus:border-brand'
+    ~ type='text' value={slug} maxlength='48' autocomplete='off' spellcheck={false} disabled={busy || Boolean(live)}
+    ~ aria-describedby='publish-slug-status'
+    ~ onInput={event => setDraft(event.currentTarget.value)}
+    ~ )
+  p#publish-slug-status(className={transferNote} role='status')
+    if live
+      span Unpublish to change the address.
+    elseif !slug
+      span Choose an address: lowercase letters, numbers and hyphens.
+    elseif !checked
+      span Checking…
+    elseif !checked.available
+      span(className='text-warning') #{checked.reason}
+    elseif checked.url
+      span Will publish to #{checked.url}
+    else
+      span Available. No hosting domain is set up yet, so the site will not have a public URL.
+
+  if deployments.length > 0
+    div(className='mb-2')
+      span(className={eyebrowLabel}) HISTORY
+      ul(className='mt-2 max-h-[min(240px,32dvh)] overflow-auto border border-edge rounded-[4px] divide-y divide-edge')
+        each deployment in deployments key deployment._id
+          li(className='flex items-center justify-between gap-3 px-3 py-2 text-[11px]')
+            div(className='min-w-0')
+              div #{formatWhen(deployment.createdAt)}
+              div(className='truncate text-dim text-[10px]' title={describe(deployment)}) #{describe(deployment)}
+            if live && deployment._id === live._id
+              span(className='shrink-0 font-code text-[9px] tracking-[0.15em] text-brand') LIVE
+            elseif deployment.status === 'ready'
+              button(className={secondaryButton + disabledLook} type='button' disabled={busy} onClick={() => void restore(deployment._id)}) Restore
+
+  if error
+    p(className='text-[12px] leading-[1.7] text-warning [overflow-wrap:anywhere]' role='alert') #{error}
+  if notice
+    p(className={transferNote} role='status') #{notice}
+
+  div(className={dialogActions})
+    if live
+      button(className={secondaryButton + disabledLook + ' mr-auto'} type='button' disabled={busy} onClick={unpublish}) Unpublish
+    button(className={secondaryButton} type='button' onClick={onClose}) Close
+    button(className={primaryButton + disabledLook} type='button' disabled={!canPublish} onClick={() => void publish()}) #{busy ? phaseLabels[phase] : live ? 'Publish update' : 'Publish'}

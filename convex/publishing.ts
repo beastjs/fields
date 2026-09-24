@@ -55,11 +55,12 @@ class HostingError extends Error {
 // Publish
 
 /**
- * Uploads a site build (`buildSite` in src/playground/site-build.ts) and makes it live. The caller compiles; the
+ * Uploads a site build (`buildSite` in src/playground/site-build.ts) and makes it live. The caller compiles what is
+ * in its editor, unsaved edits included; the deployment records the project revision current at the time. The
  * Worker validates every path and content type again before sealing the upload.
  */
 export const publish = action({
-  args: { projectId: v.id('projects'), projectRevision: v.number(), files: v.array(siteFileValidator) },
+  args: { projectId: v.id('projects'), files: v.array(siteFileValidator) },
   returns: v.object({ deploymentId: v.id('deployments'), slug: v.string() }),
   handler: async (ctx, args): Promise<{ deploymentId: Id<'deployments'>; slug: string }> => {
     const encoder = new TextEncoder()
@@ -77,7 +78,6 @@ export const publish = action({
 
     const { deploymentId, slug } = await ctx.runMutation(internal.publishing.beginDeployment, {
       projectId: args.projectId,
-      projectRevision: args.projectRevision,
       fileCount: args.files.length,
       bytes
     })
@@ -95,16 +95,13 @@ export const publish = action({
 })
 
 export const beginDeployment = internalMutation({
-  args: { projectId: v.id('projects'), projectRevision: v.number(), fileCount: v.number(), bytes: v.number() },
+  args: { projectId: v.id('projects'), fileCount: v.number(), bytes: v.number() },
   returns: v.object({ deploymentId: v.id('deployments'), slug: v.string() }),
   handler: async (ctx, args) => {
     // Runs with the publishing user's identity, which the action passes through.
     const { project, user } = await requireProjectMember(ctx, args.projectId)
     const site = await siteForProject(ctx, project._id)
     if (!site) return appError('SITE_NOT_CLAIMED', 'Choose an address before publishing.')
-    if (!Number.isSafeInteger(args.projectRevision) || args.projectRevision < 0 || args.projectRevision > project.revision) {
-      return appError('INVALID_ARGUMENT', 'Unknown project revision.')
-    }
     const now = Date.now()
     const latest = await ctx.db
       .query('deployments')
@@ -118,7 +115,7 @@ export const beginDeployment = internalMutation({
       projectId: project._id,
       slug: site.slug,
       status: 'uploading',
-      projectRevision: args.projectRevision,
+      projectRevision: project.revision,
       createdBy: user._id,
       fileCount: args.fileCount,
       bytes: args.bytes,
