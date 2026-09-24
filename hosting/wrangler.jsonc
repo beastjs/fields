@@ -11,6 +11,18 @@
   // `.dev.vars` sets `localhost` for `wrangler dev`.
   "vars": { "SITES_DOMAIN": "bigticket.ph" },
   "r2_buckets": [{ "binding": "SITES", "bucket_name": "play-sites" }],
-  "kv_namespaces": [{ "binding": "ROUTES", "id": "4eb4a82949734b0cb994417dcbaa0cf9" }]
+  "kv_namespaces": [{ "binding": "ROUTES", "id": "4eb4a82949734b0cb994417dcbaa0cf9" }],
   // ADMIN_TOKEN: `wrangler secret put ADMIN_TOKEN` in production, `.dev.vars` locally.
+
+  "env": {
+    // `--env dev` deploys `play-hosting-dev` for the dev Convex deployment: its own routes and files, and no public
+    // domain, so dev publishes can never take over a production address. Its sites are reachable only by upload.
+    "dev": {
+      "workers_dev": true,
+      "routes": [],
+      "vars": { "SITES_DOMAIN": "sites.invalid" },
+      "r2_buckets": [{ "binding": "SITES", "bucket_name": "play-sites-dev" }],
+      "kv_namespaces": [{ "binding": "ROUTES", "id": "628b68a7fc914ae49ced312197ffbbea" }]
+    }
+  }
 }

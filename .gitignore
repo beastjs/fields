@@ -16,3 +16,7 @@ test-results/
 # Cloudflare Worker local secrets
 .dev.vars
 .wrangler/
+
+# Editor Worker
+editor-host/.wrangler/
+editor-host/.dev.vars

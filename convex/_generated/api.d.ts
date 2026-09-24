@@ -13,11 +13,14 @@ import type * as builds from "../builds.js";
 import type * as chatActions from "../chatActions.js";
 import type * as chats from "../chats.js";
 import type * as colorhunt from "../colorhunt.js";
+import type * as crons from "../crons.js";
+import type * as deploymentRetention from "../deploymentRetention.js";
 import type * as logs from "../logs.js";
 import type * as presets from "../presets.js";
 import type * as projectFiles from "../projectFiles.js";
 import type * as projects from "../projects.js";
 import type * as publishing from "../publishing.js";
+import type * as rateLimits from "../rateLimits.js";
 import type * as siteSlugs from "../siteSlugs.js";
 import type * as sites from "../sites.js";
 import type * as teams from "../teams.js";
@@ -40,11 +43,14 @@ declare const fullApi: ApiFromModules<{
   chatActions: typeof chatActions;
   chats: typeof chats;
   colorhunt: typeof colorhunt;
+  crons: typeof crons;
+  deploymentRetention: typeof deploymentRetention;
   logs: typeof logs;
   presets: typeof presets;
   projectFiles: typeof projectFiles;
   projects: typeof projects;
   publishing: typeof publishing;
+  rateLimits: typeof rateLimits;
   siteSlugs: typeof siteSlugs;
   sites: typeof sites;
   teams: typeof teams;
@@ -84,4 +90,5 @@ export declare const internal: FilterApi<
 
 export declare const components: {
   agent: import("@convex-dev/agent/_generated/component.js").ComponentApi<"agent">;
+  rateLimiter: import("@convex-dev/rate-limiter/_generated/component.js").ComponentApi<"rateLimiter">;
 };

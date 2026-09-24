@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "play-editor",
+  "account_id": "3e5e21a8e670deeba6401b80e003df01",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-09-01",
+  // The editor at the apex. Published sites are the `play-hosting` Worker on `*.bigticket.ph`; see docs/hosting.md.
+  "routes": [{ "pattern": "bigticket.ph", "custom_domain": true }],
+  "workers_dev": true,
+  // `bun run build` (production Convex) writes ../dist. Only /api/* reaches the Worker; everything else is served
+  // straight from assets, with unknown paths falling back to the app shell for client-side routes.
+  "assets": {
+    "directory": "../dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  }
+  // Optional secrets for the chat routes: COHERE_API_KEY, OPENROUTER_API_KEY, AI_CUSTOM_API_KEY, AI_CUSTOM_BASE_URL,
+  // TYPESAFE_API_KEY. Unset, visitors bring their own key in chat settings.
+}

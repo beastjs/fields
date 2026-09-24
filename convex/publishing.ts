@@ -3,6 +3,8 @@ import { internal } from './_generated/api'
 import type { Doc, Id } from './_generated/dataModel'
 import { action, env, internalAction, internalMutation, internalQuery, mutation, type MutationCtx } from './_generated/server'
 import { appError, requireProjectMember } from './auth'
+import { deploymentsToDelete } from './deploymentRetention'
+import { enforceRateLimit } from './rateLimits'
 
 /**
  * Publishing a project to the hosting Worker (hosting/README.md).
@@ -15,8 +17,10 @@ import { appError, requireProjectMember } from './auth'
 
 /** Convex limits one value to 1 MiB and function arguments to 16 MiB; stay clear of both. */
 export const PUBLISH_LIMITS = { files: 500, fileBytes: 1000 * 1000, bytes: 8 * 1000 * 1000 }
-/** An upload older than this is presumed dead and no longer blocks the next publish. */
+/** An upload older than this is presumed dead: it no longer blocks the next publish, and the sweep fails it. */
 const UPLOAD_TIMEOUT_MS = 2 * 60 * 1000
+/** Deployments the sweep handles per run, per kind; the next hourly run picks up the rest. */
+const SWEEP_BATCH = 25
 const SYNC_RETRY_DELAYS_MS = [5_000, 30_000, 2 * 60_000, 10 * 60_000]
 
 const siteFileValidator = v.object({ path: v.string(), content: v.string(), contentType: v.string() })
@@ -111,6 +115,7 @@ export const beginDeployment = internalMutation({
     if (latest?.status === 'uploading' && now - latest.createdAt < UPLOAD_TIMEOUT_MS) {
       return appError('PUBLISH_IN_PROGRESS', 'This project is already being published.')
     }
+    await enforceRateLimit(ctx, 'publish', user._id)
     const deploymentId = await ctx.db.insert('deployments', {
       projectId: project._id,
       slug: site.slug,
@@ -150,6 +155,7 @@ export const promote = internalMutation({
     }
     await ctx.db.patch(deployment._id, { status: 'ready', completedAt: deployment.completedAt ?? Date.now() })
     await makeLive(ctx, deployment.projectId, deployment, user._id)
+    await ctx.scheduler.runAfter(0, internal.publishing.pruneProject, { projectId: deployment.projectId })
     return null
   }
 })
@@ -238,6 +244,115 @@ export const syncRoute = internalAction({
       console.warn(`Route sync for ${args.slug} failed; retrying in ${delay / 1000}s`, error)
       await ctx.scheduler.runAfter(delay, internal.publishing.syncRoute, { slug: args.slug, attempt: args.attempt + 1 })
     }
+    return null
+  }
+})
+
+// ---------------------------------------------------------------------------------------------------------------
+// Retention and cleanup
+
+/**
+ * Takes a deployment out of service, then removes its files. `deleting` is set in the same transaction that checks
+ * it is not live, and `rollback` only restores `ready` deployments, so files are never removed from under a site.
+ */
+async function retire(ctx: MutationCtx, deployment: Doc<'deployments'>) {
+  await ctx.db.patch(deployment._id, { status: 'deleting' })
+  await ctx.scheduler.runAfter(0, internal.publishing.deleteDeploymentFiles, { deploymentId: deployment._id })
+}
+
+/** Applies `deploymentsToDelete` to one project. Runs after every publish. */
+export const pruneProject = internalMutation({
+  args: { projectId: v.id('projects') },
+  returns: v.number(),
+  handler: async (ctx, args) => {
+    const site = await siteForProject(ctx, args.projectId)
+    const recent = await ctx.db
+      .query('deployments')
+      .withIndex('by_projectId_and_createdAt', (q) => q.eq('projectId', args.projectId))
+      .order('desc')
+      .take(100)
+    const doomed = deploymentsToDelete(recent, site?.liveDeploymentId, Date.now())
+    for (const deployment of doomed) await retire(ctx, deployment)
+    return doomed.length
+  }
+})
+
+/**
+ * Hourly: fails uploads that never finished, retires failed uploads nobody published again (their projects never
+ * reach `pruneProject`), and retries removals that have not completed.
+ */
+export const sweep = internalMutation({
+  args: {},
+  returns: v.object({ failed: v.number(), retired: v.number(), retried: v.number() }),
+  handler: async (ctx) => {
+    const now = Date.now()
+    const stale = await ctx.db
+      .query('deployments')
+      .withIndex('by_status_and_createdAt', (q) => q.eq('status', 'uploading').lt('createdAt', now - UPLOAD_TIMEOUT_MS))
+      .take(SWEEP_BATCH)
+    for (const deployment of stale) {
+      await ctx.db.patch(deployment._id, { status: 'failed', error: 'The upload did not finish.', completedAt: now })
+    }
+    const pending = await ctx.db
+      .query('deployments')
+      .withIndex('by_status_and_createdAt', (q) => q.eq('status', 'deleting'))
+      .take(SWEEP_BATCH)
+    for (const deployment of pending) {
+      await ctx.scheduler.runAfter(0, internal.publishing.deleteDeploymentFiles, { deploymentId: deployment._id })
+    }
+    const abandoned = await ctx.db
+      .query('deployments')
+      .withIndex('by_status_and_createdAt', (q) => q.eq('status', 'failed').lt('createdAt', now - 24 * 60 * 60 * 1000))
+      .take(SWEEP_BATCH)
+    for (const deployment of abandoned) await retire(ctx, deployment)
+    return { failed: stale.length, retired: abandoned.length, retried: pending.length }
+  }
+})
+
+export const deploymentStatus = internalQuery({
+  args: { deploymentId: v.id('deployments') },
+  returns: v.union(v.string(), v.null()),
+  handler: async (ctx, args) => (await ctx.db.get(args.deploymentId))?.status ?? null
+})
+
+/** Removes a retired deployment's files. One attempt; the hourly sweep retries until it succeeds. */
+export const deleteDeploymentFiles = internalAction({
+  args: { deploymentId: v.id('deployments') },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    if ((await ctx.runQuery(internal.publishing.deploymentStatus, args)) !== 'deleting') return null
+    try {
+      await hostingAdmin(`deployments/${args.deploymentId}`, 'DELETE')
+    } catch (error) {
+      console.warn(`Removing deployment ${args.deploymentId} failed; the sweep will retry`, error)
+      return null
+    }
+    await ctx.runMutation(internal.publishing.finishDeletion, args)
+    return null
+  }
+})
+
+export const finishDeletion = internalMutation({
+  args: { deploymentId: v.id('deployments') },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const deployment = await ctx.db.get(args.deploymentId)
+    if (deployment?.status === 'deleting') await ctx.db.patch(deployment._id, { status: 'deleted' })
+    return null
+  }
+})
+
+/** Retires one deployment by hand (`npx convex run publishing:retireDeployment`); refuses the live one. */
+export const retireDeployment = internalMutation({
+  args: { deploymentId: v.id('deployments') },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const deployment = await ctx.db.get(args.deploymentId)
+    if (!deployment) return appError('NOT_FOUND', 'Deployment not found.')
+    const site = await siteForProject(ctx, deployment.projectId)
+    if (site?.liveDeploymentId === deployment._id) return appError('DEPLOYMENT_LIVE', 'Unpublish or restore another deployment first.')
+    if (deployment.status === 'deleting' || deployment.status === 'deleted') return null
+    await retire(ctx, deployment)
     return null
   }
 })

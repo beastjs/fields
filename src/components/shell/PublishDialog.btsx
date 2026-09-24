@@ -35,7 +35,7 @@ module
   const describe = (deployment: Doc<'deployments'>) => {
     if (deployment.status === 'failed') return `Failed — ${deployment.error ?? 'unknown error'}`
     if (deployment.status === 'uploading') return 'Uploading…'
-    if (deployment.status === 'deleted') return 'Removed'
+    if (deployment.status === 'deleting' || deployment.status === 'deleted') return 'Removed to save space'
     return `${deployment.fileCount ?? 0} files · ${formatSize(deployment.bytes ?? 0)}`
   }
   const disabledLook = ' disabled:opacity-50 disabled:cursor-not-allowed'

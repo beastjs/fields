@@ -128,13 +128,15 @@ export const chatValidator = v.object({
 })
 
 /**
- * `uploading` until the hosting Worker seals the files, then `ready` (routable) or `failed`. `deleted` once its
- * files are removed from storage. Whether it is live is the site's `liveDeploymentId`, not a status.
+ * `uploading` until the hosting Worker seals the files, then `ready` (routable) or `failed`. Retention moves old
+ * ones to `deleting` — no longer restorable or routable — before their files are removed, then `deleted`. Whether
+ * one is live is the site's `liveDeploymentId`, not a status.
  */
 export const deploymentStatusValidator = v.union(
   v.literal('uploading'),
   v.literal('ready'),
   v.literal('failed'),
+  v.literal('deleting'),
   v.literal('deleted')
 )
 

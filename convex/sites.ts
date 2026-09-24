@@ -3,6 +3,7 @@ import { v } from 'convex/values'
 import type { Doc, Id } from './_generated/dataModel'
 import { env, mutation, query, type QueryCtx } from './_generated/server'
 import { appError, requireProjectMember } from './auth'
+import { enforceRateLimit } from './rateLimits'
 import schema from './schema'
 import { checkSlug, siteUrl, suggestSlug } from './siteSlugs'
 
@@ -104,6 +105,7 @@ export const claimSlug = mutation({
 
     const now = Date.now()
     const site = await siteForProject(ctx, project._id)
+    if (site?.slug !== check.slug) await enforceRateLimit(ctx, 'claimSlug', user._id)
     if (!site) {
       const siteId = await ctx.db.insert('sites', {
         projectId: project._id,

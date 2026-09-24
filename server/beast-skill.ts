@@ -1,17 +1,8 @@
-import { readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
+import { beastSkillReferences } from '../src/generated/beast-skill-references'
 
 // The vendored Beast agent skill (.agents/skills/beast). The chat model cannot read files, so the
-// references it would route to are loaded once here and injected into the system prompt.
-const root = fileURLToPath(new URL('../.agents/skills/beast/references/', import.meta.url))
-
-const read = (name: string) => {
-  try {
-    return readFileSync(root + name, 'utf8').trim()
-  } catch {
-    return ''
-  }
-}
+// references it would route to are bundled at build time (scripts/prepare-runtime.mjs) and injected
+// into the system prompt.
 
 /** Always relevant to editing BTSX in the playground. */
 const core = ['beast-syntax-core.md', 'beast-syntax-control.md', 'beast-syntax-advanced.md', 'octane-hooks-core.md', 'beast-diagnostics.md']
@@ -26,11 +17,7 @@ const routed: [RegExp, string][] = [
   [/reusable|component library|(?:new|create|build|make) (?:a |an )?\w* ?component/i, 'ui-component-authoring.md']
 ]
 
-const cache = new Map<string, string>()
-const load = (name: string) => {
-  if (!cache.has(name)) cache.set(name, read(name))
-  return cache.get(name)!
-}
+const load = (name: string) => beastSkillReferences[name] ?? ''
 
 /** Beast skill references relevant to this request, formatted for the system prompt. */
 export function beastSkill(haystack: string) {

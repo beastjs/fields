@@ -1,0 +1,15 @@
+{
+  "name": "play-editor-host",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "cd .. && PUBLIC_CONVEX_URL=https://clean-pony-320.convex.cloud bun run build",
+    "dev": "wrangler dev --local",
+    "deploy": "bun run build && wrangler deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "wrangler": "^4.137.0"
+  }
+}

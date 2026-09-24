@@ -26,6 +26,22 @@
       ],
       "port": 8787,
       "url": "http://127.0.0.1:8787"
+    },
+    {
+      "name": "editor-host",
+      "runtimeExecutable": "editor-host/node_modules/.bin/wrangler",
+      "runtimeArgs": [
+        "dev",
+        "--local",
+        "--config",
+        "editor-host/wrangler.jsonc",
+        "--port",
+        "8788",
+        "--ip",
+        "127.0.0.1"
+      ],
+      "port": 8788,
+      "url": "http://127.0.0.1:8788"
     }
   ]
 }
