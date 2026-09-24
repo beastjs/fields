@@ -9,7 +9,7 @@ import Topbar from './Topbar.btsx'
 import Statusbar from './Statusbar.btsx'
 import Workspace from '../layout/Workspace.btsx'
 import ThemeProvider from '../theme/ThemeProvider.btsx'
-import LandingPage from '../landing/LandingPage.btsx'
+import LandingPage from '../landing/fields/FieldsLandingPage.btsx'
 
 setup
   const [query, setQuery] = useQueryStates(panelQueryParsers, { history: 'replace', shallow: true, scroll: false });

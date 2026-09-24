@@ -1,0 +1,11 @@
+import { useEffect, useRef } from 'octane'
+import { useTheme } from '../../theme/theme-context'
+import { mountFieldsGlobe } from './fields-globe'
+
+setup
+  const { theme } = useTheme();
+  const canvas = useRef<HTMLCanvasElement | null>(null);
+  // The palette is baked in at mount, so a theme change remounts; the sway runs on the page clock, so it doesn't jump.
+  useEffect(() => mountFieldsGlobe(canvas.current!, theme), [theme]);
+
+canvas(ref={canvas} className='block size-full touch-pan-y' aria-hidden='true')

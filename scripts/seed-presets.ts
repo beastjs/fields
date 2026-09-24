@@ -7,6 +7,7 @@
  *   bun run seed:presets              # parse, validate, and push to the configured deployment
  *   bun run seed:presets --dry-run    # parse and validate only, printing what would change
  *   bun run seed:presets --out <path> # write the documents to a file instead of pushing
+ *   bun run seed:presets --prod       # push to the production deployment instead of dev
  *
  * Presets go up in batches so each `convex run` argument stays well inside the shell's limit.
  */
@@ -28,6 +29,7 @@ const argument = (flag: string) => {
   return index > 0 ? process.argv[index + 1] : undefined
 }
 const dryRun = process.argv.includes('--dry-run')
+const prod = process.argv.includes('--prod')
 const out = argument('--out')
 
 function build() {
@@ -69,7 +71,7 @@ function build() {
 const convex = fileURLToPath(new URL('../node_modules/.bin/convex', import.meta.url))
 
 function run(name: string, args: unknown) {
-  const result = spawnSync(convex, ['run', name, JSON.stringify(args)], { stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf8' })
+  const result = spawnSync(convex, ['run', ...(prod ? ['--prod'] : []), name, JSON.stringify(args)], { stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf8' })
   if (result.status === 0) return result.stdout.trim()
   const detail = (result.stderr ?? '').trim()
   if (detail.includes('Could not find function')) {
@@ -105,6 +107,7 @@ if (out) {
 } else if (dryRun) {
   console.info('Dry run: every preset parsed, flattened, validated, and round-tripped. Nothing was pushed.')
 } else {
+  console.info(`Pushing to the ${prod ? 'production' : 'dev'} deployment.`)
   let inserted = 0
   let updated = 0
   for (let at = 0; at < presets.length; at += BATCH) {

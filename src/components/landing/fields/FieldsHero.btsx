@@ -1,0 +1,49 @@
+import FieldsGlobe from './FieldsGlobe.btsx'
+
+module
+  /** Where the hairlines sit in the gutters beside the globe, as fractions of the gutter's width. */
+  const westTicks = [0.11, 0.3, 0.57]
+  const eastTicks = [0.44, 0.72, 0.9]
+  const stages = [
+    { index: '0.1', title: 'Ideation', note: 'Talk an idea through with an agent that drafts the first components.' },
+    { index: '0.2', title: 'Design', note: 'Compose pages from a section library and tune the theme in Design Studio.' },
+    { index: '0.3', title: 'Prototype', note: 'Build in a real editor and watch it run in an isolated live preview.' },
+    { index: '0.4', title: 'Publish', note: 'Put a project live as a static site at an address of its own.' },
+    { index: '0.5', title: 'Deploy', note: 'Served from the edge, with recent deployments kept to roll back to.' }
+  ]
+
+section#overview
+  div(className='px-(--fl-gutter)')
+    div(className='flex justify-center px-4 py-8')
+      div(className='flex max-w-[600px] flex-col gap-4')
+        // Two set lines on wide screens; on narrow ones the phrase flows and balances instead.
+        h1(className='text-[clamp(24px,4.4vw,50px)] leading-[1.06] font-semibold md:font-bold tracking-[-0.045em] text-center md:text-balance max-w-[15ch]')
+          span(className='min-[640px]:block opacity-60')
+            | #{'Let the '}
+            em(className='pr-[0.04em] font-bold light:text-[#f3adbc] opacity-100') machines
+            | #{' build'}
+          | #{' '}
+          span(className='min-[640px]:block') your billion dollar ideas!
+        p(className='hidden max-w-[540px] text-[15px] leading-[1.65] text-pretty text-(--fl-dim)') Build Beast components with an agent at your side. Read the Octane they compile to, and watch them run live in the browser — no install, no build step.
+
+  div(className='relative border-y border-(--fl-rule) light:border-panel-deep light:bg-panel-deep/20')
+    each tick in westTicks key tick
+      span(aria-hidden='true' className='absolute inset-y-0 w-px bg-(--fl-rule) max-[760px]:hidden ' style={{ left: `calc(var(--fl-gutter) * ${tick})` }})
+    each tick in eastTicks key tick
+      span(aria-hidden='true' className='absolute inset-y-0 w-px bg-(--fl-rule) max-[760px]:hidden' style={{ right: `calc(var(--fl-gutter) * ${1 - tick})` }})
+    div(className='mx-(--fl-gutter) h-[clamp(300px,36vw,460px)] light:bg-gradient-to-r from-inset/50 via-seam to-inset/50')
+      FieldsGlobe
+
+  div(className='relative')
+    span(aria-hidden='true' className='absolute bottom-0 left-0 w-(--fl-gutter) border-b border-dashed border-(--fl-rule)')
+    span(aria-hidden='true' className='absolute right-0 bottom-0 w-(--fl-gutter) border-b border-dashed border-(--fl-rule)')
+    // The gap-px grid over a rule-coloured ground draws the hairlines between cells at any column count.
+    ol(className='mx-(--fl-gutter) hidden md:grid grid-cols-5 gap-px border-b border-(--fl-rule) bg-(--fl-rule) max-[1024px]:grid-cols-2 max-[560px]:grid-cols-1' aria-label='From idea to deployment')
+      each stage in stages key stage.index
+        li(className='flex min-h-[80px] flex-col gap-8 bg-(--fl-frame) p-4 last:max-[1024px]:col-span-2 last:max-[560px]:col-span-1 max-[560px]:min-h-0 max-[560px]:gap-4')
+          span(className='flex items-center gap-2 font-code text-[12px] text-(--fl-faint)')
+            span ⟢
+            span(className='text-2xs') #{stage.index}
+          span(className='flex flex-col gap-1')
+            span(className='font-mono text-base text-(--fl-ink) -tracking-[0.028em] opacity-80') #{stage.title}
+            // span(className='text-2xs leading-[1.55] text-(--fl-dim) opacity-50 font-light max-w-[10ch]') #{stage.note}

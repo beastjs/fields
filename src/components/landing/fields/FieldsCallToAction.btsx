@@ -1,0 +1,31 @@
+import { Icon } from '@/lib/icons'
+import type { LandingActions } from '../types'
+
+module
+  const reassurances = [
+    'Free — no card, no trial clock',
+    'Projects sync across your devices',
+    'Share a project with a link'
+  ]
+
+props { signIn, enter, isPending }: LandingActions
+
+section#get-started(className='md:hidden border-b border-(--fl-rule) px-(--fl-gutter)')
+  // Three columns and two, so the split lines up with the hairlines of the five-column legend above.
+  div(className='grid grid-cols-5 gap-px bg-(--fl-rule) max-[900px]:grid-cols-1')
+    div(className='col-span-3 flex flex-col items-start gap-5 bg-(--fl-frame) px-4 pt-12 pb-14 max-[900px]:col-span-1 max-[760px]:pt-10 max-[760px]:pb-10')
+      span(className='flex items-center gap-2 font-code text-[12px] text-(--fl-faint)')
+        span(aria-hidden='true' className='flex items-center')
+          span(className='h-px w-2 bg-current')
+          span(className='size-[3px] rounded-full bg-current')
+        span 1.0 — Get started
+      h2(className='hidden sm:flex max-w-[520px] text-[clamp(26px,3vw,38px)] leading-[1.1] font-bold tracking-[-0.04em] text-balance') Your first component is one click away.
+      p(className='hidden sm:flex max-w-[480px] text-[14px] leading-[1.7] text-pretty text-(--fl-dim)') Sign in to keep your projects in the cloud and share them — or jump straight in, and everything saves in this browser until you do.
+      div(className='flex flex-wrap items-center gap-2 pt-1')
+        button(className='rounded-sm bg-(--fl-solid) px-4 py-2.5 text-xs font-medium text-(--fl-solid-ink) transition-opacity hover:opacity-90 disabled:cursor-default disabled:opacity-60' type='button' disabled={isPending} onClick={signIn}) #{isPending ? 'Signing in…' : 'Sign in with Google'}
+        a(className='hidden sm:flex rounded-sm border border-(--fl-ink)/12 px-4 py-2.5 text-xs text-(--fl-dim) transition-colors hover:border-(--fl-ink)/25 hover:text-(--fl-ink)' href='/playground' onClick={enter}) Open the playground →
+    ul(className='col-span-2 flex flex-col justify-end bg-(--fl-frame) max-[900px]:col-span-1')
+      each item in reassurances key item
+        li(className='flex items-center gap-3 border-t border-(--fl-rule) px-4 py-4 font-code text-[12px] text-(--fl-dim) first:border-t-0 max-[900px]:first:border-t-0')
+          Icon(name='check' className='size-3.5 shrink-0 text-(--fl-accent)')
+          span #{item}

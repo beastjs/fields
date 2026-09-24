@@ -83,6 +83,7 @@ app shell, and the chat routes `/api/ai/*` and `/api/jev/*` (`server/`) run in t
 
 ```sh
 cd editor-host && bun run deploy   # builds against production Convex, then deploys
+bun run seed:presets --prod        # a fresh production deployment: Design Studio sections, recipes, themes
 ```
 
 Its chat routes use the Worker secrets `COHERE_API_KEY` and `TYPESAFE_API_KEY`. They only

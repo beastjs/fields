@@ -36,7 +36,7 @@ section#overview(className='relative overflow-hidden px-5 pt-20 pb-4 max-[760px]
     span(className='inline-flex items-center gap-2 rounded-full border border-edge bg-panel-deep py-1 pr-3 pl-1.5 font-code text-[10px] tracking-[0.12em] text-dim uppercase')
       span(className='rounded-full bg-brand/15 px-2 py-0.5 text-brand') Beta
       span Beast + Octane, in the browser
-    h1(className='text-[46px] leading-[1.04] font-medium tracking-[-0.03em] text-balance text-fg max-[760px]:text-[32px]') Write Beast components. Watch them run instantly.
+    h1(className='text-[46px] leading-[1.04] font-medium tracking-[-0.03em] text-balance text-fg max-[760px]:text-[32px]')  Build your billion dollar ideas.
     p(className='max-w-xl text-[15px] leading-[1.7] text-pretty text-dim') A playground for the Beast language with no install and no build step — a real editor with diagnostics, the compiled Octane output, and an isolated live preview, side by side.
     div(className='flex flex-wrap items-center justify-center gap-2.5 pt-1')
       button(className='rounded-xl border border-brand bg-brand px-5 py-3 text-[13px] font-semibold text-[#1b1b1b] transition-colors hover:bg-brand-hover disabled:cursor-default disabled:opacity-60 light:text-white light:shadow-elevation' type='button' disabled={isPending} onClick={signIn}) #{isPending ? 'Signing in…' : 'Sign in with Google'}

@@ -1,0 +1,21 @@
+import { Icon } from '@/lib/icons'
+import { useTheme } from '../../theme/theme-context'
+import type { LandingActions } from '../types'
+
+
+props { signIn, enter, isPending }: LandingActions
+setup
+  const { theme, toggleTheme } = useTheme();
+  const themeLabel = theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme';
+
+header(className='sticky top-0 z-20 border-b border-(--fl-rule) light:border-panel-deep bg-(--fl-frame)/85 light:bg-panel backdrop-blur-xl')
+  nav(className='flex h-[72px] items-center gap-2 px-(--fl-gutter) max-[760px]:h-14')
+    a(className='flex min-w-0 items-center gap-1 md:gap-3 md:pl-4 text-inherit no-underline max-[760px]:pl-0' href='/' aria-label='Beast Playground home')
+      Icon(name='beast' className='size-4.5 opacity-60 hidden md:flex')
+      span(className='text-base leading-none font-mono font-light tracking-[-0.02em]') Fields
+      span(className='mt-1.5 font-code text-[10px] tracking-[0.14em] text-(--fl-faint) uppercase max-[420px]:hidden')
+    div(className='ml-auto flex shrink-0 items-center gap-2')
+      button(className='hidden _md:flex size-9 items-center justify-center rounded-md text-(--fl-dim) transition-colors hover:bg-(--fl-ink)/6 hover:text-(--fl-ink)' type='button' aria-label={themeLabel} title={themeLabel} onClick={toggleTheme})
+        Icon(name='theme' className='size-4')
+      a(className='hidden md:flex rounded-md px-3.5 py-2 text-xs text-(--fl-dim) transition-colors hover:border-(--fl-ink)/25 hover:text-(--fl-ink) max-[520px]:hidden' href='/playground' onClick={enter}) Open playground
+      button(className='rounded-sm light:bg-(--fl-solid) dark:bg-edge px-3.5 py-2 text-xs font-medium light:text-(--fl-solid-ink) transition-opacity hover:opacity-90 disabled:cursor-default disabled:opacity-60' type='button' disabled={isPending} onClick={signIn}) #{isPending ? 'Signing in…' : 'Start for free'}

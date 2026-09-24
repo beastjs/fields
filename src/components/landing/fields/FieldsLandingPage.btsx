@@ -1,0 +1,53 @@
+import { useState } from 'octane'
+import type { MouseEvent } from 'octane'
+import { cn } from '@/lib/utils'
+import { signInWithGoogle } from '../../../lib/firebase/auth'
+import { navigateTo } from '../../../playground/route'
+import FieldsHeader from './FieldsHeader.btsx'
+import FieldsHero from './FieldsHero.btsx'
+import FieldsCallToAction from './FieldsCallToAction.btsx'
+import FieldsFooter from './FieldsFooter.btsx'
+
+module
+  // The page keeps its own palette — a near-black ground with hairline rules — rather than the workspace
+  // tokens. Dark is the default; `light:` follows the playground theme toggle. `--fl-gutter` is the width
+  // of the margins either side of the content column.
+  const palette = cn(
+    '[--fl-page:#0c0d0f] [--fl-frame:#111214] [--fl-rule:#1f2124] [--fl-ink:#f2f2ee] [--fl-dim:#8e9195] [--fl-faint:#64686d]',
+    '[--fl-accent:#c9c79a] [--fl-solid:#f2f2ee] [--fl-solid-ink:#111214] [--fl-gutter:clamp(16px,9.4vw,136px)] max-[760px]:[--fl-gutter:14px]',
+    'light:[--fl-page:#e7e6e0] light:[--fl-frame:#f6f5f1] light:[--fl-rule:#dcdad2] light:[--fl-ink:#141517]',
+    'light:[--fl-dim:#63666b] light:[--fl-faint:#8d9095] light:[--fl-accent:#77752f] light:[--fl-solid:#141517] light:[--fl-solid-ink:#f6f5f1]'
+  )
+
+setup
+  const [isPending, setIsPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // Signing in swaps the shell over to the workspace, so the success path just leaves this mounted
+  // until the auth state lands; only a failure has to hand control back.
+  const signIn = () => {
+    setIsPending(true);
+    setError(null);
+    signInWithGoogle().catch((cause: unknown) => {
+      setError(cause instanceof Error ? cause.message : 'Sign-in failed. Please try again.');
+      setIsPending(false);
+    });
+  };
+  // Leave modified clicks to the browser so "open in new tab" still works on a real /playground link.
+  const enter = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+    event.preventDefault();
+    navigateTo('playground');
+  };
+
+div(className={cn('landing h-dvh overflow-x-hidden overflow-y-auto bg-(--fl-page) light:bg-seam p-[clamp(0px,2.4vw,36px)] text-(--fl-ink) antialiased', palette)})
+  div(className='mx-auto max-w-[1440px] border border-(--fl-rule) light:border-panel-deep bg-(--fl-frame) light:bg-panel max-[760px]:border-0')
+    FieldsHeader(signIn={signIn} enter={enter} isPending={isPending})
+    div(className='relative')
+      // The content column's edges run the full height below the header, over every section.
+      div(aria-hidden='true' className='pointer-events-none absolute inset-y-0 right-(--fl-gutter) left-(--fl-gutter) z-10 border-x border-(--fl-rule) light:border-panel-deep')
+      main
+        FieldsHero
+        FieldsCallToAction(signIn={signIn} enter={enter} isPending={isPending})
+      // FieldsFooter(enter={enter})
+  if error
+    div(className='sticky bottom-4 z-30 mx-auto w-fit max-w-[calc(100%-32px)] rounded-xl border border-notice-edge bg-notice-surface px-4 py-2.5 text-[12px] text-notice shadow-elevation' role='alert') #{error}
