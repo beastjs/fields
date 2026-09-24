@@ -96,11 +96,32 @@ test('several hunk blocks for the attached file apply in order, like one patch',
 });
 
 test('completed replies and retries retain original file and project identity', async () => {
+  const references = [{ file: '/src/Hero.btsx', source: 'h1 Original hero\n' }];
   const chat = new ChatController(defaultSettings, () => {}, async () => new Response(
     `data: ${JSON.stringify({ choices: [{ delta: { content: block() } }] })}\n\ndata: [DONE]\n\n`, { headers: { 'Content-Type': 'text/event-stream' } }));
-  await chat.submit('Improve', context, 7);
-  expect(chat.getSnapshot().messages.at(-1)).toMatchObject({ state: 'complete', context, projectGeneration: 7 });
+  await chat.submit('Improve', context, 7, references);
+  expect(chat.getSnapshot().messages.at(-1)).toMatchObject({ state: 'complete', context, references, projectGeneration: 7 });
   await chat.retry();
-  expect(chat.getSnapshot().messages.at(-1)).toMatchObject({ state: 'complete', context, projectGeneration: 7 });
+  expect(chat.getSnapshot().messages.at(-1)).toMatchObject({ state: 'complete', context, references, projectGeneration: 7 });
   chat.dispose();
+});
+
+test('explicit reference edits use the attached reference source, with or without an active file', () => {
+  const hero = { file: '/src/sections/Hero.btsx', source: 'section\n  h1 Original hero\n' };
+  const content = patch(hunk('  h1 Original hero\n', '  h1 New hero\n'), './src/sections/Hero.btsx');
+  const expected = { file: hero.file, source: 'section\n  h1 New hero\n', hunks: 1 };
+  expect(fileRecommendation(content, context, [hero])).toEqual(expected);
+  expect(fileRecommendation(content, undefined, [hero])).toEqual(expected);
+  expect(fileRecommendation(block(hero.file, 'h1 Complete hero\n'), context, [hero]))
+    .toEqual({ file: hero.file, source: 'h1 Complete hero\n' });
+  expect(fileRecommendation(content, context)?.error).toContain('targets');
+  // Active-file text cannot serve as a SEARCH anchor for an attached reference.
+  expect(fileRecommendation(patch(hunk('h1 Before\n', 'h1 Wrong file\n'), hero.file), context, [hero])?.error).toContain('does not match');
+});
+
+test('reference support still rejects unattached targets, ambiguous bare hunks and multi-file replies', () => {
+  const hero = { file: '/src/Hero.btsx', source: 'h1 Hero\n' };
+  expect(fileRecommendation(block('/src/Missing.btsx'), context, [hero])?.error).toContain('targets');
+  expect(fileRecommendation('```btsx\n' + hunk(hero.source, 'h1 New hero\n') + '```', undefined, [hero])?.error).toContain('No file was attached');
+  expect(fileRecommendation(block() + '\n' + block(hero.file), context, [hero])?.error).toContain('more than one file');
 });

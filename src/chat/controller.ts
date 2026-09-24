@@ -1,8 +1,9 @@
+import { fileRecommendation } from './recommendation';
 import type { FetchLike } from './contracts';
 import { MAX_PROJECT_PATHS, MAX_REFERENCE_CHARS, MAX_REFERENCES, type AIStatus, type ChatRequest, type ChatSettings, type ChatTurn, type FileContext } from './contracts';
 import { streamChat } from './transport';
 
-export interface ChatMessage extends ChatTurn { context?: FileContext; attachments?: string[]; projectGeneration?: number; id: number; attempt?: number; model?: string; state?: 'complete' | 'streaming' | 'stopped' | 'error' }
+export interface ChatMessage extends ChatTurn { reasoning?: string; context?: FileContext; references?: FileContext[]; attachments?: string[]; projectGeneration?: number; id: number; attempt?: number; model?: string; state?: 'complete' | 'streaming' | 'stopped' | 'error' }
 export interface ChatSnapshot {
   settings: ChatSettings;
   messages: ChatMessage[];
@@ -32,6 +33,7 @@ export class ChatController {
     for (const listener of this.listeners) listener();
   }
   async checkConnection() {
+    if (this.disposed) return;
     try {
       const send = this.send;
       const response = await send('/api/ai/status', { signal: this.statusAbort.signal });
@@ -50,7 +52,7 @@ export class ChatController {
    * `files` lists every current project path, so the model knows what exists beyond the attached sources.
    */
   async submit(prompt: string, context?: FileContext, projectGeneration?: number, references: FileContext[] = [], attempt = 1, files: string[] = []) {
-    if (this.state.busy || !prompt.trim()) return;
+    if (this.disposed || this.state.busy || !prompt.trim()) return;
     if (prompt.length > 32000) { this.patch({ error: 'Keep your message under 32,000 characters.' }); return; }
     if (context && context.source.length > 60000) { this.patch({ error: 'This file is too large to attach. Turn off active-file context or select a smaller file.' }); return; }
     if (references.length > MAX_REFERENCES) { this.patch({ error: `Include at most ${MAX_REFERENCES} other files.` }); return; }
@@ -60,19 +62,27 @@ export class ChatController {
     const messages = [...this.state.messages, user];
     this.patch({ messages });
     const settings = this.state.settings;
-    const request: ChatRequest = { ...settings, messages: messages.filter(message => message.state !== 'error' && message.state !== 'stopped').slice(-30).map(({ role, content }) => ({ role, content })), context, references: references.length ? references : undefined, files: files.length ? files.slice(0, MAX_PROJECT_PATHS) : undefined };
+    // Do not let rejected patches and repair chatter become evidence for the next edit.
+    // A repair is self-contained: original intent, exact current source, and located lines.
+    const history = attempt > 1 ? [user] : messages.filter(message => {
+      if (message.state === 'error' || message.state === 'stopped') return false;
+      if (message.role === 'user') return !message.attempt;
+      return message.attempt === 1 && !fileRecommendation(message.content, message.context, message.references)?.error;
+    });
+    const request: ChatRequest = { ...settings, messages: history.slice(-30).map(({ role, content }) => ({ role, content })), context, references: references.length ? references : undefined, files: files.length ? files.slice(0, MAX_PROJECT_PATHS) : undefined };
     this.lastRequest = request;
     this.lastGeneration = projectGeneration;
     this.lastAttempt = attempt;
     await this.run(request);
   }
   private async run(request: ChatRequest) {
+    if (this.disposed) return;
     const abort = new AbortController(); this.abort = abort;
     const id = ++this.sequence;
-    this.patch({ busy: true, error: '', messages: [...this.state.messages, { id, role: 'assistant', content: '', model: request.model, state: 'streaming', context: request.context ? { ...request.context } : undefined, projectGeneration: this.lastGeneration, attempt: this.lastAttempt }] });
+    this.patch({ busy: true, error: '', messages: [...this.state.messages, { id, role: 'assistant', content: '', model: request.model, state: 'streaming', context: request.context ? { ...request.context } : undefined, references: request.references?.map(reference => ({ ...reference })), projectGeneration: this.lastGeneration, attempt: this.lastAttempt }] });
     const update = (patch: Partial<ChatMessage>) => this.patch({ messages: this.state.messages.map(message => message.id === id ? { ...message, ...patch } : message) });
     try {
-      await streamChat(request, content => { if (this.abort === abort) update({ content }); }, abort.signal, this.send);
+      await streamChat(request, content => { if (this.abort === abort) update({ content }); }, abort.signal, this.send, reasoning => { if (this.abort === abort) update({ reasoning }); });
       if (this.abort === abort) update({ state: 'complete' });
     } catch (error) {
       if (this.abort !== abort) return;
@@ -80,11 +90,11 @@ export class ChatController {
       if (!abort.signal.aborted) this.patch({ error: error instanceof Error ? error.message : 'The response failed. Please retry.' });
     } finally { if (this.abort === abort) { this.abort = undefined; this.patch({ busy: false }); } }
   }
-  /** Read-only files sent with the last request, so a fix-up round can include them again. */
+  /** Reference files sent with the last request, so a fix-up round can include them again. */
   get lastReferences() { return this.lastRequest?.references ?? []; }
   stop = () => { this.abort?.abort(); };
   retry = async () => {
-    if (!this.lastRequest || this.state.busy) return;
+    if (this.disposed || !this.lastRequest || this.state.busy) return;
     const messages = this.state.messages.slice();
     if (messages.at(-1)?.role === 'assistant') messages.pop();
     this.patch({ messages });

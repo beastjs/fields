@@ -31,26 +31,65 @@ export class TemplatePreview {
   /** Called with what Fine Layout reports; only the visible frame is ever inspected. */
   onDesign?: (event: DesignEvent) => void;
   private designing = false;
+  private compiling?: ReturnType<typeof setTimeout>;
+  /**
+   * How long a compile may take before the worker is presumed lost.
+   *
+   * Every path through a *frame* already has `Preview`'s own ten-second guard, so a page that never starts becomes
+   * a runtime error a reader can act on. The worker round trip had no such guard, and it is the one step that can
+   * fail silently: a compile that never answers — a worker wedged on a pathological source, or killed by the
+   * browser under memory pressure — leaves `show` having announced `compiling` with nothing left to move it on.
+   * The studio then reads "Building preview…" forever, says nothing about why, and cannot be recovered by
+   * reloading, because the next build wedges the same way. Generous on purpose: a large page compiles in well
+   * under a second, so anything near this is already broken rather than slow.
+   */
+  private static readonly COMPILE_TIMEOUT = 20000;
 
-  constructor(private frames: HTMLIFrameElement[], theme: Theme, createWorker: () => CompilerWorker, private onStatus: (status: TemplatePreviewStatus) => void, private title = 'Preview') {
+  constructor(private frames: HTMLIFrameElement[], theme: Theme, private createWorker: () => CompilerWorker, private onStatus: (status: TemplatePreviewStatus) => void, private title = 'Preview') {
     this.previews = frames.map((frame, index) => new Preview(frame, event => this.receive(index, event), theme));
     this.present();
-    this.worker = createWorker();
-    this.worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
+    this.worker = this.startWorker();
+  }
+
+  /** A worker wired to this instance. Replacing one is how a lost compiler is recovered from. */
+  private startWorker(): CompilerWorker {
+    const worker = this.createWorker();
+    worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
       if (event.data?.type !== 'compile-result' || event.data.id !== this.request) return;
+      clearTimeout(this.compiling);
       const { result } = event.data;
       const error = result.diagnostics.find(diagnostic => diagnostic.severity === 'error');
       if (!result.entry || error) this.onStatus({ state: 'error', message: error?.message ?? 'The template did not compile.' });
       else this.load(result);
     };
-    this.worker.onerror = () => this.onStatus({ state: 'error', message: 'The template compiler stopped unexpectedly.' });
+    worker.onerror = () => {
+      clearTimeout(this.compiling);
+      this.onStatus({ state: 'error', message: 'The template compiler stopped unexpectedly.' });
+    };
+    return worker;
   }
 
   /** Compiles and shows `project`; `reveal` scrolls to an element once that build has rendered. */
   show(project: CompilationProject, reveal?: { selector: string; highlight?: boolean }) {
     this.pendingReveal = reveal && { selector: reveal.selector, highlight: reveal.highlight ?? false };
     this.onStatus({ state: 'compiling' });
+    clearTimeout(this.compiling);
+    this.compiling = setTimeout(() => this.abandonCompile(), TemplatePreview.COMPILE_TIMEOUT);
     this.worker.postMessage({ version: PROTOCOL_VERSION, type: 'compile', id: ++this.request, project });
+  }
+
+  /**
+   * Give up on a compile that never answered, and start a worker that can.
+   *
+   * The dead one is replaced rather than reused, so the next edit rebuilds instead of queueing behind whatever
+   * wedged it — the difference between a studio that reports a bad build and one that has to be closed and
+   * reopened. Bumping `request` drops the old worker's answer if it ever arrives.
+   */
+  private abandonCompile() {
+    this.request++;
+    this.worker.terminate();
+    this.worker = this.startWorker();
+    this.onStatus({ state: 'error', message: 'The preview compiler stopped responding. Change anything to build again.' });
   }
 
   reveal(selector: string, highlight = false) { this.previews[this.front].reveal(selector, highlight); }
@@ -72,6 +111,7 @@ export class TemplatePreview {
 
   dispose() {
     this.request++;
+    clearTimeout(this.compiling);
     this.worker.terminate();
     for (const preview of this.previews) preview.dispose();
   }

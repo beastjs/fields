@@ -41,13 +41,86 @@ module
     low: string
     high: string
   }
+  interface ResultChoiceProps {
+    label: string
+    value: string
+    options: readonly string[]
+    onChoose: (value: string) => void
+    swatch?: string
+  }
+  interface ResultRangeProps {
+    label: string
+    value: number
+    low: string
+    high: string
+    onChange: (value: number) => void
+  }
 
   const percent = (value: number) => Math.round(value * 100) + '%'
+  const titleCase = (value: string) => value.replace(/_/g, ' ').replace(/^./, letter => letter.toUpperCase())
   const chip = 'rounded-full border px-1.5 py-px font-code text-[9px] whitespace-nowrap'
   const fieldLabel = 'font-code text-[9px] tracking-[0.12em] text-faint uppercase'
   const pill = 'rounded-[4px] border border-edge px-1.5 py-0.5 text-[10px] text-dim hover:border-brand hover:text-fg aria-pressed:border-brand aria-pressed:bg-brand/15 aria-pressed:text-fg'
   const actionButton = 'flex items-center justify-center gap-1 rounded-[5px] border border-brand bg-brand/15 px-2 py-1 text-[10px] text-fg hover:bg-brand/25 disabled:cursor-default disabled:opacity-45'
   const textField = 'w-full rounded-[5px] border border-edge bg-inset px-2 py-1.5 text-[11px] text-fg outline-none placeholder:text-faint focus-visible:border-brand'
+  const resultRow = 'relative isolate flex min-h-12 items-center justify-between gap-3 overflow-hidden rounded-[11px] border border-edge/60 bg-surface-recessed shadow-xs'
+
+component ResultChoice
+  props { label, value, options, onChoose, swatch }: ResultChoiceProps
+  label(className={cn(resultRow, 'px-3 py-2.5 has-[select:focus-visible]:border-brand')})
+    span(className='min-w-0 flex-1 truncate text-[11px] text-fg-secondary') #{label}
+    span(className='flex min-w-0 shrink-0 items-center gap-2')
+      if swatch
+        span(className='size-6 shrink-0 rounded-[7px] ring-1 ring-black/15 ring-inset' style={{ backgroundColor: swatch }} aria-hidden={true})
+      span(className='relative flex min-w-0 items-center')
+        select(
+          ~ className='max-w-28 appearance-none bg-transparent pr-4 text-right text-[11px] text-fg outline-none'
+          ~ aria-label={label}
+          ~ value={value}
+          ~ onChange={event => onChoose(event.currentTarget.value)}
+          ~ )
+          each option in options key option
+            option(value={option}) #{titleCase(option)}
+        Icon(name='select-caret' className='pointer-events-none absolute right-0 size-2.5 text-dim')
+
+component ResultRange
+  props { label, value, low, high, onChange }: ResultRangeProps
+  setup
+    const position = percent(value);
+    const shown = value.toFixed(2);
+
+  label(
+    ~ className={cn(resultRow, 'cursor-ew-resize p-0 has-[input:focus-visible]:border-brand')}
+    ~ title={low + ' → ' + high}
+    ~ )
+    span(
+      ~ className='pointer-events-none absolute inset-y-0 left-0 -z-10 rounded-[10px] bg-control'
+      ~ style={{ width: `max(38%, ${position})` }}
+      ~ aria-hidden={true}
+      ~ )
+    span(
+      ~ className='pointer-events-none absolute inset-y-2 w-1 -translate-x-1/2 rounded-full bg-fg-secondary/55'
+      ~ style={{ left: `max(38%, ${position})` }}
+      ~ aria-hidden={true}
+      ~ )
+    span(className='pointer-events-none absolute top-1/2 right-12 left-[42%] flex -translate-y-1/2 justify-between' aria-hidden={true})
+      span(className='h-2 w-px bg-edge-strong')
+      span(className='h-2 w-px bg-edge-strong')
+      span(className='h-2 w-px bg-edge-strong')
+      span(className='h-2 w-px bg-edge-strong')
+    span(className='pointer-events-none z-10 min-w-0 flex-1 truncate px-3 text-[11px] text-fg-secondary') #{label}
+    output(className='pointer-events-none z-10 w-12 shrink-0 pr-3 text-right text-[11px] text-fg') #{shown}
+    input(
+      ~ type='range'
+      ~ min='0'
+      ~ max='1'
+      ~ step='0.01'
+      ~ value={String(value)}
+      ~ aria-label={label}
+      ~ aria-valuetext={shown + ', ' + low + ' to ' + high}
+      ~ className='absolute inset-0 z-20 size-full cursor-ew-resize opacity-0'
+      ~ onInput={event => onChange(Number(event.currentTarget.value))}
+      ~ )
 
 component Meter
   props { label, value, low, high }: MeterProps
@@ -194,50 +267,32 @@ div(className='flex min-h-0 flex-col')
           if design.aura.unsure || design.hue.unsure || design.ground.unsure || design.voice.unsure
             p(className='text-[10px] leading-[1.5] text-dim') Some axes were too close to call, so they fell back rather than guess. Pick one below, or add a refinement.
 
-        div(className='grid gap-2.5')
-          div(className='grid gap-1')
-            span(className={fieldLabel}) Ground
-            div(className='flex flex-wrap gap-1')
-              each option in grounds key option
-                button(className={pill} type='button' aria-pressed={design.axes.ground === option} onClick={() => tweak({ ground: option })}) #{option}
-          div(className='grid gap-1')
-            span(className={fieldLabel}) Page cast
-            div(className='flex flex-wrap gap-1')
-              each option in hues key option
-                button(className={pill} type='button' aria-pressed={design.axes.hue === option} onClick={() => tweak({ hue: option })}) #{option}
-          div(className='grid gap-1')
-            span(className={fieldLabel}) Accent
-            div(className='flex flex-wrap gap-1')
-              each option in hues key option
-                button(className={pill} type='button' aria-pressed={design.axes.accent === option} onClick={() => tweak({ accent: option })}) #{option}
-          div(className='grid gap-1')
-            span(className={fieldLabel}) Voice
-            div(className='flex flex-wrap gap-1')
-              each option in voices key option
-                button(className={pill} type='button' aria-pressed={design.axes.voice === option} onClick={() => tweak({ voice: option })}) #{option}
-
+        div(className='grid gap-1.5')
+          ResultChoice(label='Ground' value={design.axes.ground} options={grounds} onChoose={value => tweak({ ground: value as Ground })})
+          ResultChoice(label='Page cast' value={design.axes.hue} options={hues} onChoose={value => tweak({ hue: value as Hue })})
+          ResultChoice(
+            ~ label='Accent'
+            ~ value={design.axes.accent}
+            ~ options={hues}
+            ~ swatch={design.theme.tokens.color.accent}
+            ~ onChoose={value => tweak({ accent: value as Hue })}
+            ~ )
+          ResultChoice(label='Voice' value={design.axes.voice} options={voices} onChoose={value => tweak({ voice: value as Voice })})
           each axis in scaleAxes key axis.field
-            div(className='grid gap-1')
-              div(className='flex items-baseline justify-between gap-2')
-                span(className={fieldLabel}) #{axis.label}
-                span(className='font-code text-[9px] text-dim') #{axis.low} → #{axis.high}
-              input(
-                ~ type='range'
-                ~ min='0'
-                ~ max='1'
-                ~ step='0.01'
-                ~ value={String(design.axes[axis.field])}
-                ~ aria-label={axis.label}
-                ~ className='h-1 w-full accent-brand'
-                ~ onInput={event => tweak({ [axis.field]: Number(event.currentTarget.value) })}
-                ~ )
+            ResultRange(
+              ~ label={axis.label}
+              ~ value={design.axes[axis.field]}
+              ~ low={axis.low}
+              ~ high={axis.high}
+              ~ onChange={value => tweak({ [axis.field]: value })}
+              ~ )
 
         if design.hue.ranked.length > 1
-          div(className='grid gap-1')
-            span(className={fieldLabel}) Also considered
-            div(className='flex flex-wrap gap-1')
+          div(className={cn(resultRow, 'flex-col items-stretch gap-2 px-3 py-2.5')})
+            span(className='text-[11px] text-fg-secondary') Also considered
+            div(className='flex flex-wrap gap-1.5')
               each option in design.hue.ranked.slice(0, 4) key option[0]
-                button(className={pill} type='button' title={'Jev gave this ' + percent(option[1])} onClick={() => tweak({ hue: option[0] })})
+                button(className={cn(pill, 'bg-inset px-2 py-1')} type='button' title={'Jev gave this ' + percent(option[1])} onClick={() => tweak({ hue: option[0] })})
                   | #{option[0]} #{percent(option[1])}
 
         div(className='grid gap-1.5')

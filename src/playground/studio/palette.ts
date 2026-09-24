@@ -287,6 +287,53 @@ export function composeTheme(axes: ThemeAxes, identity: { themeId: string; name:
 }
 
 /* ------------------------------------------------------------------ *
+ * Reading a palette the other way, for the brand paint style
+ * ------------------------------------------------------------------ */
+
+/**
+ * The ground a `brand` page sits on: its quietest level, barely there.
+ *
+ * Translucent on purpose. The brand style deliberately does not claim the page, so this composites over whatever
+ * ground the project already has and tints it rather than replacing it — which is also what lets one declaration
+ * work in both modes, since each mode washes with its own level.
+ */
+export const groundWash = (color: string) => `color-mix(in oklab, ${color} 22%, transparent)`
+
+/** Halfway between two colours, for a level a theme does not itself declare. */
+const midpoint = (from: string, to: string) => `color-mix(in oklab, ${from} 50%, ${to})`
+
+/**
+ * Any theme's colours, re-read as a brand and three accent levels.
+ *
+ * A palette theme has four colours to spend and `colorhunt` spends them directly; a built-in or a generated theme
+ * has three, and they already carry roles. The accent is the brand — it is chosen to be the one colour that stands
+ * off the ground, which is exactly what a button needs. The ground and the type become the outer levels, ordered by
+ * lightness rather than by role, because under this style the page is near-neutral in both modes and what matters
+ * is which level sits nearer whatever ground the page was dropped into. Level 2 is the midpoint, since three
+ * colours cannot fill four jobs.
+ *
+ * The brand does not move between modes. A theme's own dark accent exists to stay readable on that theme's dark
+ * ground, and under this style there is no such ground to read against — so the one colour the whole page is named
+ * for stays put, exactly as it does for a hunted palette.
+ *
+ * `undefined` when the theme does not declare all three, or writes them in a notation this cannot measure: there is
+ * then nothing to re-read, and a caller should leave the theme as it is rather than invent a reading for it.
+ */
+export function brandReading(tokens: ThemeTokens): { light: Record<string, string>; dark: Record<string, string> } | undefined {
+  const { accent, bg, fg } = tokens.color
+  if (!accent || !bg || !fg) return undefined
+  const lightness = (value: string) => parseColor(value)?.l
+  const [groundL, typeL] = [lightness(bg), lightness(fg)]
+  if (groundL === undefined || typeL === undefined) return undefined
+  const [lighter, darker] = groundL >= typeL ? [bg, fg] : [fg, bg]
+  const middle = midpoint(lighter, darker)
+  return {
+    light: { bg: groundWash(lighter), brand: accent, 'accent-1': lighter, 'accent-2': middle, 'accent-3': darker },
+    dark: { bg: groundWash(darker), brand: accent, 'accent-1': darker, 'accent-2': middle, 'accent-3': lighter }
+  }
+}
+
+/* ------------------------------------------------------------------ *
  * Reading a theme back, for a model that can only read words
  * ------------------------------------------------------------------ */
 

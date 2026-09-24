@@ -154,3 +154,46 @@ test('the route reports configuration and never proxies without a key', async ()
   const crossSite = await handleJevRequest(new Request('http://localhost/api/jev/evaluate', { method: 'POST', headers: { 'sec-fetch-site': 'cross-site' } }), { TYPESAFE_API_KEY: 'k' });
   expect(crossSite.status).toBe(403);
 });
+
+test('a body timeout aborts the previous connection before retrying', async () => {
+  const signals: AbortSignal[] = [];
+  let closed = 0;
+  const result = await Effect.runPromise(Effect.either(Effect.provide(
+    Effect.flatMap(Jev, client => client.ask({ state: 's', questions: { q: { type: 'noul', instructions: 'i' } } })),
+    layer({ timeout: Duration.millis(20), retries: 1, fetch: async (_url, init) => {
+      // Model fetch: headers arrive, but the response body never finishes.
+      expect(signals.every(signal => signal.aborted)).toBe(true);
+      const signal = init!.signal!;
+      signals.push(signal);
+      return new Response(new ReadableStream({ start(controller) {
+        signal.addEventListener('abort', () => { closed++; controller.error(signal.reason); }, { once: true });
+      } }));
+    } })
+  )));
+  expect(result._tag === 'Left' && result.left._tag).toBe('JevUnreachable');
+  expect(signals).toHaveLength(2);
+  expect(signals.every(signal => signal.aborted)).toBe(true);
+  expect(closed).toBe(2);
+});
+
+test('interrupting body consumption releases the connection without retrying', async () => {
+  const stop = new AbortController();
+  let connection: AbortSignal | undefined;
+  let started!: () => void;
+  const reading = new Promise<void>(resolve => { started = resolve; });
+  const pending = Effect.runPromise(Effect.provide(
+    Effect.flatMap(Jev, client => client.ask({ state: 's', questions: { q: { type: 'noul', instructions: 'i' } } })),
+    layer({ fetch: async (_url, init) => {
+      connection = init!.signal!;
+      return new Response(new ReadableStream({ start(controller) {
+        connection!.addEventListener('abort', () => controller.error(connection!.reason), { once: true });
+        started();
+      } }));
+    } })
+  ), { signal: stop.signal });
+  await reading;
+  await new Promise(resolve => setTimeout(resolve, 0));
+  stop.abort();
+  await expect(pending).rejects.toThrow();
+  expect(connection?.aborted).toBe(true);
+});

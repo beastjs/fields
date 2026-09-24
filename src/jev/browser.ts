@@ -20,9 +20,11 @@ import { EVALUATE_ENDPOINT, JevNotConfigured, jevConfigured } from './status'
  * The `Jev` requirement is discharged here and only here, which is what keeps `Effect.runPromise` out of the
  * workflows themselves and leaves them composable.
  */
-export async function runJev<A>(workflow: Effect.Effect<A, JevFailure, Jev>, send?: FetchLike): Promise<A> {
+export async function runJev<A>(workflow: Effect.Effect<A, JevFailure, Jev>, send?: FetchLike, signal?: AbortSignal): Promise<A> {
   if (!(await jevConfigured(send))) throw new JevNotConfigured()
+  signal?.throwIfAborted()
   return Effect.runPromise(
-    Effect.provide(workflow, layer({ endpoint: EVALUATE_ENDPOINT, ...(send ? { fetch: send } : {}) }))
+    Effect.provide(workflow, layer({ endpoint: EVALUATE_ENDPOINT, ...(send ? { fetch: send } : {}) })),
+    { signal }
   )
 }

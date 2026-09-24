@@ -90,3 +90,19 @@ test('oversized reference files are rejected before sending', async () => {
   expect(chat.getSnapshot().error).toContain('too large together');
   chat.dispose();
 });
+
+test('disposed chat rejects late repair, retry and connection work', async () => {
+  let calls = 0;
+  const chat = new ChatController({ ...defaultSettings }, () => {}, async () => {
+    calls++;
+    return response(delta('Done') + 'data: [DONE]\n\n');
+  });
+  await chat.submit('Initial prompt');
+  const snapshot = chat.getSnapshot();
+  chat.dispose();
+  await chat.submit('Late repair');
+  await chat.retry();
+  await chat.checkConnection();
+  expect(calls).toBe(1);
+  expect(chat.getSnapshot()).toBe(snapshot);
+});

@@ -1,17 +1,19 @@
 import { expect, test } from '@playwright/test';
 
 test('zoom preserves viewport width, running state and iframe identity while keeping overflow reachable', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/playground');
   const preview = page.frameLocator('#preview-frame');
   await expect(preview.getByRole('heading', { name: 'Hello, world.' })).toBeVisible();
   await preview.getByRole('button', { name: 'Increase count' }).click();
   const original = await page.locator('#preview-frame').getAttribute('srcdoc');
   await page.getByRole('button', { name: 'Tablet preview', exact: true }).click();
-  const zoom = page.getByRole('combobox', { name: 'Preview zoom' });
-  for (const value of ['0.5', '0.75', '1', '1.25', '1.5']) {
+  const zoom = page.getByRole('combobox', { name: 'preview-zoom' });
+  for (const value of ['50', '75', '100', '125', '150']) {
     await zoom.selectOption(value);
-    await expect(page.locator('#preview-frame')).toHaveCSS('width', '768px');
-    await expect.poll(async () => (await page.locator('#preview-frame').boundingBox())!.width).toBeCloseTo(768 * Number(value), 0);
+    await expect(page.locator('#preview-frame')).toHaveCSS('width', `${Math.round(76800 / Number(value))}px`);
+    const box = (await page.locator('#preview-frame').boundingBox())!;
+    const stage = (await page.locator('.preview-stage').boundingBox())!;
+    expect(box.width).toBeLessThanOrEqual(stage.width + 1);
     await expect(preview.locator('.value')).toHaveText('1');
     await expect(page.locator('#preview-frame')).toHaveAttribute('srcdoc', original!);
     expect(await page.locator('.preview-stage').evaluate(element => {
@@ -20,8 +22,8 @@ test('zoom preserves viewport width, running state and iframe identity while kee
     })).toBe(true);
   }
   await page.getByRole('button', { name: 'Mobile preview', exact: true }).click();
-  await zoom.selectOption('0.5');
-  await expect(page.locator('#preview-frame')).toHaveCSS('width', '375px');
+  await zoom.selectOption('50');
+  await expect(page.locator('#preview-frame')).toHaveCSS('width', '750px');
   await preview.getByRole('button', { name: 'Increase count' }).click();
   await expect(preview.locator('.value')).toHaveText('2');
   await page.setViewportSize({ width: 320, height: 740 });
@@ -31,7 +33,7 @@ test('zoom preserves viewport width, running state and iframe identity while kee
 });
 
 test('native fullscreen enters and exits without restarting preview; external exit restores the control', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/playground');
   const preview = page.frameLocator('#preview-frame');
   await expect(preview.getByRole('heading', { name: 'Hello, world.' })).toBeVisible();
   const supported = await page.evaluate(() => Boolean(document.fullscreenEnabled && document.documentElement.requestFullscreen));
@@ -42,11 +44,11 @@ test('native fullscreen enters and exits without restarting preview; external ex
   }
   await preview.getByRole('button', { name: 'Increase count' }).click();
   const original = await page.locator('#preview-frame').getAttribute('srcdoc');
-  await page.getByRole('combobox', { name: 'Preview zoom' }).selectOption('0.75');
+  await page.getByRole('combobox', { name: 'preview-zoom' }).selectOption('75');
   await enter.click();
   const exit = page.getByRole('button', { name: 'Exit fullscreen preview' });
   await expect(exit).toHaveAttribute('aria-pressed', 'true');
-  expect(await page.evaluate(() => document.fullscreenElement?.className)).toBe('preview-surface');
+  expect(await page.evaluate(() => document.fullscreenElement?.contains(document.querySelector('#preview-frame')))).toBe(true);
   await expect(preview.locator('.value')).toHaveText('1');
   await preview.getByRole('button', { name: 'Increase count' }).click();
   await expect(preview.locator('.value')).toHaveText('2');
@@ -62,7 +64,7 @@ test('native fullscreen enters and exits without restarting preview; external ex
   await expect(enter).toBeFocused();
   await expect(preview.locator('.value')).toHaveText('2');
   await expect(page.locator('#preview-frame')).toHaveAttribute('srcdoc', original!);
-  await expect(page.getByRole('combobox', { name: 'Preview zoom' })).toHaveValue('0.75');
+  await expect(page.getByRole('combobox', { name: 'preview-zoom' })).toHaveValue('75');
 });
 
 test('fullscreen rejection is visible and leaves the running app usable', async ({ page }) => {
@@ -70,7 +72,7 @@ test('fullscreen rejection is visible and leaves the running app usable', async 
     Object.defineProperty(document, 'fullscreenEnabled', { configurable: true, value: true });
     Element.prototype.requestFullscreen = () => Promise.reject(new Error('Denied by browser'));
   });
-  await page.goto('/');
+  await page.goto('/playground');
   const preview = page.frameLocator('#preview-frame');
   await expect(preview.getByRole('heading', { name: 'Hello, world.' })).toBeVisible();
   await page.getByRole('button', { name: 'Enter fullscreen preview' }).click();

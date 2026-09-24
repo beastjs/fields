@@ -7,6 +7,9 @@ import ChatSettings from './ChatSettings.btsx'
 import ChatComposer from './ChatComposer.btsx'
 import ChatMessage from './ChatMessage.btsx'
 import { planRepair } from '../../chat/iterate'
+import { fileRecommendation } from '../../chat/recommendation'
+import { chatReferences } from '../../chat/project-context'
+import { jevConfigured } from '../../jev/status'
 import type { ChatMessage as Message } from '../../chat/controller'
 import {Icon} from '@/lib/icons'
 import type { WorkspaceProps } from '../types'
@@ -14,11 +17,27 @@ import {ThinkingOrb} from '@beastjs/thinking-orbs'
 import { cn } from '@/lib/utils'
 import { iconButton, secondaryButton } from '../ui/styles'
 
+component SmartBuilder
+  props {isActive}: {isActive: boolean}
+  setup
+    const ACTIVE_CLASS = 'text-accent light:text-indigo-300/70 scale-105'
+  div(className='relative size-16 aspect-square flex items-center justify-center scale-110')
+    span(className={cn('absolute text-2xl scale-95 text-border/60 light:text-border/50 blur-sm animate-spin', {[ACTIVE_CLASS]: isActive})}) ✦
+    span(className={cn('absolute text-xl text-muted-foreground/80', {[ACTIVE_CLASS]: isActive})}) ✦
+    span(className={cn('absolute text-border/60 light:text-border/30 text-xl scale-90 blur-[2px] animate-pulse',{[ACTIVE_CLASS]: isActive} )}) ✦
+    ThinkingOrb(state='composing' size={64} speed={isActive ? 0.2515 : 0.1515})
+
 props { layout, session }: WorkspaceProps
 setup
   const chat = useMemo(() => new ChatController(readChatSettings(), saveChatSettings), []);
   const state = useSyncExternalStore(chat.subscribe, chat.getSnapshot);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [jevActive, setJevActive] = useState(false);
+  useEffect(() => {
+    let mounted = true;
+    void jevConfigured().then(configured => { if (mounted) setJevActive(configured); });
+    return () => { mounted = false; };
+  }, []);
   const scroller = useRef<HTMLDivElement | null>(null);
   const follow = useRef(true);
   const connected = !!state.settings.apiKey || !!state.status?.configured[state.settings.provider] || (state.settings.provider === 'custom' && !!state.settings.baseURL);
@@ -28,41 +47,42 @@ setup
   const errorButton = cn(secondaryButton, 'px-[7px] py-1 text-[9px]');
   const [isAutoApply, setIsAutoApply] = useState(true)
   const toggleAuto = () => setIsAutoApply(v => !v)
+  const repairLifetime = useMemo(() => new AbortController(), []);
+  useEffect(() => () => repairLifetime.abort(), [repairLifetime]);
   const autoRef = useRef(isAutoApply)
   autoRef.current = isAutoApply
   // Why the loop stopped, keyed by the reply it stopped on, so the message can say so.
   const [halted, setHalted] = useState<Record<number, string>>({});
   // The reply this fix-up round still belongs to: the latest one, while auto is on.
-  const current = (message: Message) => autoRef.current && chat.getSnapshot().messages.at(-1)?.id === message.id;
+  const current = (message: Message) => !repairLifetime.signal.aborted && autoRef.current && chat.getSnapshot().messages.at(-1)?.id === message.id;
   // Auto-apply failures go back to the model with the current file until a change applies
   // cleanly, the attempts run out, or the failure is judged not worth another attempt.
   // Only the latest reply iterates, and only while auto is on.
   const autoFix = (message: Message, error: string) => {
+    if (!current(message)) return;
     // The reply is marked complete just before the controller clears `busy`; wait for idle.
     if (chat.getSnapshot().busy) {
       const unsubscribe = chat.subscribe(() => { if (!chat.getSnapshot().busy) { unsubscribe(); autoFix(message, error); } });
       return;
     }
-    if (!current(message) || !message.context) return;
-    const file = message.context.file;
+    const attached = [...(message.context ? [message.context] : []), ...(message.references ?? [])];
+    const file = fileRecommendation(message.content, message.context, message.references)?.file ?? message.context?.file;
+    if (!file || !attached.some(context => context.file === file)) return;
     const attempt = message.attempt ?? 1;
     if (session.read(file) === undefined) return;
     const messages = chat.getSnapshot().messages;
     const reply = messages.findIndex(entry => entry.id === message.id);
-    const request = messages.slice(0, reply < 0 ? 0 : reply).filter(entry => entry.role === 'user').at(-1)?.content ?? '';
-    void planRepair({ prompt: request, file, error, attempt }).then(plan => {
+    const request = messages.slice(0, reply < 0 ? 0 : reply).filter(entry => entry.role === 'user' && !entry.attempt).at(-1)?.content ?? '';
+    void planRepair({ prompt: request, file, source: session.read(file), error, attempt }, undefined, repairLifetime.signal).then(plan => {
       // Deciding took a round trip, in which the developer may have turned auto off or moved on.
-      if (!current(message)) return;
+      if (!current(message) || session.getSnapshot().projectGeneration !== message.projectGeneration) return;
       if (plan.action === 'stop') { setHalted(reasons => ({ ...reasons, [message.id]: plan.reason })); return; }
       const source = session.read(file);
       if (source === undefined) return;
-      const references = chat.lastReferences.flatMap(reference => {
-        const latest = session.read(reference.file);
-        return latest === undefined ? [] : [{ file: reference.file, source: latest }];
-      });
       const snapshot = session.getSnapshot();
+      const { references } = chatReferences(snapshot.project, [], attached.filter(reference => reference.file !== file).map(reference => reference.file));
       void chat.submit(plan.prompt, { file, source }, snapshot.projectGeneration, references, attempt + 1, Object.keys(snapshot.project.files));
-    });
+    }).catch(() => { /* Unmount cancelled the pending repair. */ });
   }
 
 
@@ -82,11 +102,7 @@ PaneSurface(layout={layout} pane='chat' label='AI chat' className='flex flex-col
   div(className='min-h-0 flex-1 overflow-auto px-[15px] py-[17px]' ref={scroller} onScroll={scroll} role='log' aria-label='Chat messages' aria-live='polite')
     if !state.messages.length
       div(className='chat-welcome mt-2.5 mb-3')
-        div(className='relative size-16 aspect-square flex items-center justify-center scale-110')
-          span(className='absolute text-2xl scale-105 text-brand/80 blur-sm animate-spin light:text-indigo-300/80') ✦
-          span(className='absolute text-xl text-brand') ✦
-          span(className='absolute text-xl scale-90 text-brand blur-[2px] animate-pulse light:text-indigo-300') ✦
-          ThinkingOrb(state='composing' size={64} speed={0.1515})
+        SmartBuilder(isActive={jevActive})
 
         h2(className='mt-[9px] mb-[11px] text-[18px] font-medium leading-[1.3] tracking-[-0.5px] text-fg') Fast Builder
         each idea in ['Explore an idea', 'untangle an error', 'or find the next step'] key idea

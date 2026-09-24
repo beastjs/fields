@@ -4,7 +4,7 @@ import { helloWorld } from '../src/playground/examples';
 const frame = (page: Page) => page.frameLocator('#preview-frame');
 const editor = (page: Page) => page.getByRole('textbox', { name: 'Source editor' });
 async function ready(page: Page) {
-  await page.goto('/');
+  await page.goto('/playground?panes=24,36,30,10&rows=75,25');
   await expect(frame(page).getByRole('heading', { name: 'Hello, world.' })).toBeVisible({ timeout: 20000 });
 }
 async function edit(page: Page, name: string, source: string) {
@@ -21,7 +21,7 @@ test('consecutive component and stylesheet updates preserve state and preview do
   for (const label of ['First hot update', 'Second hot update']) {
     await edit(page, 'Counter.btsx', helloWorld.files['/src/Counter.btsx'].replace('A LITTLE INTERACTION', label));
     await expect(frame(page).getByText(label)).toBeVisible();
-    await expect(page.locator('#preview-status')).toHaveText('Live · HMR');
+    await expect(page.locator('#pane-preview').getByText('Live · HMR', { exact: true })).toHaveText('Live · HMR');
     await expect(frame(page).locator('.value')).toHaveText('1');
     await expect(page.locator('#preview-frame')).toHaveAttribute('srcdoc', previewDocument!);
   }

@@ -1,11 +1,12 @@
-import { useField, useForm } from '@octanejs/tanstack-form'
-import { useState, useSyncExternalStore } from 'octane'
-import { MAX_REFERENCES } from '../../chat/contracts'
+import { useField, useForm, useStore } from '@octanejs/tanstack-form'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'octane'
+import { MAX_REFERENCES, MAX_REFERENCE_CHARS } from '../../chat/contracts'
 import { chatReferences, relatedFiles } from '../../chat/project-context'
+import { defaultChatReferences, sameReferenceSelection } from '../../chat/references'
+import { ReferenceSelector } from '../../chat/reference-selector'
 import { fileLabel } from '../../playground/presentation'
 import type { ChatController } from '../../chat/controller'
 import type { PlaygroundSession, SessionSnapshot } from '../../playground/session'
-import NativeSelect, {NativeSelectOption} from "../ui/native-select.btsx";
 import { cn } from '@/lib/utils'
 import {Icon} from "@/lib/icons";
 import Checkbox from "../ui/checkbox.btsx";
@@ -18,6 +19,10 @@ setup
   const project = useSyncExternalStore(session.subscribe, session.getSnapshot);
   const [included, setIncluded] = useState<string[]>([]);
   const [excluded, setExcluded] = useState<string[]>([]);
+  const selector = useMemo(() => new ReferenceSelector(), []);
+  const selected = useSyncExternalStore(selector.subscribe, selector.getSnapshot);
+  const selection = useRef<AbortController | null>(null);
+  useEffect(() => () => { selection.current?.abort(); selector.dispose(); }, [selector]);
   // Files deleted since they were picked, or duplicating the attached active file, are skipped.
   const pickedFiles = (snapshot: SessionSnapshot, withActive: boolean) =>
     included.filter(file => snapshot.project.files[file] !== undefined && !(withActive && file === snapshot.activeFile));
@@ -27,33 +32,64 @@ setup
     const related = withActive ? relatedFiles(snapshot.project, snapshot.activeFile).filter(file => !excluded.includes(file)) : [];
     return { picked, ...chatReferences(snapshot.project, picked, related) };
   };
-  const form = useForm({ defaultValues: { prompt: '', includeFile: true }, onSubmit: ({ value }) => {
-    if (chat.getSnapshot().busy) return;
+  const form = useForm({ defaultValues: { prompt: '', includeFile: true }, onSubmit: async ({ value }) => {
+    if (chat.getSnapshot().busy || selection.current) return;
     const snapshot = session.getSnapshot();
     const active = snapshot.activeFile;
-    const context = value.includeFile ? { file: active, source: session.read(active)! } : undefined;
-    const { references } = attachments(snapshot, value.includeFile);
-    void chat.submit(value.prompt, context, snapshot.projectGeneration, references, 1, Object.keys(snapshot.project.files));
-    if (!context || context.source.length <= 60000) form.setFieldValue('prompt', '');
+    const context = value.includeFile ? { file: active, source: snapshot.project.files[active] } : undefined;
+    const abort = new AbortController();
+    selection.current = abort;
+    const messages = chat.getSnapshot().messages;
+    // A new chat, project replacement or edit invalidates the evidence used for selection.
+    const disconnectChat = chat.subscribe(() => { if (chat.getSnapshot().messages !== messages) abort.abort(); });
+    const disconnectProject = session.subscribe(() => {
+      const latest = session.getSnapshot();
+      if (latest.project !== snapshot.project || latest.projectGeneration !== snapshot.projectGeneration || latest.activeFile !== active) abort.abort();
+    });
+    try {
+      const { references } = context && context.source.length > 60000 ? attachments(snapshot, value.includeFile) : await selector.resolve({
+        prompt: value.prompt, project: snapshot.project, activeFile: active, includeActive: value.includeFile,
+        picked: pickedFiles(snapshot, value.includeFile), excluded,
+      }, abort.signal);
+      if (abort.signal.aborted) return;
+      disconnectChat();
+      disconnectProject();
+      void chat.submit(value.prompt, context, snapshot.projectGeneration, references, 1, Object.keys(snapshot.project.files));
+      // Preserve the draft when validation rejects the send, or when it was edited while selecting.
+      if (chat.getSnapshot().busy && form.state.values.prompt === value.prompt) form.setFieldValue('prompt', '');
+    } catch (error) {
+      if (!abort.signal.aborted) throw error;
+    } finally {
+      disconnectChat();
+      disconnectProject();
+      if (selection.current === abort) selection.current = null;
+    }
   } });
+  const selecting = useStore(form.store, state => state.isSubmitting);
   const prompt = useField({ form, name: 'prompt', validators: { onSubmit: ({ value }) => value.trim() ? undefined : 'Write a message first.' } });
   const includeFile = useField({ form, name: 'includeFile' });
-  const current = attachments(project, includeFile.state.value);
-  const visible = current.picked;
-  const linked = current.references.map(reference => reference.file).filter(file => !visible.includes(file));
-  const available = Object.keys(project.project.files).filter(file => !included.includes(file) && !linked.includes(file) && !(includeFile.state.value && file === project.activeFile)).sort();
-  const unlinkFile = (file: string) => setExcluded(files => [...files, file]);
-  const addFile = (event: Event) => {
-    const select = event.currentTarget as HTMLSelectElement;
-    const file = select.value;
-    select.value = '';
-    if (file && visible.length < MAX_REFERENCES) { setIncluded([...visible, file]); setExcluded(files => files.filter(item => item !== file)); }
+  const selectionInput = { prompt: prompt.state.value, project: project.project, activeFile: project.activeFile,
+    includeActive: includeFile.state.value, picked: pickedFiles(project, includeFile.state.value), excluded };
+  useEffect(() => {
+    selector.update(selectionInput);
+  }, [selector, prompt.state.value, project.project, project.activeFile, project.projectGeneration, includeFile.state.value, included, excluded]);
+  const current = sameReferenceSelection(selected.input, selectionInput) ? selected.result : defaultChatReferences(selectionInput);
+  const checkedFiles = current.references.map(reference => reference.file);
+  const available = Object.keys(project.project.files).filter(file => file !== project.activeFile).sort();
+  const manualCharacters = selectionInput.picked.reduce((sum, file) => sum + project.project.files[file].length, 0);
+  const toggleFile = (file: string, checked: boolean) => {
+    if (checked) {
+      setIncluded(files => [...new Set([...files, file])]);
+      setExcluded(files => files.filter(item => item !== file));
+    } else {
+      setIncluded(files => files.filter(item => item !== file));
+      setExcluded(files => [...new Set([...files, file])]);
+    }
   };
-  const removeFile = (file: string) => setIncluded(files => files.filter(item => item !== file));
   const roundButton = 'mb-[7px] size-7 shrink-0 rounded-full border border-seam bg-control text-[18px] text-brand shadow-[inset_0_1px_var(--faint)] light:border-transparent light:bg-fg light:text-panel light:shadow-none light:disabled:bg-control';
   const submit = (event: SubmitEvent) => { event.preventDefault(); void form.handleSubmit(); };
   const keydown = (event: KeyboardEvent) => {
-    if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); if (!state.busy) void form.handleSubmit(); }
+    if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); if (!state.busy && !selecting) void form.handleSubmit(); }
   };
 
 
@@ -67,41 +103,35 @@ form(className='shrink-0 border-t border-edge bg-editor p-3 chat-short:p-2' onSu
   div(className='w-full flex items-center justify-between')
     div(className='flex items-center gap-1')
       label(className='mb-[9px] flex flex-wrap items-center gap-[5px] text-[8px] text-dim [&_input]:m-0 [&_input]:size-[11px] [&_input]:accent-brand')
-        Checkbox(checked={includeFile.state.value} onCheckedChange={includeFile.handleChange} indicatorClass='bg-accent' className=' data-checked:border-accent!')
+        Checkbox(checked={includeFile.state.value} onCheckedChange={includeFile.handleChange} disabled={selecting} aria-label={'Include ' + fileLabel(project.activeFile)} indicatorClass='bg-accent' className=' data-checked:border-accent!')
         code(className='max-w-full overflow-hidden text-ellipsis rounded-[3px] border border-edge bg-surface-hover px-1 py-px font-code text-2xs text-brand-hover' title={project.activeFile}) #{fileLabel(project.activeFile)}
-      div(className='mb-[9px] flex flex-wrap items-center gap-1 empty:hidden')
-        if visible.length < 2
-          each file in visible key file
-            span(className='inline-flex max-w-full items-center rounded-[3px] border border-edge bg-surface-hover' title={file})
-              code(className='truncate py-[3px] pl-[5px] font-code text-2xs text-brand') #{fileLabel(file)}
-              button(className='border-0 bg-none px-[5px] text-[10px] leading-none text-dim hover:text-fg' type='button' onClick={() => removeFile(file)} aria-label={'Remove ' + file + ' from chat'}) ×
-        else
-          span(className='inline-flex max-w-full items-center rounded-[3px] border border-edge bg-surface-hover' title={visible[0]})
-            code(className='truncate py-[3px] pl-[5px] font-code text-[8px] text-brand') #{fileLabel(visible[0])}
-              button(className='border-0 bg-none px-[5px] text-[10px] leading-none text-dim hover:text-fg' type='button' onClick={() => removeFile(visible[0])} aria-label={'Remove ' + visible[0] + ' from chat'}) ×
-
-            code +
-            | #{visible.length - 1} more
-
-        span.chat-linked-file(className='inline-flex max-w-full items-center rounded-[3px] border border-dashed border-edge bg-surface-hover' title={linked[0] + ' is included automatically because it imports or is imported by ' + fileLabel(project.activeFile)})
-          code(className='truncate py-px pl-[5px] font-code text-2xs text-dim') ↪ #{linked.length} files
-          button(className='border-0 bg-none px-1 text-2xs leading-none text-dim hover:text-fg' type='button' onClick={() => unlinkFile(linked[0])} aria-label={'Stop including ' + linked[0] + ' automatically'}) ×
-
-        if available.length && visible.length < MAX_REFERENCES
-          NativeSelect#chat-add-file(className='rounded-[3px] border border-dashed border-edge-strong bg-transparent px-1 py-0.75! font-code text-[8px] text-dim hover:text-fg' value='' onChange={addFile} aria-label='Include another file in chat' placeholder='+ Add')
-            option(value='add') +Add
-            each file in available key file
-              NativeSelectOption( value={file}) #{fileLabel(file)}
     label(className='mb-[9px] flex flex-wrap items-center gap-[5px] text-2xs text-dim [&_input]:m-0 [&_input]:size-[11px] [&_input]:accent-brand' htmlFor='auto')
       Checkbox#auto(checked={auto} onCheckedChange={toggleAuto} indicatorClass='bg-accent' className=' data-checked:border-accent!')
       span(className='select-none') Auto
 
+  details(className='mb-2 rounded-md border border-edge px-2 py-1 text-[10px] text-dim' open={true})
+    summary(className='cursor-pointer py-1 select-none') Reference files · #{checkedFiles.length} selected
+    div(className='max-h-32 space-y-1 overflow-y-auto py-1' role='group' aria-label='Reference files')
+      each file in available key file
+        label(className='flex min-w-0 cursor-pointer items-center gap-2 py-0.5' title={file})
+          Checkbox(checked={checkedFiles.includes(file)} onCheckedChange={checked => toggleFile(file, checked)} disabled={selecting || (!checkedFiles.includes(file) && (selectionInput.picked.length >= MAX_REFERENCES || manualCharacters + project.project.files[file].length > MAX_REFERENCE_CHARS))} aria-label={'Include ' + fileLabel(file) + ' as reference'})
+          code(className='min-w-0 flex-1 truncate font-code text-[9px]') #{fileLabel(file)}
+          if checkedFiles.includes(file)
+            span(className='shrink-0 text-[8px] text-brand') #{included.includes(file) ? 'Selected' : 'Auto included'}
+    if current.skipped.length
+      p(className='py-1 text-[9px] text-warning') #{current.skipped.length} files exceed the reference limits.
+
   div(className='overflow-hidden rounded-md border border-edge-strong bg-inset shadow-[inset_0_1px_3px_#15151515] focus-within:border-brand-hover light:rounded-xl light:border-edge light:bg-panel light:shadow-elevation light:focus-within:border-brand/50')
     label(className='sr-only' for='chat-prompt') Message AI
-    textarea#chat-prompt(value={prompt.state.value} onInput={event => prompt.handleChange(event.currentTarget.value)} onKeyDown={keydown} placeholder='Ask about your code…' rows={3} maxlength='32000' className='block max-h-[170px] min-h-[70px] w-full resize-none border-0 bg-muted p-[11px] text-[11px] leading-[1.7] text-fg decoration-none outline-none placeholder:text-dim focus-visible:outline-none chat-short:min-h-[42px] chat-short:p-[7px]')
+    textarea#chat-prompt(value={prompt.state.value} onInput={event => { selection.current?.abort(); prompt.handleChange(event.currentTarget.value); }} onKeyDown={keydown} placeholder='Ask about your code…' rows={3} maxlength='32000' className='block max-h-[170px] min-h-[70px] w-full resize-none border-0 bg-muted p-[11px] text-[11px] leading-[1.7] text-fg decoration-none outline-none placeholder:text-dim focus-visible:outline-none chat-short:min-h-[42px] chat-short:p-[7px]')
     div(className='flex items-center justify-between gap-2 pr-[7px] pl-2.5 chat-short:justify-end chat-short:pb-[5px]')
-      span(className='font-code text-[8px]/[1.6] text-faint chat-short:hidden') Enter to send · Shift Enter for a new line
-      if state.busy
+      if selecting || selected.pending
+        span(className='font-code text-[8px]/[1.6] text-dim' role='status') Finding relevant files…
+      else
+        span(className='font-code text-[8px]/[1.6] text-faint chat-short:hidden' title='Relevant project files are selected automatically before sending') Enter to send · Shift Enter for a new line
+      if selecting
+        button(className={cn(roundButton, 'text-[10px]')} type='button' onClick={() => selection.current?.abort()} aria-label='Cancel file selection') ■
+      elseif state.busy
         button(className={cn(roundButton, 'text-[10px]')} type='button' onClick={chat.stop} aria-label='Stop response') ■
       else
         button(className={cn(roundButton, 'disabled:text-faint disabled:opacity-65')} type='submit' disabled={!prompt.state.value.trim()} aria-label='Send message') ↑

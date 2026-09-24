@@ -16,8 +16,8 @@ import { toClasses } from '../../playground/studio/ir/classes'
 import type { Style } from '../../playground/studio/ir/types'
 import type { DesignNode } from '../../playground/preview'
 import DesignOverlay, { type DesignEdit } from './DesignOverlay.btsx'
-import { INHERIT_THEME, themeById, themeCss } from '../../playground/studio/themes'
-import type { ThemeDocument } from '../../playground/studio/themes'
+import { DEFAULT_PAINT, INHERIT_THEME, paintOf, readPaintedId, themeById, themeCss } from '../../playground/studio/themes'
+import type { PaintStyle, ThemeDocument } from '../../playground/studio/themes'
 import type { PageBlock } from '../../playground/studio/page'
 import { TemplatePreview, type TemplatePreviewStatus } from '../../playground/template-preview'
 import { dialogPanel, eyebrowLabel, iconButton, primaryButton, secondaryButton } from '../ui/styles'
@@ -25,6 +25,9 @@ import PageOutline from './PageOutline.btsx'
 import SectionLibrary from './SectionLibrary.btsx'
 import ThemeDesigner from './ThemeDesigner.btsx'
 import { themeFromId } from '../../jev/theme-model'
+import { isHuntedTheme, paintOfTheme, repaintTheme, themeFromHuntedId, themeFromPalette, type PaletteLike } from '../../playground/studio/colorhunt'
+import { useConvex } from '@/hooks/use-convex'
+import ThemePicker from './ThemePicker.btsx'
 import Button from "../ui/button.btsx";
 
 module
@@ -38,6 +41,8 @@ module
   const blockSelector = (index: number) => `[data-page] > :nth-child(${index + 1})`
   const fileLabel = (path: string) => path.replace('/src/', '')
   const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`
+  // Either id form carries its style: a hunted palette in the id itself, any other theme as a `~style` suffix.
+  const paintOfId = (themeId: string) => paintOfTheme(themeId) ?? readPaintedId(themeId)?.paint
 
 props { session, compact = false }: SessionProps & { compact?: boolean }
 setup
@@ -66,6 +71,15 @@ setup
   // Hides the side panels so the preview fills the dialog. Fine Layout keeps working: its button is in the
   // header and its overlay lives over the preview, neither of which the panels own.
   const [maximized, setMaximized] = useState(false);
+  /**
+   * Bumped whenever a preview instance is created.
+   *
+   * The rebuild effect below is keyed on what the page *is*, so a fresh instance with an unchanged page was never
+   * asked to build anything: `show` is what moves the status off `compiling`, and nothing else ever calls it, so
+   * the studio sat on "Building preview…" with no way back. Making the instance itself a dependency means every
+   * preview that exists has been asked for a build.
+   */
+  const [previewEpoch, setPreviewEpoch] = useState(0);
   const maximizedRef = useRef(false);
   maximizedRef.current = maximized;
   /**
@@ -73,6 +87,29 @@ setup
    * was composed from, so one already installed in a project is recomposed from its id on open.
    */
   const [generated, setGenerated] = useState<ThemeDocument[]>([]);
+  /**
+   * Palettes pulled from Color Hunt this session. Like a generated theme, a hunted one needs no Convex row: its
+   * id carries the 24-character code, so all four colors are recoverable from the stylesheet alone.
+   */
+  const [hunted, setHunted] = useState<ThemeDocument[]>([]);
+  /**
+   * The feed page being walked. The first shuffle fetches 40 palettes and every shuffle after it takes the next
+   * one, so browsing costs one request rather than one per click; exhausting a page fetches the one after it.
+   */
+  /**
+   * Built-in and generated themes read in a style other than the one they were composed in. Unlike a hunted
+   * palette, these cannot be rebuilt from their id alone — it only names the theme they came from — so the one on
+   * screen is held here and an installed one is re-read from the list on open.
+   */
+  const [repainted, setRepainted] = useState<ThemeDocument[]>([]);
+  const hunt = useRef<{ palettes: PaletteLike[]; cursor: number; step: number }>({ palettes: [], cursor: 0, step: 0 });
+  /**
+   * How a palette reaches the sections: the wash the studio has always used, or the brand-and-accent-levels
+   * reading of the same four colors. It decides what the next shuffle builds, and repaints what is already chosen.
+   */
+  const [paint, setPaint] = useState<PaintStyle>(DEFAULT_PAINT);
+  const [hunting, setHunting] = useState(false);
+  const [huntError, setHuntError] = useState<string | undefined>(undefined);
   const [hoveredNode, setHoveredNode] = useState<DesignNode | undefined>(undefined);
   const [selectedNode, setSelectedNode] = useState<DesignNode | undefined>(undefined);
   // The edit in flight during a drag, committed to the document on release.
@@ -90,13 +127,23 @@ setup
   const saved = open ? readPage(state.project, presets) : [];
   const recipes: PresetRecipe[] = recipeRows ?? [];
   const themeRows = useConvexQuery(api.presets.themes, open ? {} : 'skip');
+  const convex = useConvex();
   const savedThemeId = readProjectThemeId(state.project) ?? INHERIT_THEME.themeId;
   // A generated theme installed in an earlier session is rebuilt from the id in the stylesheet, so reopening the
   // studio finds it selected rather than silently falling back to Inherit and stripping it from the preview.
   const installedGenerated = open && !generated.some(theme => theme.themeId === savedThemeId) ? themeFromId(savedThemeId) : undefined;
   // A theme is only custom properties, so the whole list is small enough to hold and switching costs no rebuild.
-  const themes: ThemeDocument[] = [INHERIT_THEME, ...generated, ...(installedGenerated ? [installedGenerated] : []), ...(themeRows ?? [])];
+  const installedHunted = open && !hunted.some(theme => theme.themeId === savedThemeId) ? themeFromHuntedId(savedThemeId) : undefined;
+  const baseThemes: ThemeDocument[] = [INHERIT_THEME, ...hunted, ...(installedHunted ? [installedHunted] : []), ...generated, ...(installedGenerated ? [installedGenerated] : []), ...(themeRows ?? [])];
+  // A repainted built-in or generated theme is its base id plus a style, so a project installed with one resolves
+  // the base out of the list above and re-reads it, rather than dropping to Inherit and stripping the stylesheet.
+  const savedPaint = open ? readPaintedId(savedThemeId) : undefined;
+  const installedRepainted = savedPaint && !repainted.some(theme => theme.themeId === savedThemeId)
+    ? repaintTheme(themeById(baseThemes, savedPaint.baseId), savedPaint.paint)
+    : undefined;
+  const themes: ThemeDocument[] = [...baseThemes, ...repainted, ...(installedRepainted?.themeId === savedThemeId ? [installedRepainted] : [])];
   const pageTheme = themeById(themes, themeId);
+  const paintStyle = paintOf(pageTheme);
   const catalogLoading = open && catalog === undefined;
   // Composing and installing need every referenced tree and theme in hand; until then the studio waits rather than
   // writing a page with sections missing or replacing an applied theme with a loading fallback.
@@ -142,7 +189,8 @@ setup
       cleanups ? `Removes ${plural(cleanups, 'unused section')}.` : '',
       !themeChanged ? '' : pageTheme.themeId === INHERIT_THEME.themeId
         ? 'Removes the Design Studio theme from your stylesheet.'
-        : `Writes the ${pageTheme.name} theme into your stylesheet.`,
+        // Two readings of one palette share a name, so the note says which one is about to be written.
+        : `Writes the ${pageTheme.name}${paintStyle ? ' (' + paintStyle.label + ')' : ''} theme into your stylesheet.`,
       editedNodes ? `Includes ${plural(editedNodes, 'Fine Layout edit')}.` : '',
       install?.rendered === false ? 'App.btsx could not be updated automatically, so import Page and render it where it belongs.' : ''
     ].filter(Boolean).join(' ');
@@ -263,7 +311,34 @@ setup
   };
   const chooseTheme = (nextThemeId: string) => {
     setThemeId(nextThemeId);
+    // Choosing a palette that was painted in the other style moves the studio to it, so the next shuffle agrees
+    // with what is on screen rather than silently going back to the style the panel still shows.
+    const chosen = paintOfId(nextThemeId);
+    if (chosen) setPaint(chosen);
     session.setStudioThemePreview(themeCss(themeById(themes, nextThemeId)));
+  };
+  /**
+   * The same theme, read the other way.
+   *
+   * A repaint is a different theme with an id of its own, so both readings stay in the list and either can be
+   * installed. Repainting always starts from the unpainted theme rather than from what is on screen, because a
+   * painted document has already spent its ground and type on levels — which is also what makes going back to
+   * Washed simply a matter of selecting the base again.
+   *
+   * A theme with nothing to re-read — Inherit, or a record whose colours the palette maths cannot parse — comes
+   * back unchanged. The style is still remembered, so the next shuffle honours it.
+   */
+  const choosePaint = (next: PaintStyle) => {
+    setPaint(next);
+    const base = themeById(themes, readPaintedId(pageTheme.themeId)?.baseId ?? pageTheme.themeId);
+    const chosen = repaintTheme(base, next);
+    if (chosen.themeId === pageTheme.themeId) return;
+    // A hunted palette rebuilds from its own id, so it belongs with the hunted ones; anything else is a reading of
+    // a theme the list already holds and is kept beside it.
+    const register = isHuntedTheme(chosen.themeId) ? setHunted : setRepainted;
+    if (chosen.paint) register(current => [chosen, ...current.filter(existing => existing.themeId !== chosen.themeId)].slice(0, 12));
+    setThemeId(chosen.themeId);
+    session.setStudioThemePreview(themeCss(chosen));
   };
   /**
    * A theme from the designer, registered and selected in one step.
@@ -276,13 +351,45 @@ setup
     setThemeId(theme.themeId);
     session.setStudioThemePreview(themeCss(theme));
   };
+  /**
+   * The next Color Hunt palette, registered and selected exactly like a generated one.
+   *
+   * The feed sends no CORS headers, so the request cannot be made from the browser and goes through the
+   * `colorhunt.list` action instead — which is also why this needs a signed-in user.
+   */
+  const shuffle = async () => {
+    if (!convex || hunting) return;
+    setHunting(true);
+    setHuntError(undefined);
+    try {
+      if (hunt.current.cursor >= hunt.current.palettes.length) {
+        const palettes = await convex.action(api.colorhunt.list, { sort: 'random', step: hunt.current.step });
+        if (!palettes.length) { setHuntError('Color Hunt sent no palettes.'); return; }
+        hunt.current = { palettes, cursor: 0, step: hunt.current.step + 1 };
+      }
+      const theme = themeFromPalette(hunt.current.palettes[hunt.current.cursor], paint);
+      hunt.current.cursor += 1;
+      setHunted(current => [theme, ...current.filter(existing => existing.themeId !== theme.themeId)].slice(0, 12));
+      setThemeId(theme.themeId);
+      session.setStudioThemePreview(themeCss(theme));
+    } catch (error) {
+      // The action answers with a `ConvexError`, whose `data` carries the message worth showing.
+      const data = (error as { data?: { message?: unknown } } | null)?.data;
+      setHuntError(typeof data?.message === 'string' ? data.message : 'Could not reach Color Hunt.');
+    } finally {
+      setHunting(false);
+    }
+  };
 
   const show = () => {
     const page = readPage(state.project, presets);
     setBlocks(page);
     setSelected(page[0]?.name);
     setOpenKind(page[0]?.kind ?? 'topbar');
-    setThemeId(readProjectThemeId(state.project) ?? INHERIT_THEME.themeId);
+    const installed = readProjectThemeId(state.project) ?? INHERIT_THEME.themeId;
+    setThemeId(installed);
+    // A project already on a painted theme opens in the style it was painted in, so a shuffle continues from there.
+    setPaint(paintOfId(installed) ?? DEFAULT_PAINT);
     setView('preview');
     setMaximized(false);
     if (window.matchMedia('(max-width: 760px)').matches) setDevice('mobile');
@@ -321,6 +428,7 @@ setup
     instance.hot = true;
     instance.onDesign = receiveDesign;
     preview.current = instance;
+    setPreviewEpoch(epoch => epoch + 1);
     return () => { instance.dispose(); preview.current = null; };
   }, [open]);
   // Rebuild shortly after the page settles, so a drag or a burst of clicks compiles once.
@@ -334,7 +442,7 @@ setup
       preview.current?.show(pagePreviewProject(state.project, blocks, presets, designing), index >= 0 ? { selector: blockSelector(index), highlight: focus!.highlight } : undefined);
     }, 140);
     return () => clearTimeout(timer);
-  }, [open, blocks, ready, designing]);
+  }, [open, blocks, ready, designing, previewEpoch]);
   useEffect(() => {
     if (!open || !stage.current) return;
     const observer = new ResizeObserver(([entry]) => {
@@ -345,7 +453,7 @@ setup
     return () => observer.disconnect();
   }, [open]);
   useEffect(() => { preview.current?.setTheme(theme); }, [theme]);
-  useEffect(() => { preview.current?.setTokens(themeCss(pageTheme)); }, [open, themeId, themeRows, generated]);
+  useEffect(() => { preview.current?.setTokens(themeCss(pageTheme)); }, [open, themeId, themeRows, generated, hunted, repainted]);
   useEffect(() => { preview.current?.setDesigning(designing); }, [open, designing]);
   // A rebuild replaces the node that was measured, so the overlay asks the new one for its box.
   useEffect(() => {
@@ -388,28 +496,32 @@ dialog(className={cn(dialogPanel, 'h-[min(920px,calc(100dvh-24px))] w-[min(1440p
         ~ className='flex size-7 items-center justify-center rounded-[4px] text-dim hover:text-fg aria-pressed:bg-control aria-pressed:text-brand'
         ~ onClick={() => setMaximized(value => !value)}
         ~ )
-        Icon(name='sidebar' className='size-3.5')
+        span ⛶
     div(className='flex items-center gap-2')
       button(
         ~ type='button'
         ~ aria-pressed={designing}
         ~ disabled={!blocks.length || view === 'code'}
         ~ title='Hover the preview to inspect a section, then drag its padding, margin or size'
-        ~ className='flex items-center gap-1.5 rounded-[6px] border border-edge px-2 py-1 text-[10px] text-dim transition-colors hover:text-fg disabled:opacity-40 aria-pressed:border-brand aria-pressed:bg-brand/15 aria-pressed:text-fg'
+        ~ className='flex items-center gap-1.5 rounded-[6px] p-1 text-dim transition-colors hover:text-brand aria-pressed:text-brand disabled:opacity-40 aria-pressed:border-brand'
         ~ onClick={toggleDesigning}
         ~ )
-        Icon(name='layout' className='size-3' )
-        span Fine Layout
-      label(className='flex items-center gap-1.5 text-[10px] text-dim')
-        span(className='sr-only') Theme
-        select(
-          ~ className='rounded-[6px] border border-edge bg-inset px-2 py-1 text-[11px] text-fg outline-none focus-visible:border-brand'
-          ~ value={themeId}
-          ~ title={pageTheme.description}
-          ~ onChange={event => chooseTheme(event.currentTarget.value)}
+        Icon(name='layout' className='size-5' )
+        // span Fine Layout
+      div(className='flex items-center gap-1.5')
+        if huntError
+          span(className='max-w-44 truncate text-[10px] text-warning' title={huntError}) #{huntError}
+        ThemePicker(
+          ~ themes={themes}
+          ~ themeId={themeId}
+          ~ onChoose={chooseTheme}
+          ~ paint={paint}
+          ~ onPaint={choosePaint}
+          ~ onShuffle={shuffle}
+          ~ shuffling={hunting}
+          ~ shuffleBlocked={convex ? undefined : 'Color Hunt needs a Convex connection.'}
+          ~ container={dialog}
           ~ )
-          each option in themes key option.themeId
-            option(value={option.themeId}) #{option.name}
 
       Button(variant='ghost' size='icon' aria-label='Close Design Studio' onClick={closeFromButton} className='relative -translate-y-3 translate-x-3') ×
 

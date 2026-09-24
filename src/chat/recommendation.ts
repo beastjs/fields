@@ -1,3 +1,4 @@
+import { locateEditLines } from './edit-locations';
 import type { FileContext } from './contracts';
 import { normalizeFences } from './fences';
 
@@ -78,7 +79,11 @@ function applyHunks(original: string, body: string): HunkResult {
   for (const { search, replace } of hunks) {
     if (!search) return { error: 'A hunk has an empty SEARCH section. Anchor insertions on a nearby line.' };
     const matches = findHunkMatches(source, search);
-    if (!matches.length) return { error: 'A hunk does not match the current file closely enough to apply safely. Ask for a fresh recommendation.' };
+    if (!matches.length) {
+      const candidates = locateEditLines(source, search, 3);
+      return { error: 'A hunk does not match the current file closely enough to apply safely. Its SEARCH text is absent from the attached source.' +
+        (candidates.length ? ` Check current source near lines ${candidates.map(candidate => candidate.line).join(', ')} and copy the intended line exactly.` : ' Locate the requested text in the current source before retrying.') };
+    }
     if (matches.length > 1) return { error: 'A hunk matches more than once. It needs more surrounding context.' };
     const { at, length } = matches[0];
     source = source.slice(0, at) + replace + source.slice(at + length);
@@ -94,7 +99,7 @@ const projectPath = (path: string) => '/' + path.replace(/^\.?\/+/, '');
  * snippets stay illustrative. Anything that renders as a change (a marked block or hunks) returns
  * a result: either the new source or an error explaining why it cannot apply, never silence.
  */
-export function fileRecommendation(raw: string, context?: FileContext): FileRecommendation | undefined {
+export function fileRecommendation(raw: string, context?: FileContext, references: readonly FileContext[] = []): FileRecommendation | undefined {
   const content = normalizeFences(raw);
   const full = [...content.matchAll(fullBlock)];
   const patches = [...content.matchAll(patchBlock)];
@@ -110,6 +115,13 @@ export function fileRecommendation(raw: string, context?: FileContext): FileReco
     return;
   }
   const targets = [...full, ...patches].map(block => projectPath(block[1]));
+  if (new Set(targets).size > 1) {
+    return { file: targets[0], error: 'The reply targets more than one file. Ask for a single-file patch so it can be verified safely.' };
+  }
+  // Explicit paths may select any supplied source. Bare hunks still belong only to the active file.
+  if (targets.length && targets[0] !== context?.file) {
+    context = references.find(reference => reference.file === targets[0]) ?? context;
+  }
   if (!context) {
     return { file: targets[0] ?? 'attached file', error: 'No file was attached to this message, so there is nothing to apply it to. Turn on active-file context and ask again.' };
   }

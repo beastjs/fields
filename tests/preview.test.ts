@@ -1,3 +1,4 @@
+import { runInNewContext } from 'node:vm';
 import { expect, test } from 'bun:test';
 import { isPreviewEvent, previewDocument } from '../src/playground/preview';
 import { hostedPreviewDocument } from '../src/playground/preview-bootstrap';
@@ -45,4 +46,28 @@ test('bootstrap is independent from user source and restricts remote execution',
   expect(document).toContain('event.source !== parent');
   expect(document).not.toContain('allow-same-origin');
   expect(document).not.toContain('Hello, world.');
+});
+
+test('runtime-error budget suppresses serialization and resets after one second', () => {
+  let now = 0;
+  const listeners = new Map<string, (event: { message: unknown }) => void>();
+  const messages: { type: string; message?: string }[] = [];
+  const sandbox = {
+    parent: { postMessage: (message: { type: string; message?: string }) => messages.push(message) },
+    performance: { now: () => now },
+    console: Object.fromEntries(['log', 'info', 'warn', 'error', 'debug'].map(level => [level, () => {}])),
+    addEventListener: (name: string, callback: (event: { message: unknown }) => void) => listeners.set(name, callback),
+  };
+  const html = previewDocument('budget-test', 1);
+  runInNewContext(html.slice(html.indexOf('<script>') + 8, html.indexOf('</script>')), { ...sandbox, window: sandbox });
+  const report = listeners.get('error')!;
+  for (let index = 0; index < 1000; index++) report({ message: 'burst' });
+  expect(messages.filter(message => message.type === 'runtime-error')).toHaveLength(21);
+  expect(messages.at(-1)?.message).toContain('Runtime error rate limit reached');
+  let inspected = false;
+  report({ message: new Proxy({}, { ownKeys() { inspected = true; return []; } }) });
+  expect(inspected).toBe(false);
+  now = 1000;
+  report({ message: 'recovered' });
+  expect(messages.at(-1)?.message).toBe('recovered');
 });

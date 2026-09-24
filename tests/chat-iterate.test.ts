@@ -75,3 +75,18 @@ test('a remedy shapes the follow-up instead of resending the same request', asyn
   await planRepair(failure, jev);
   expect(jev.calls[0]).toMatchObject({ prompt: 'make the heading tomato', attempt: 2, maxAttempts: MAX_ATTEMPTS });
 });
+
+test('cancelled repair decisions never fall back to another request', async () => {
+  const abort = new AbortController();
+  let finish!: (value: ReturnType<typeof plan>) => void;
+  const pending = planRepair(failure, (_input, signal) => {
+    expect(signal).toBe(abort.signal);
+    return new Promise(resolve => { finish = resolve; });
+  }, abort.signal);
+  abort.abort();
+  finish(plan({ remedy: 'retry' }));
+  await expect(pending).rejects.toThrow();
+  const unused = decide();
+  await expect(planRepair(failure, unused, abort.signal)).rejects.toThrow();
+  expect(unused.calls).toHaveLength(0);
+});

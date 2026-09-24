@@ -141,44 +141,48 @@ const discard = (response: Response) => Effect.promise(() => response.body?.canc
 
 /** One attempt. The retry policy lives outside it, where it can be read on its own. */
 const attempt = <Q extends Questions>(config: JevConfig, request: Ask<Q>) =>
-  Effect.gen(function* () {
-    const send = config.fetch ?? fetch
-    const response = yield* Effect.tryPromise({
-      try: (interrupt) =>
-        send(config.endpoint ?? ENDPOINT, {
-          method: 'POST',
-          redirect: 'error',
-          signal: request.signal ? AbortSignal.any([interrupt, request.signal]) : interrupt,
-          headers: {
-            'Content-Type': 'application/json',
-            ...(config.apiKey ? { Authorization: `Bearer ${config.apiKey}` } : {})
-          },
-          body: JSON.stringify({
-            state: request.state,
-            model: request.model ?? config.model ?? DEFAULT_MODEL,
-            questions: request.questions
-          })
-        }),
-      catch: (cause) => new JevUnreachable({ message: 'Could not reach TypeSafe. Check the connection and retry.', cause })
-    })
-    if (response.status === 429 || response.status === 529) {
-      yield* discard(response)
-      return yield* new JevBusy({ status: response.status, retryAfter: retryAfterOf(response) })
-    }
-    if (!response.ok) {
-      yield* discard(response)
-      return yield* new JevRejected({ status: response.status, message: explain(response.status) })
-    }
-    const body = yield* Effect.tryPromise({
-      try: () => response.json() as Promise<unknown>,
-      catch: () => new JevMalformed({ message: 'TypeSafe returned a body that was not JSON.' })
-    })
-    const evaluation = yield* decode(body).pipe(
-      Effect.mapError(
-        (error) => new JevMalformed({ message: `TypeSafe returned an unexpected evaluation: ${error.message.slice(0, 200)}` })
+  Effect.suspend(() => {
+    // Own the connection through body consumption, not just until headers arrive.
+    const connection = new AbortController()
+    return Effect.gen(function* () {
+      const send = config.fetch ?? fetch
+      const response = yield* Effect.tryPromise({
+        try: (interrupt) =>
+          send(config.endpoint ?? ENDPOINT, {
+            method: 'POST',
+            redirect: 'error',
+            signal: AbortSignal.any([connection.signal, interrupt, ...(request.signal ? [request.signal] : [])]),
+            headers: {
+              'Content-Type': 'application/json',
+              ...(config.apiKey ? { Authorization: `Bearer ${config.apiKey}` } : {})
+            },
+            body: JSON.stringify({
+              state: request.state,
+              model: request.model ?? config.model ?? DEFAULT_MODEL,
+              questions: request.questions
+            })
+          }),
+        catch: (cause) => new JevUnreachable({ message: 'Could not reach TypeSafe. Check the connection and retry.', cause })
+      })
+      if (response.status === 429 || response.status === 529) {
+        yield* discard(response)
+        return yield* new JevBusy({ status: response.status, retryAfter: retryAfterOf(response) })
+      }
+      if (!response.ok) {
+        yield* discard(response)
+        return yield* new JevRejected({ status: response.status, message: explain(response.status) })
+      }
+      const body = yield* Effect.tryPromise({
+        try: () => response.json() as Promise<unknown>,
+        catch: () => new JevMalformed({ message: 'TypeSafe returned a body that was not JSON.' })
+      })
+      const evaluation = yield* decode(body).pipe(
+        Effect.mapError(
+          (error) => new JevMalformed({ message: `TypeSafe returned an unexpected evaluation: ${error.message.slice(0, 200)}` })
+        )
       )
-    )
-    return yield* verify(evaluation, request.questions)
+      return yield* verify(evaluation, request.questions)
+    }).pipe(Effect.ensuring(Effect.sync(() => connection.abort())))
   })
 
 /** Jittered so a fan-out that rate-limits does not retry in lockstep. */

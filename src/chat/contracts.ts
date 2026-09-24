@@ -8,7 +8,7 @@ export const providers = [
 export interface ChatSettings { provider: AIProvider; model: string; baseURL: string; apiKey: string }
 export interface ChatTurn { role: 'user' | 'assistant'; content: string }
 export interface FileContext { file: string; source: string }
-/** Other project files sent as read-only context; edits still target only `context`. */
+/** Other attached project files; an explicit edit may target any attached file. */
 export const MAX_REFERENCES = 8;
 export const MAX_REFERENCE_CHARS = 60000;
 /** Every project path is listed so the model knows which files exist, including ones added since the chat began. */

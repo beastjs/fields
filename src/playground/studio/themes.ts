@@ -22,6 +22,66 @@ export interface ThemeTokens {
   shadow?: Record<string, string>
 }
 
+/**
+ * How a theme's colours reach the sections.
+ *
+ * Presets never name a colour. Every fill, hairline and muted line in them is `currentColor` at some alpha —
+ * `bg-current/10`, `border-current/15`, `text-current/70` — so what a section looks like is decided entirely by
+ * which colour is current where. A paint style is that decision, and it is the only thing that differs between
+ * two themes built from the same four colours.
+ *
+ * `washed` is the original and still the default: the page takes the palette's ground and type, and since nothing
+ * below sets a colour of its own, every tint in every section is that one type colour at low alpha. A page painted
+ * this way reads as a single wash, which is what makes the presets look designed rather than assembled.
+ *
+ * `brand` spends the palette on roles instead of on the page. The most prominent colour becomes `--color-brand`
+ * and lands on the affordances; the remaining three become `--color-accent-1` … `--color-accent-3`, quietest to
+ * loudest, and take the page's ground wash and the two levels of heading. The rules move `color` rather than
+ * painting elements directly, so a button's `bg-current/15` becomes a brand wash and its border follows, with no
+ * preset edited. They sit in `@layer base`, below the utilities on purpose: an element that already says
+ * `text-current/70` keeps its muted tone, so the brand lands on what the preset left at full strength.
+ */
+export type PaintStyle = 'washed' | 'brand'
+
+/** The paint styles a theme can be built in, in the order a chooser should offer them. */
+export const paintStyles: { id: PaintStyle; label: string; description: string }[] = [
+  { id: 'washed', label: 'Washed', description: 'The palette washes the whole page: one ground, one type colour, every section a tint of it.' },
+  { id: 'brand', label: 'Brand', description: 'A near-neutral page. The strongest colour carries the buttons and links, the rest become accent levels.' }
+]
+
+export const DEFAULT_PAINT: PaintStyle = 'washed'
+
+/** The style a theme is painted in, for a chooser or a note. `undefined` for a theme that never said. */
+export const paintOf = (theme: ThemeDocument) => paintStyles.find(style => style.id === theme.paint)
+
+/**
+ * A theme's id under one paint style, for a theme that is a reference rather than a recipe.
+ *
+ * A hunted palette encodes its style in its own id, because the id already carries every colour and rebuilding the
+ * theme from it is the whole point. A built-in or a generated theme is not rebuilt from its id — it is looked up,
+ * or recomposed from coordinates that say nothing about paint — so a second reading of it needs an id that still
+ * names the theme it came from. Hence a suffix: `midnight~brand` reads back as Midnight, painted brand.
+ *
+ * The default style stays unmarked, so every id written before paint styles existed keeps its exact meaning.
+ */
+export const paintedThemeId = (baseId: string, paint: PaintStyle) =>
+  paint === DEFAULT_PAINT ? baseId : `${baseId}~${paint}`
+
+const PAINTED_ID = /^(.+)~([a-z]+)$/
+
+/**
+ * The theme and style a painted id names, or `undefined` for a plain id.
+ *
+ * An unknown style is not a painted id at all rather than a theme painted in the default style: reading it as
+ * washed would silently repaint a theme whose stylesheet was explicit about being something else.
+ */
+export const readPaintedId = (themeId: string): { baseId: string; paint: PaintStyle } | undefined => {
+  const match = PAINTED_ID.exec(themeId)
+  if (!match) return undefined
+  const paint = paintStyles.find(style => style.id === match[2])
+  return paint ? { baseId: match[1], paint: paint.id } : undefined
+}
+
 export interface ThemeDocument {
   themeId: string
   name: string
@@ -29,6 +89,8 @@ export interface ThemeDocument {
   tokens: ThemeTokens
   /** Applied under `[data-theme=dark]`; absent for a theme that reads the same either way. */
   dark?: ThemeTokens
+  /** How the tokens reach the sections. Absent means `washed`, which is how every theme was painted before. */
+  paint?: PaintStyle
 }
 
 /**
@@ -96,11 +158,28 @@ export function themeIdFromCss(css: string): string | undefined {
 }
 
 /**
+ * The rules a paint style needs on top of its custom properties.
+ *
+ * Layered rather than unlayered, unlike the declarations above, and that is the whole trick: `@layer base` loses to
+ * the utilities, so a preset that already muted an element with `text-current/70` keeps its own tone and only what
+ * the preset left at full strength takes the role colour. Every selector is a constant — nothing from a theme
+ * document reaches this — so there is nothing here to sanitise.
+ */
+const paintRules: Record<PaintStyle, string> = {
+  washed: '',
+  brand: `@layer base {
+  [data-page] [data-section] :where(a, button) { color: var(--color-brand); }
+  [data-page] [data-section] :where(h1, h2) { color: var(--color-accent-3); }
+  [data-page] [data-section] :where(h3, h4) { color: var(--color-accent-2); }
+}`
+}
+
+/**
  * The stylesheet for a theme.
  *
- * Deliberately unlayered: the studio's defaults sit in `@layer base`, and unlayered rules beat any layer regardless
- * of specificity, so a theme overrides them without having to match `:root[data-theme='light']` selector for
- * selector.
+ * The declarations are deliberately unlayered: the studio's defaults sit in `@layer base`, and unlayered rules beat
+ * any layer regardless of specificity, so a theme overrides them without having to match `:root[data-theme='light']`
+ * selector for selector. A paint style's rules are the exception and say why in `paintRules`.
  */
 export function themeCss(theme: ThemeDocument): string {
   const base = declarations(theme.tokens)
@@ -111,6 +190,8 @@ export function themeCss(theme: ThemeDocument): string {
   const blocks = [`${THEME_START}: ${theme.name.replace(/[^\w\s-]/g, '')} */`, `/* Design Studio theme id: ${encodedId} */`]
   if (base.length) blocks.push(`:root {\n${base.join('\n')}\n}`)
   if (dark.length) blocks.push(`:root[data-theme='dark'] {\n${dark.join('\n')}\n}`)
+  const rules = paintRules[theme.paint ?? DEFAULT_PAINT]
+  if (rules) blocks.push(rules)
   blocks.push(THEME_END)
   return `${blocks.join('\n')}\n`
 }

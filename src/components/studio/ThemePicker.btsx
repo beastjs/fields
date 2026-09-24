@@ -1,0 +1,97 @@
+import DropdownMenu, { DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu.btsx'
+import type { RefObject } from 'octane'
+import { Icon } from '@/lib/icons'
+import { cn } from '@/lib/utils'
+import { themeSwatches } from '../../playground/studio/colorhunt'
+import { paintOf, type PaintStyle, paintStyles, type ThemeDocument } from '../../playground/studio/themes'
+
+module
+  interface PickerProps {
+    themes: ThemeDocument[]
+    themeId: string
+    onChoose: (themeId: string) => void
+    /** How the palette reaches the sections. Governs what the next shuffle builds, and repaints what is selected. */
+    paint: PaintStyle
+    onPaint: (paint: PaintStyle) => void
+    /** Pulls the next Color Hunt palette in and selects it. */
+    onShuffle: () => void
+    /** Why the shuffle is unavailable, or `undefined` while it is available. */
+    shuffleBlocked?: string
+    shuffling?: boolean
+    /**
+     * Where the menu portals to.
+     *
+     * The studio is a modal `<dialog>`, which paints in the top layer. A menu portalled to `document.body` lands
+     * under that layer and is invisible, so it has to be mounted inside the dialog itself.
+     */
+    container?: RefObject<HTMLElement | null>
+  }
+
+  /**
+   * A theme's colors as one strip.
+   *
+   * The outer corners are rounded harder than the inner ones so the strip nests inside the pill rather than sitting
+   * in it as four loose squares. Inherit declares no colors at all, so it falls through to a dashed placeholder
+   * instead of rendering an empty pill.
+   */
+  interface SwatchesProps {
+    colors: string[]
+    swatchClassName?: string
+  }
+
+component Swatches
+  props { colors, swatchClassName }: SwatchesProps
+
+  div(className='flex items-center gap-1')
+    each color, index in colors key color + index
+      span(
+        ~ className={cn('size-5 rounded-[5px] ring-1 ring-black/15 ring-inset', index === 0 && 'rounded-l-[8px]', index === colors.length - 1 && 'rounded-r-[8px]', swatchClassName)}
+        ~ style={{ backgroundColor: color }}
+        ~ )
+    empty
+      span(className={cn('size-5 rounded-[8px] border border-edge border-dashed', swatchClassName)})
+
+props { themes, themeId, onChoose, paint, onPaint, onShuffle, shuffleBlocked, shuffling = false, container }: PickerProps
+setup
+  const current = themes.find(theme => theme.themeId === themeId);
+  // The pill shows the palette itself, so the name it stands for lives in the tooltip and the accessible name.
+  const colors = current ? themeSwatches(current) : [];
+
+div(className='flex items-center gap-1.5')
+  DropdownMenu
+    DropdownMenuTrigger(
+      ~ className='flex items-center rounded-[11px] border border-edge bg-inset p-1 transition-colors hover:border-edge-strong data-popup-open:border-brand'
+      ~ title={current ? current.name + ' — ' + current.description : 'Choose a theme'}
+      ~ aria-label={'Theme: ' + (current?.name ?? 'none')}
+      ~ )
+      Swatches(colors={colors})
+    DropdownMenuContent(className='max-h-[min(420px,60dvh)] w-64' align='end' container={container})
+      DropdownMenuGroup
+        DropdownMenuLabel(className='font-normal text-[10px] text-dim') Paint
+        DropdownMenuSeparator
+        each style in paintStyles key style.id
+          DropdownMenuItem(className='gap-2 p-1.5' onClick={() => onPaint(style.id)} title={style.description})
+            span(className='min-w-0 flex-1 truncate text-[12px]') #{style.label}
+            if style.id === paint
+              Icon(name='check' className='size-3 shrink-0 text-brand')
+      DropdownMenuGroup
+        DropdownMenuLabel(className='mt-1 font-normal text-[10px] text-dim') Theme
+        DropdownMenuSeparator
+        each option in themes key option.themeId
+          DropdownMenuItem(className='gap-2 p-1.5' onClick={() => onChoose(option.themeId)} title={option.description})
+            Swatches(colors={themeSwatches(option)} swatchClassName='size-4 rounded-[4px]')
+            span(className='min-w-0 flex-1 truncate text-[12px]') #{option.name}
+            // Two readings of one palette carry the same name and the same swatches, so the style tells them apart.
+            if paintOf(option)
+              span(className='shrink-0 font-code text-[9px] text-faint') #{paintOf(option)?.label}
+            if option.themeId === themeId
+              Icon(name='check' className='size-3 shrink-0 text-brand')
+  button(
+    ~ type='button'
+    ~ disabled={Boolean(shuffleBlocked) || shuffling}
+    ~ title={shuffleBlocked ?? 'Shuffle in a palette from Color Hunt'}
+    ~ aria-label='Shuffle in a palette from Color Hunt'
+    ~ className='flex size-7 shrink-0 items-center justify-center rounded-[11px] border border-edge bg-inset text-dim transition-colors hover:text-fg disabled:opacity-40'
+    ~ onClick={onShuffle}
+    ~ )
+    Icon(name='refresh' className={cn('size-5 opacity-80', shuffling && 'animate-spin')})

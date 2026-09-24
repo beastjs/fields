@@ -148,7 +148,15 @@ function bootstrap(channel: string, build: number) {
     }
   };
 
+  let errorWindow = performance.now();
+  let errorCount = 0;
   const report = (error: unknown, position?: { url: string; line: number; column: number }) => {
+    const now = performance.now();
+    if (now - errorWindow >= 1000) { errorWindow = now; errorCount = 0; }
+    if (++errorCount > 20) {
+      if (errorCount === 21) send('runtime-error', { message: 'Runtime error rate limit reached (20 errors/second). Additional errors suppressed.' });
+      return;
+    }
     const message = error instanceof Error ? error.message : describe(error);
     const stack = error instanceof Error ? error.stack : undefined;
     send('runtime-error', { message: message.slice(0, 16000), stack: stack?.slice(0, 16000), position });
@@ -250,7 +258,8 @@ function bootstrap(channel: string, build: number) {
       return;
     }
     if (message.type === 'tokens' && typeof message.css === 'string' && message.css.length <= 20000) {
-      // A theme is only custom properties, so swapping this node repaints the page without touching the build.
+      // A theme is custom properties and, for a paint style, the few layered rules that move `color` onto a role,
+      // so swapping this node repaints the page without touching the build.
       let node = document.querySelector('style[data-studio-tokens]');
       if (!node) {
         node = document.createElement('style');

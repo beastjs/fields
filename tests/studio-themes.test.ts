@@ -1,8 +1,9 @@
 import { expect, test } from 'bun:test';
 import { helloWorld } from '../src/playground/examples';
 import { addSection, planPageInstall, readProjectThemeId, STUDIO_STYLESHEET } from '../src/playground/studio/page';
-import { builtInThemes, INHERIT_THEME, installedThemeCss, isSafeToken, themeById, themeCss, themeIdFromCss, THEME_BASE } from '../src/playground/studio/themes';
+import { builtInThemes, INHERIT_THEME, installedThemeCss, isSafeToken, paintStyles, themeById, themeCss, themeIdFromCss, THEME_BASE } from '../src/playground/studio/themes';
 import type { ThemeDocument } from '../src/playground/studio/themes';
+import { repaintTheme } from '../src/playground/studio/colorhunt';
 import { builtInPresets } from './built-in-presets';
 
 const presets = builtInPresets;
@@ -32,6 +33,29 @@ test('a theme with a dark variant scopes it, and one without emits no dark rule'
   const paper = builtInThemes.find(theme => theme.themeId === 'paper')!;
   expect(themeCss(paper)).toContain(":root[data-theme='dark'] {");
   expect(themeCss(midnight)).not.toContain('data-theme');
+});
+
+test('a paint style adds its rules to the block, and the default style adds none', () => {
+  const brand: ThemeDocument = {
+    themeId: 'branded',
+    name: 'Branded',
+    description: '',
+    paint: 'brand',
+    tokens: { color: { brand: '#B8892D', 'accent-1': '#F5EFE3', 'accent-2': '#D8C9A8', 'accent-3': '#4F5B2A' } }
+  };
+  const css = themeCss(brand);
+  // Levels are ordinary colour tokens, so they arrive as Tailwind's own --color-* variables.
+  expect(css).toContain('--color-brand: #B8892D;');
+  expect(css).toContain('--color-accent-3: #4F5B2A;');
+  expect(css).not.toContain('--studio-fg');
+  // The rules are layered below the utilities on purpose: a preset that already muted an element keeps its tone.
+  expect(css).toContain('@layer base {');
+  expect(css).toContain('[data-page] [data-section] :where(a, button) { color: var(--color-brand); }');
+  expect(css.indexOf('@layer base {')).toBeLessThan(css.indexOf('/* end Design Studio theme */'));
+  // Washed is the style every theme had before paint styles existed, and it writes exactly what it always did.
+  expect(themeCss(midnight)).not.toContain('@layer');
+  expect(themeCss({ ...midnight, paint: 'washed' })).toBe(themeCss(midnight));
+  expect(paintStyles.map(style => style.id)).toEqual(['washed', 'brand']);
 });
 
 test('the inherit theme declares nothing, so sections read as they did before themes existed', () => {
@@ -117,4 +141,25 @@ test('applying a theme upgrades section styles installed before page theming exi
   expect(css.match(/\[data-page\]/g)).toHaveLength(1);
   const upgraded = { ...project, files: { ...project.files, ...upgrade.files } };
   expect(planPageInstall(upgraded, blocks, presets, midnight).files).toEqual({});
+});
+
+test('a repainted theme installs and reads back by its own id, rules and all', () => {
+  const blocks = addSection([], 'hero-centered', presets).blocks;
+  const brand = repaintTheme(midnight, 'brand');
+
+  const install = planPageInstall(helloWorld, blocks, presets, brand);
+  const css = stylesheetOf(install.files);
+  // The suffixed id is what makes the reading recoverable: the name alone would read back as plain Midnight.
+  expect(readProjectThemeId({ ...helloWorld, files: { ...helloWorld.files, ...install.files } })).toBe('midnight~brand');
+  expect(css).toContain('--color-brand: oklch(0.72 0.15 265);');
+  expect(css).toContain(':where(a, button) { color: var(--color-brand); }');
+  // The paint rules sit inside the block, so switching styles replaces them rather than leaving both sets behind.
+  const project = { ...helloWorld, files: { ...helloWorld.files, ...install.files } };
+  const washed = stylesheetOf(planPageInstall(project, blocks, presets, midnight).files);
+  expect(washed).not.toContain('--color-brand');
+  expect(washed).not.toContain('var(--color-accent-3)');
+  expect(washed).toContain('--studio-fg: oklch(0.93 0.01 265);');
+  expect(washed.match(/Design Studio theme:/g)?.length).toBe(1);
+  // And re-installing the repainted theme is still a no-op, so the block is byte-identical each time.
+  expect(planPageInstall(project, blocks, presets, brand).files).toEqual({});
 });

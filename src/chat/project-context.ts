@@ -28,7 +28,7 @@ export function relatedFiles(project: CompilationProject, file: string) {
 }
 
 /**
- * Read-only files for one chat request. Files the person picked always come first; related files
+ * Reference files for one chat request. Files the person picked always come first; related files
  * fill the remaining count and size budget, and any that do not fit are reported as skipped.
  */
 export function chatReferences(project: CompilationProject, picked: string[], related: string[]) {

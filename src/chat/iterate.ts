@@ -1,3 +1,4 @@
+import { locateEditLines, formatEditLocations, type EditLocation } from './edit-locations';
 import type { RepairPlan } from '../jev/chat';
 import { JevNotConfigured, jevConfigured } from '../jev/status';
 
@@ -50,16 +51,17 @@ export interface RepairInput {
   file: string;
   error: string;
   attempt: number;
+  source?: string;
 }
-export type Decide = (input: RepairInput & { maxAttempts: number }) => Promise<RepairPlan>;
+export type Decide = (input: RepairInput & { maxAttempts: number; locations?: EditLocation[] }, signal?: AbortSignal) => Promise<RepairPlan>;
 
 // Loaded on demand: a failed auto-apply is a rare path, and this keeps Effect and the workflows
 // out of the initial bundle for every session that never hits one. `status.ts` carries neither, so
 // an unconfigured server never loads any of it.
-const viaJev: Decide = async input => {
+const viaJev: Decide = async (input, signal) => {
   if (!(await jevConfigured())) throw new JevNotConfigured();
   const [{ runJev }, { repairDecision }] = await Promise.all([import('../jev/browser'), import('../jev/chat')]);
-  return runJev(repairDecision(input));
+  return runJev(repairDecision(input), undefined, signal);
 };
 
 /**
@@ -72,20 +74,30 @@ const viaJev: Decide = async input => {
  *
  * The deterministic answers come first and cost nothing. "No file was attached" is not a judgment.
  */
-export async function planRepair(input: RepairInput, decide: Decide | null = viaJev): Promise<Repair> {
+export async function planRepair(input: RepairInput, decide: Decide | null = viaJev, signal?: AbortSignal): Promise<Repair> {
+  signal?.throwIfAborted();
   const { error, file, attempt } = input;
   const retry = fixUpPrompt(error, file, attempt);
   if (!retry) return { action: 'stop', reason: attempt >= MAX_ATTEMPTS ? EXHAUSTED : UNFIXABLE };
-  const fallback: Repair = { action: 'retry', prompt: retry, remedy: 'retry' };
+  const locations = input.source === undefined ? [] : locateEditLines(input.source, input.prompt);
+  const grounded = (prompt: string, selected = locations) => `${prompt}
+
+Original developer request:
+${input.prompt}
+
+${selected.length ? 'Located in the current source (copy these lines exactly; do not copy earlier failed SEARCH text):\n' + formatEditLocations(file, selected) : 'Read the current attached source again; do not reuse invented text from earlier replies.'}`;
+  const fallback: Repair = { action: 'retry', prompt: grounded(retry), remedy: 'retry' };
   if (!decide) return fallback;
   try {
-    const plan = await decide({ ...input, maxAttempts: MAX_ATTEMPTS });
+    const plan = await decide({ ...input, maxAttempts: MAX_ATTEMPTS, locations }, signal);
+    signal?.throwIfAborted();
     if (!plan.certain) return fallback;
     if (plan.remedy === 'stop' || !plan.fixable) return { action: 'stop', reason: UNFIXABLE };
     if (plan.remedy === 'ask_user') return { action: 'stop', reason: NEEDS_YOU };
     if (plan.prospect < PROSPECT_FLOOR) return { action: 'stop', reason: UNLIKELY };
-    return { action: 'retry', prompt: fixUpPrompt(error, file, attempt, plan.remedy)!, remedy: plan.remedy };
+    return { action: 'retry', prompt: grounded(fixUpPrompt(error, file, attempt, plan.remedy)!, plan.lines?.length ? [...locations].sort((a, b) => Number(plan.lines!.includes(b.line)) - Number(plan.lines!.includes(a.line))) : locations), remedy: plan.remedy };
   } catch {
+    signal?.throwIfAborted();
     // Unreachable, unconfigured, rate limited: the loop must not depend on it being there.
     return fallback;
   }

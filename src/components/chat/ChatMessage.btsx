@@ -3,6 +3,8 @@ import { EXHAUSTED, MAX_ATTEMPTS } from '../../chat/iterate'
 import type { PlaygroundSession } from '../../playground/session'
 import { useEffect, useRef, useState } from 'octane'
 import { renderChatMarkdown } from '../../chat/markdown'
+import { chatResponseParts } from '../../chat/response-parts'
+import Accordion, { AccordionItem, AccordionTrigger, AccordionPanel } from '../ui/accordion.btsx'
 import type { ChatMessage } from '../../chat/controller'
 import { cn } from '@/lib/utils'
 import { secondaryButton } from '../ui/styles'
@@ -19,7 +21,9 @@ module
   interface ChatMessageProps { message: ChatMessage; session: PlaygroundSession, auto: boolean, onAutoFailure?: (message: ChatMessage, error: string) => void, haltReason?: string }
 props { message, session, auto, onAutoFailure, haltReason }: ChatMessageProps
 setup
-  const recommendation = message.state === 'complete' ? fileRecommendation(message.content, message.context) : undefined;
+  const parts = chatResponseParts(message.content);
+  const recommendation = message.state === 'complete' ? fileRecommendation(message.content, message.context, message.references) : undefined;
+  const targetContext = [message.context, ...(message.references ?? [])].find(context => context?.file === recommendation?.file);
   const [applyState, setApplyState] = useState('');
   const [applyError, setApplyError] = useState('');
   const pending = useRef<AbortController | null>(null);
@@ -27,13 +31,13 @@ setup
 
   // `automatic` marks auto-apply runs, whose failures are fed back to the model.
   const apply = async (automatic = false) => {
-    if (!recommendation?.source || !message.context || message.projectGeneration === undefined || pending.current || applyState === 'Applied and compiled successfully') return;
+    if (recommendation?.source === undefined || !targetContext || message.projectGeneration === undefined || pending.current || applyState === 'Applied and compiled successfully') return;
     const abort = new AbortController();
     pending.current = abort;
     setApplyError('');
     setApplyState('Checking compilation…');
     try {
-      await session.applyRecommendation(recommendation.file, message.context.source, recommendation.source, message.projectGeneration, abort.signal);
+      await session.applyRecommendation(recommendation.file, targetContext.source, recommendation.source, message.projectGeneration, abort.signal);
       setApplyState('Applied and compiled successfully');
     } catch (error) {
       setApplyState('');
@@ -49,7 +53,7 @@ setup
   const autoApplied = useRef(false);
   useEffect(() => {
     if (!autoOnArrival.current || autoApplied.current) return;
-    if (message.state !== 'complete' || !recommendation?.source || message.projectGeneration === undefined) return;
+    if (message.state !== 'complete' || recommendation?.source === undefined || message.projectGeneration === undefined) return;
     autoApplied.current = true;
     void apply(true);
   }, [message.id, message.state, message.projectGeneration, recommendation?.file]);
@@ -83,8 +87,18 @@ article(className={'chat-message mb-6 ' + message.role} data-message-state={mess
       div(className='mt-1.5 flex flex-wrap gap-1 [&>code]:rounded-[3px] [&>code]:border [&>code]:border-edge [&>code]:px-1 [&>code]:py-0.5 [&>code]:font-code [&>code]:text-[8px] [&>code]:text-dim')
         each file in message.attachments key file
           code(title={file}) #{file.replace(/^\/src\//, '')}
-  elseif message.content
-    div(className={markdown} dangerouslySetInnerHTML={{ __html: renderChatMarkdown(message.content, message.context?.source) }})
+  elseif message.content || message.reasoning
+    if parts.explanation || message.reasoning
+      Accordion(className='chat-explanation mb-2')
+        AccordionItem(value='explanation')
+          AccordionTrigger(className='items-center rounded px-1 py-1.5 text-[10px] text-dim hover:text-fg') Thinking & explanation
+          AccordionPanel(keepMounted={true} className='px-1 pt-1')
+            if message.reasoning
+              div(className={cn(markdown, 'text-dim')} dangerouslySetInnerHTML={{ __html: renderChatMarkdown(message.reasoning) }})
+            if parts.explanation
+              div(className={markdown} dangerouslySetInnerHTML={{ __html: renderChatMarkdown(parts.explanation) }})
+    each change, index in parts.changes key index
+      div(className={cn(markdown, 'chat-change')} dangerouslySetInnerHTML={{ __html: renderChatMarkdown(change, targetContext?.source ?? message.context?.source) }})
   elseif message.state === 'streaming'
     div(className='flex items-center gap-1 text-[9px] text-dim' role='status')
       span(className='size-[3px] animate-thinking rounded-full bg-brand')

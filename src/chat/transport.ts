@@ -2,7 +2,7 @@ import type { FetchLike } from './contracts';
 import type { ChatRequest } from './contracts';
 
 /** Decode OpenAI-compatible SSE, including UTF-8 and events split across chunks. */
-export async function streamChat(input: ChatRequest, onText: (text: string) => void, signal: AbortSignal, send: FetchLike = fetch) {
+export async function streamChat(input: ChatRequest, onText: (text: string) => void, signal: AbortSignal, send: FetchLike = fetch, onReasoning?: (text: string) => void) {
   const response = await send('/api/ai/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input), signal });
   if (!response.ok) {
     const body = await response.json().catch(() => null);
@@ -11,7 +11,7 @@ export async function streamChat(input: ChatRequest, onText: (text: string) => v
   if (!response.body || !response.headers.get('content-type')?.includes('text/event-stream')) throw new Error('The chat server did not return a response stream.');
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
-  let buffer = '', text = '', ended = false, finished = false;
+  let buffer = '', text = '', reasoning = '', ended = false, finished = false;
   const event = (data: string) => {
     if (data === '[DONE]') { ended = true; return; }
     if (!data) return;
@@ -19,9 +19,15 @@ export async function streamChat(input: ChatRequest, onText: (text: string) => v
     try { value = JSON.parse(data); } catch { throw new Error('The provider returned an invalid stream. Please retry.'); }
     if (value.error) throw new Error('The provider stopped this response. Check the model settings and retry.');
     const choice = value.choices?.[0];
+    const thought = choice?.delta?.reasoning_content ?? choice?.delta?.reasoning;
+    if (typeof thought === 'string') {
+      reasoning += thought;
+      if (text.length + reasoning.length > 128000) throw new Error('The response reached the display limit. Ask for a smaller change.');
+      onReasoning?.(reasoning);
+    }
     if (typeof choice?.delta?.content === 'string') {
       text += choice.delta.content;
-      if (text.length > 128000) throw new Error('The response reached the display limit. Ask for a smaller change.');
+      if (text.length + reasoning.length > 128000) throw new Error('The response reached the display limit. Ask for a smaller change.');
       onText(text);
     }
     if (choice?.finish_reason) finished = true;
