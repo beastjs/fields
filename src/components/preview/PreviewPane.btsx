@@ -127,29 +127,30 @@ setup
 
 PaneSurface(layout={layout} pane='preview' label='Application preview' className='flex flex-col bg-panel')
   div(className='@container/preview flex size-full min-h-0 flex-col bg-panel' ref={surface})
-    div(className='flex min-h-9 shrink-0 flex-nowrap items-center gap-0 bg-panel px-1 py-[3px] [&_button:disabled]:cursor-default [&_button:disabled]:opacity-40 @max-[360px]/preview:gap-1.5')
-      div(className='flex min-w-0 items-center font-mono text-muted-foreground text-[11px]')
-        Icon(name='world' className='size-3.5 shrink-0 opacity-80')
-        if hostedURL
-          select(className={zoomSelect} aria-label='Preview mode' value={state.previewMode} onChange={event => session.setPreviewMode(event.currentTarget.value === 'hosted' ? 'hosted' : 'local')})
-            option(value='local') Local preview
-            option(value='hosted') Hosted preview
-        else
-          span(className='truncate opacity-80') local://preview/
-            span(className='lowercase') #{state.previewStatus}
-      ButtonGroup(className='ml-auto flex shrink-0 overflow-hidden border border-edge shadow-[inset_0_1px_var(--edge-strong)] light:gap-0.5 light:rounded-lg light:border-transparent light:divide-transparent light:bg-black/[0.045] light:p-0.5 light:shadow-none' role='group' aria-label='Preview size')
-        each viewport in viewports key viewport.width
-          button(type='button' className={cn('flex h-[26px] w-[30px] items-center justify-center bg-panel text-[14px] text-faint light:h-[24px] light:rounded-md light:bg-transparent light:hover:text-fg', previewWidth === viewport.width && 'bg-[linear-gradient(var(--canvas),var(--panel))] text-accent light:bg-panel light:bg-none light:text-fg light:shadow-elevation')} data-width={viewport.width} aria-label={viewport.label + ' preview'} aria-pressed={previewWidth === viewport.width} title={viewport.label} onClick={() => { session.setPreviewWidth(viewport.width); void setToolbar({ preview: viewport.width === '100%' ? null : viewport.width }); }})
-            Icon(name={viewport.symbol} className='size-3')
-        NativeSelect(className={zoomSelect} aria-label='preview-zoom' title={device ? `Preview zoom · ${Math.round(device.width / zoom)}px wide viewport` : 'Preview zoom'} value={String(Math.round(zoom * 100))} onChange={event => { const percent = previewZooms.find(value => String(value) === event.currentTarget.value); if (percent) void setToolbar({ zoom: percent === defaultPreviewZoom ? null : percent }); }})
-          each option in zoomOptions key option.id
-            NativeSelectOption(value={option.id}) #{option.label}
-        button#reload-preview(className='flex h-[26px] w-[30px] items-center justify-center bg-panel text-[14px] text-faint light:h-[24px] light:rounded-md light:bg-transparent light:hover:text-fg' type='button' aria-label='Reload preview' title='Reload preview' onClick={session.reloadPreview})
-          Icon(name='refresh' className='size-3.5 -rotate-8')
-      button(className={iconButton} ref={fullscreenButton} type='button' aria-label={fullscreen ? 'Exit fullscreen preview' : 'Enter fullscreen preview'} aria-pressed={fullscreen} title={fullscreenSupported ? (fullscreen ? 'Exit fullscreen (Esc)' : 'Fullscreen preview') : 'Fullscreen is unavailable in this browser'} disabled={!fullscreenSupported || fullscreenPending} onClick={toggleFullscreen}) #{fullscreen ? '⛶' : '⛶'}
+    if !fullscreen
+      div(className='flex min-h-9 shrink-0 flex-nowrap items-center gap-0 bg-panel px-1 py-[3px] [&_button:disabled]:cursor-default [&_button:disabled]:opacity-40 @max-[360px]/preview:gap-1.5')
+        div(className='flex min-w-0 items-center font-mono text-muted-foreground text-[11px]')
+          Icon(name='world' className='size-3.5 shrink-0 opacity-80')
+          if hostedURL
+            select(className={zoomSelect} aria-label='Preview mode' value={state.previewMode} onChange={event => session.setPreviewMode(event.currentTarget.value === 'hosted' ? 'hosted' : 'local')})
+              option(value='local') Local preview
+              option(value='hosted') Hosted preview
+          else
+            span(className='truncate opacity-80') local://preview/
+              span(className='lowercase') #{state.previewStatus}
+        ButtonGroup(className='ml-auto flex shrink-0 overflow-hidden border border-edge shadow-[inset_0_1px_var(--edge-strong)] light:gap-0.5 light:rounded-lg light:border-transparent light:divide-transparent light:bg-black/[0.045] light:p-0.5 light:shadow-none' role='group' aria-label='Preview size')
+          each viewport in viewports key viewport.width
+            button(type='button' className={cn('flex h-[26px] w-[30px] items-center justify-center bg-panel text-[14px] text-faint light:h-[24px] light:rounded-md light:bg-transparent light:hover:text-fg', previewWidth === viewport.width && 'bg-[linear-gradient(var(--canvas),var(--panel))] text-accent light:bg-panel light:bg-none light:text-fg light:shadow-elevation')} data-width={viewport.width} aria-label={viewport.label + ' preview'} aria-pressed={previewWidth === viewport.width} title={viewport.label} onClick={() => { session.setPreviewWidth(viewport.width); void setToolbar({ preview: viewport.width === '100%' ? null : viewport.width }); }})
+              Icon(name={viewport.symbol} className='size-3')
+          NativeSelect(className={zoomSelect} aria-label='preview-zoom' title={device ? `Preview zoom · ${Math.round(device.width / zoom)}px wide viewport` : 'Preview zoom'} value={String(Math.round(zoom * 100))} onChange={event => { const percent = previewZooms.find(value => String(value) === event.currentTarget.value); if (percent) void setToolbar({ zoom: percent === defaultPreviewZoom ? null : percent }); }})
+            each option in zoomOptions key option.id
+              NativeSelectOption(value={option.id}) #{option.label}
+          button#reload-preview(className='flex h-[26px] w-[30px] items-center justify-center bg-panel text-[14px] text-faint light:h-[24px] light:rounded-md light:bg-transparent light:hover:text-fg' type='button' aria-label='Reload preview' title='Reload preview' onClick={session.reloadPreview})
+            Icon(name='refresh' className='size-3.5 -rotate-8')
+        button(className={iconButton} ref={fullscreenButton} type='button' aria-label={fullscreen ? 'Exit fullscreen preview' : 'Enter fullscreen preview'} aria-pressed={fullscreen} title={fullscreenSupported ? (fullscreen ? 'Exit fullscreen (Esc)' : 'Fullscreen preview') : 'Fullscreen is unavailable in this browser'} disabled={!fullscreenSupported || fullscreenPending} onClick={toggleFullscreen}) #{fullscreen ? '⛶' : '⛶'}
 
-      if !fullscreen
-        CollapseButton(layout={layout} pane='preview')
+        if !fullscreen
+          CollapseButton(layout={layout} pane='preview')
     p(className='fullscreen-notice m-0 px-3 py-2 text-[11px] text-warning' role='status' hidden={!fullscreenError}) #{fullscreenError}
     if state.previewMode === 'hosted'
       p(className='m-0 px-3 py-1.5 text-[10px] text-fg-secondary') Hosted preview · Failure containment depends on your browser. No CPU or memory quotas.

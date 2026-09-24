@@ -34,19 +34,20 @@ export interface ThemeTokens {
  * below sets a colour of its own, every tint in every section is that one type colour at low alpha. A page painted
  * this way reads as a single wash, which is what makes the presets look designed rather than assembled.
  *
- * `brand` spends the palette on roles instead of on the page. The most prominent colour becomes `--color-brand`
- * and lands on the affordances; the remaining three become `--color-accent-1` … `--color-accent-3`, quietest to
- * loudest, and take the page's ground wash and the two levels of heading. The rules move `color` rather than
- * painting elements directly, so a button's `bg-current/15` becomes a brand wash and its border follows, with no
- * preset edited. They sit in `@layer base`, below the utilities on purpose: an element that already says
- * `text-current/70` keeps its muted tone, so the brand lands on what the preset left at full strength.
+ * `brand` spends the palette on the accented elements and leaves the page alone: no ground, no type, no heading
+ * colour, so the background and text stay whatever the project gives them in both modes. The most prominent colour
+ * becomes `--color-brand` and lands on the affordances — links and buttons; the remaining three are declared as
+ * `--color-accent-1` … `--color-accent-3`, quietest to loudest, for utilities such as `bg-accent-2` to use. The rule
+ * moves `color` rather than painting elements directly, so a button's `bg-current/15` becomes a brand wash and its
+ * border follows, with no preset edited. It sits in `@layer base`, below the utilities on purpose: an element that
+ * already says `text-current/70` keeps its muted tone, so the brand lands on what the preset left at full strength.
  */
 export type PaintStyle = 'washed' | 'brand'
 
 /** The paint styles a theme can be built in, in the order a chooser should offer them. */
 export const paintStyles: { id: PaintStyle; label: string; description: string }[] = [
   { id: 'washed', label: 'Washed', description: 'The palette washes the whole page: one ground, one type colour, every section a tint of it.' },
-  { id: 'brand', label: 'Brand', description: 'A near-neutral page. The strongest colour carries the buttons and links, the rest become accent levels.' }
+  { id: 'brand', label: 'Brand', description: 'The page keeps its own background and type. The strongest colour goes on buttons and links only.' }
 ]
 
 export const DEFAULT_PAINT: PaintStyle = 'washed'
@@ -169,8 +170,6 @@ const paintRules: Record<PaintStyle, string> = {
   washed: '',
   brand: `@layer base {
   [data-page] [data-section] :where(a, button) { color: var(--color-brand); }
-  [data-page] [data-section] :where(h1, h2) { color: var(--color-accent-3); }
-  [data-page] [data-section] :where(h3, h4) { color: var(--color-accent-2); }
 }`
 }
 

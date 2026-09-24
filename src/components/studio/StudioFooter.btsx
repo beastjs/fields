@@ -20,7 +20,7 @@ module
 
 props { note, overwriteNote, editedNodes, onClearDesign, canDiscard, onDiscard, onClose, applyLabel, canApply, onApply }: FooterProps
 
-footer(className='flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-t border-edge-strong px-5 py-3')
+footer(className='flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-t border-edge-strong px-5 py-2')
   p(className='min-w-0 flex-1 basis-80 text-[11px] leading-[1.6] text-dim' role='status')
     span #{note}
     if overwriteNote

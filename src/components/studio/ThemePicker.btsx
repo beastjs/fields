@@ -94,4 +94,4 @@ div(className='flex items-center gap-1.5')
     ~ className='flex size-7 shrink-0 items-center justify-center rounded-[11px] border border-edge bg-inset text-dim transition-colors hover:text-fg disabled:opacity-40'
     ~ onClick={onShuffle}
     ~ )
-    Icon(name='refresh' className={cn('size-5 opacity-80', shuffling && 'animate-spin')})
+    Icon(name='refresh' className={cn('size-4 opacity-90 -rotate-6', shuffling && 'animate-spin')})

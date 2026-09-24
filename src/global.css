@@ -236,11 +236,11 @@
 /* Light: neutral grey ground, white cards with hairline edges and soft lift, near-black type, one indigo accent. */
 :root[data-theme='light'] {
   color-scheme: light;
-  --canvas: oklch(0.9384 0 236);
+  --canvas: oklch(0.971 0.004 286.33);
   --panel: #ffffff;
-  --panel-deep: #f8f8f9;
-  --inset: #f2f2f3;
-  --seam: #ececee;
+  --panel-deep: oklch(0.9147 0.0055 297.72);
+  --inset: oklch(92.5% 0.005 214.3);
+  --seam: oklch(0.971 0.004 286.33);
   --surface-toolbar: #f8f8f9;
   --editor-background: #ffffff;
   --surface-recessed: #ffffff;
@@ -343,9 +343,27 @@
     font-synthesis: none;
     text-rendering: optimizeLegibility;
   }
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: var(--edge-strong) transparent;
+  /* The thinnest native scrollbar, on a transparent track. Chromium and Safari draw a 4px one from the WebKit
+     pseudo-elements, which Chromium ignores once `scrollbar-width` is set (its `thin` is 11px), so the standard
+     properties only go to browsers without them: Firefox, whose `thin` is its narrowest. */
+  @supports not selector(::-webkit-scrollbar) {
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: var(--edge-strong) transparent;
+    }
+  }
+  *::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background: var(--edge-strong);
+  }
+  *::-webkit-scrollbar-track,
+  *::-webkit-scrollbar-corner {
+    background: transparent;
   }
   button:not(:disabled) {
     cursor: pointer;

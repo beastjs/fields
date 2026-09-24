@@ -12,7 +12,8 @@ module
   type CardState = 'current' | 'swap' | 'add'
 
   interface LibraryProps {
-    maximized: boolean
+    /** Where the library sits: the studio sizes it as a panel, or stacks it on a phone. */
+    className?: string
     blocks: PageBlock[]
     presets: PresetLookup
     /** The block a same-kind preset would replace: the selected block when it matches, else the first of that kind. */
@@ -40,33 +41,32 @@ component TemplateCard
     const [expanded, setExpanded] = useState(false);
 
   // The card chrome sits on the wrapper so the description toggle can live beside, not inside, the main button.
-  div(className='group/card relative rounded-[6px] border border-edge bg-surface-recessed transition-colors hover:border-edge-strong hover:bg-surface-hover has-[[aria-pressed=true]]:border-brand has-[[aria-pressed=true]]:shadow-[inset_0_0_0_1px_var(--brand)]')
+  div(className={cn('group/card relative rounded-md border border-edge bg-surface-recessed transition-colors hover:border-edge-strong hover:bg-surface-hover has-[[aria-pressed=true]]:border-brand/50 has-[[aria-pressed=true]]:shadow-[inset_0_0_0_1px_var(--brand)] p-px', state === 'current' ? 'bg-accent/20' : 'bg-panel')})
     button(
       ~ type='button'
       ~ aria-pressed={state === 'current'}
-      ~ className='grid w-full gap-2 rounded-[6px] p-2 pb-1 text-left'
+      ~ className='grid w-full rounded-[6px] pb-1 text-left'
       ~ onClick={() => onUse(preset.presetId)}
       ~ )
-      Wireframe(rows={preset.wireframe} className='h-[72px] rounded-[4px] bg-inset px-3 text-fg-secondary')
-      span(className='flex items-center justify-between gap-2 px-0.5')
-        span(className='min-w-0 truncate text-[12px] text-fg')
+      Wireframe(rows={preset.wireframe} className='h-[72px] rounded-sm border border-canvas bg-inset px-3 text-fg-secondary')
+      span(className='flex items-center justify-between gap-2 px-0.75 h-full')
+        span(className='flex items-end p-0.25 space-x-1 min-w-0 truncate text-[12px] text-fg')
           if showKind
             span(className='text-dim') #{sectionKind(preset.kind).label + ' · '}
           | #{preset.title}
-        span(className={cn('flex shrink-0 items-center gap-1 rounded-full px-1.5 py-px text-[9px] tracking-wide uppercase', state === 'current' ? 'bg-brand/15 text-brand' : 'text-dim group-hover/card:text-fg')})
+          if preset.description
+            button(
+              ~ type='button'
+              ~ aria-expanded={expanded}
+              ~ aria-label={(expanded ? 'Hide' : 'Show') + ' description of ' + preset.title}
+              ~ className='group/about flex -mb-0.25 w-full items-center text-left text-faint hover:text-fg-secondary'
+              ~ onClick={() => setExpanded(value => !value)}
+              ~ )
+              Icon(name='chevron-down-tiny' className='size-3 -rotate-45 transition-transform group-aria-expanded/about:rotate-0')
+        span(className={cn('flex shrink-0 items-center gap-1 rounded-full px-1.5 py-px text-[9px] tracking-wide uppercase', state === 'current' ? '' : 'text-dim group-hover/card:text-fg')})
           if state === 'current'
             Icon(name='check' className='size-2.5')
-          span #{actionLabel[state]}
-    if preset.description
-      button(
-        ~ type='button'
-        ~ aria-expanded={expanded}
-        ~ aria-label={(expanded ? 'Hide' : 'Show') + ' description of ' + preset.title}
-        ~ className='group/about flex w-full items-center gap-1 px-2.5 pb-1.5 text-left text-[10px] text-faint hover:text-fg-secondary'
-        ~ onClick={() => setExpanded(value => !value)}
-        ~ )
-        Icon(name='chevron-down-tiny' className='size-3 shrink-0 -rotate-90 transition-transform group-aria-expanded/about:rotate-0')
-        span About
+
       if expanded
         p(className='px-2.5 pb-2 text-[10px] leading-[1.55] text-dim') #{preset.description}
     if state !== 'add'
@@ -79,7 +79,7 @@ component TemplateCard
         ~ )
         Icon(name='plus' className='size-3')
 
-props { blocks, presets, targetOf, openKind, onOpenKind, onUse, onAdd, maximized }: LibraryProps
+props { blocks, presets, targetOf, openKind, onOpenKind, onUse, onAdd, className }: LibraryProps
 setup
   const [query, setQuery] = useState('');
   // The whole catalog is already loaded as summaries, so filtering here beats a round trip on every keystroke.
@@ -91,9 +91,9 @@ setup
   };
   const usage = (kind: SectionKindId) => blocks.filter(block => block.kind === kind).length;
 
-aside(className={cn('flex min-h-0 flex-col border-r border-edge bg-panel-deep max-[1180px]:row-start-1 max-[760px]:order-2 max-[760px]:h-[70dvh] max-[760px]:shrink-0 max-[760px]:border-r-0 max-[760px]:border-b', maximized && 'hidden')} aria-label='Section library')
+aside(className={cn('flex min-h-0 min-w-0 flex-col bg-background ::-webkit-scrollbar:none', className)} aria-label='Section library')
   div(className='flex min-h-0 flex-col')
-    div(className='border-b border-edge h-9')
+    div(className='border-b border-border h-9')
       label(className='flex items-center gap-2 bg-inset px-2.5 h-full text-dim focus-within:border-brand')
         Icon(name='search' className='size-3.5 shrink-0')
         span(className='sr-only') Search sections
@@ -104,10 +104,10 @@ aside(className={cn('flex min-h-0 flex-col border-r border-edge bg-panel-deep ma
           ~ className='min-w-0 flex-1 bg-transparent text-[12px] text-fg outline-none placeholder:text-faint focus-visible:outline-none'
           ~ onInput={event => setQuery(event.currentTarget.value)}
           ~ )
-    div(className='min-h-0 flex-1 overflow-auto p-2')
+    div(className='min-h-0 flex-1 overflow-auto p-1')
       if query.trim()
         div
-          p(className='px-1.5 pt-1 pb-2 text-[10px] text-dim' role='status') #{results.length} #{results.length === 1 ? 'design' : 'designs'} for “#{query.trim()}”
+          p(className=' pt-1 pb-2 text-[10px] text-dim' role='status') #{results.length} #{results.length === 1 ? 'design' : 'designs'} for “#{query.trim()}”
           div(className='grid gap-2')
             each preset in results key preset.presetId
               TemplateCard(preset={preset} state={stateOf(preset)} showKind={true} onUse={onUse} onAdd={onAdd})
@@ -116,23 +116,23 @@ aside(className={cn('flex min-h-0 flex-col border-r border-edge bg-panel-deep ma
       else
         each stage in sectionStages key stage.id
           section(className='mb-2')
-            h3(className='px-1.5 pt-2 pb-1 font-code text-[9px] tracking-[0.15em] text-faint uppercase') #{stage.label}
+            h3(className='px-2 pt-2 pb-1 font-code text-[9px] tracking-[0.15em] text-faint uppercase') #{stage.label}
             each kind in sectionKinds.filter(candidate => candidate.stage === stage.id) key kind.id
-              div(className='mb-0.5')
+              div(className='p-1')
                 button(
                   ~ type='button'
                   ~ aria-expanded={openKind === kind.id}
-                  ~ className='group/kind flex w-full items-center gap-2 rounded-[6px] px-1.5 py-1.5 text-left hover:bg-surface-hover data-open:bg-bg-surface aria-expanded:bg-surface-hover'
+                  ~ className='group/kind flex w-full items-center gap-1 rounded-[6px] px-1 py-1.5 text-left hover:bg-surface-hover data-open:bg-bg-surface aria-expanded:bg-surface-hover'
                   ~ onClick={() => onOpenKind(openKind === kind.id ? undefined : kind.id)}
                   ~ )
                   Icon(name='chevron-down-tiny' className='size-3 shrink-0 -rotate-45 text-dim transition-transform group-aria-expanded/kind:rotate-0')
-                  span(className='min-w-0 flex-1')
+                  span(className='min-w-0 flex-1 space-x-2')
                     span(className='block truncate text-[12px] text-fg') #{kind.label}
                     span(className='hidden _block truncate text-[10px] text-dim') #{kind.summary}
                   if usage(kind.id)
                     span(className='size-1.5 shrink-0 rounded-full bg-brand' title='On your page')
                   span(className='shrink-0 font-code text-[10px] text-faint') #{presetsOf(kind.id).length}
                 if openKind === kind.id
-                  div(className='grid gap-2 py-1.5 pl-1.5')
+                  div(className='grid gap-2 py-1.5')
                     each preset in presetsOf(kind.id) key preset.presetId
                       TemplateCard(preset={preset} state={stateOf(preset)} showKind={false} onUse={onUse} onAdd={onAdd})

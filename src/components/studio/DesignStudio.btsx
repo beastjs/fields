@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'octane'
+import { Group, Panel, Separator, useDefaultLayout, type Layout, type LayoutChangedMeta, type PanelImperativeHandle } from '@octanejs/resizable-panels'
 import { Icon } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { useTheme } from '../theme/theme-context'
@@ -41,6 +42,28 @@ module
   const NO_RECIPES: PresetRecipe[] = []
   /** Theme designer previews reach the rest of the app this long after the last slider move. */
   const SESSION_THEME_DELAY = 150
+  /** Below this width the columns stack and scroll, as on a phone, instead of sitting side by side. */
+  const NARROW_QUERY = '(max-width: 760px)'
+  type SidePanel = 'library' | 'aside'
+  type PanelVisibility = Record<SidePanel, boolean>
+  const ALL_PANELS: PanelVisibility = { library: true, aside: true }
+  const NO_PANELS: PanelVisibility = { library: false, aside: false }
+  const PANELS_KEY = 'design-studio:panels'
+  /** Which side panels were showing last time. Storage can be missing or refuse, so it only ever suggests. */
+  const readPanels = (): PanelVisibility => {
+    try {
+      const stored = JSON.parse(localStorage.getItem(PANELS_KEY) ?? 'null') as Partial<PanelVisibility> | null
+      return { library: stored?.library !== false, aside: stored?.aside !== false }
+    } catch {
+      return ALL_PANELS
+    }
+  }
+  const writePanels = (panels: PanelVisibility) => {
+    try { localStorage.setItem(PANELS_KEY, JSON.stringify(panels)) } catch { /* the layout still works, just unremembered */ }
+  }
+  /** Each side panel's opening width, and the narrowest it can be dragged to before it folds away. */
+  const PANEL_SIZES: Record<SidePanel, { initial: number; min: number }> = { library: { initial: 300, min: 220 }, aside: { initial: 252, min: 220 } }
+  const panelSeparator = 'relative w-px shrink-0 bg-edge outline-none transition-colors hover:bg-brand focus-visible:bg-brand data-[separator=active]:bg-brand'
   const SPACING_CSS: Record<string, string> = {
     pt: 'padding-top', pr: 'padding-right', pb: 'padding-bottom', pl: 'padding-left',
     mt: 'margin-top', mr: 'margin-right', mb: 'margin-bottom', ml: 'margin-left'
@@ -91,9 +114,29 @@ setup
   const [copied, setCopied] = useState(false);
   const [themeId, setThemeId] = useState<string>(INHERIT_THEME.themeId);
   const [designing, setDesigning] = useState(false);
-  // Hides the side panels so the preview fills the dialog. Fine Layout keeps working: its button is in the
-  // header and its overlay lives over the preview, neither of which the panels own.
-  const [maximized, setMaximized] = useState(false);
+  /**
+   * Which side panels are showing. This is the source of truth: the resizable panels follow it, and a drag that
+   * collapses or reopens one writes back to it. A hidden panel is collapsed, never unmounted — the theme designer
+   * holds a brief, a design and its answers, and bringing the panel back should not throw that away.
+   */
+  const [panels, setPanels] = useState<PanelVisibility>(readPanels);
+  // Maximised is simply both panels hidden. Fine Layout keeps working: its button is in the header and its overlay
+  // lives over the preview, neither of which the panels own.
+  const maximized = !panels.library && !panels.aside;
+  // What to bring back when leaving the maximised preview: the panels that were showing when it was entered.
+  const restorePanels = useRef<PanelVisibility>(ALL_PANELS);
+  const [narrow, setNarrow] = useState(() => window.matchMedia(NARROW_QUERY).matches);
+  /**
+   * The panel group is created the first time the studio opens, then kept. A closed dialog has no width, and a
+   * group laid out at zero width cannot meet its minimum sizes, so it would drop the remembered layout for its
+   * defaults before anyone saw it.
+   */
+  const [laidOut, setLaidOut] = useState(false);
+  const libraryPanel = useRef<PanelImperativeHandle | null>(null);
+  const asidePanel = useRef<PanelImperativeHandle | null>(null);
+  // Column sizes, remembered across sessions. Only a person dragging a separator saves them: the dialog is laid out
+  // while closed too, at zero width, and that layout is not one worth keeping.
+  const savedLayout = useDefaultLayout({ id: 'design-studio', panelIds: ['library', 'stage', 'aside'], onlySaveAfterUserInteractions: true });
   /**
    * Bumped whenever a preview instance is created.
    *
@@ -105,6 +148,21 @@ setup
   const [previewEpoch, setPreviewEpoch] = useState(0);
   const maximizedRef = useRef(false);
   maximizedRef.current = maximized;
+  const togglePanel = (panel: SidePanel) => setPanels(current => ({ ...current, [panel]: !current[panel] }));
+  const toggleMaximized = () => setPanels(current => {
+    if (current.library || current.aside) {
+      restorePanels.current = current;
+      return NO_PANELS;
+    }
+    return restorePanels.current.library || restorePanels.current.aside ? restorePanels.current : ALL_PANELS;
+  });
+  /** A separator dragged shut, or open again, is the same as pressing the panel's toggle. */
+  const layoutChanged = (layout: Layout, meta: LayoutChangedMeta) => {
+    savedLayout.onLayoutChanged(layout, meta);
+    if (!meta.isUserInteraction) return;
+    const next = { library: (layout.library ?? 0) > 0, aside: (layout.aside ?? 0) > 0 };
+    setPanels(current => (current.library === next.library && current.aside === next.aside ? current : next));
+  };
   const designingRef = useRef(false);
   designingRef.current = designing;
   /**
@@ -200,14 +258,8 @@ setup
   const codePath = !focused ? '' : codeFile === 'page' ? PAGE_FILE : sectionFile(focused.name);
   const width = devices.find(candidate => candidate.id === device)!.width;
   const scale = stageSize.width ? Math.min(1, stageSize.width / width) : 1;
-  /**
-   * Maximised, the body is one column and the panels are hidden rather than unmounted — the theme designer holds
-   * a brief, a design and its answers, and restoring the panels should not throw that away.
-   */
-  const bodyClass = maximized
-    ? 'grid min-h-0 grid-cols-[minmax(0,1fr)]'
-    : 'grid min-h-0 grid-cols-[300px_minmax(0,1fr)_252px] max-[1180px]:grid-cols-[280px_minmax(0,1fr)] max-[1180px]:grid-rows-[minmax(0,1fr)_minmax(0,62%)] max-[760px]:flex max-[760px]:flex-col max-[760px]:overflow-auto';
-  const mainClass = cn('flex min-h-0 min-w-0 flex-col bg-canvas', !maximized && 'max-[1180px]:col-start-2 max-[1180px]:row-span-2 max-[1180px]:row-start-1 max-[760px]:order-3 max-[760px]:h-[80dvh] max-[760px]:shrink-0');
+  // On a phone the columns stack and scroll: outline first, then the library, then the preview.
+  const mainClass = cn('flex min-h-0 min-w-0 flex-col bg-canvas', narrow ? 'order-1 h-[80dvh] shrink-0' : 'h-full');
   const targetOf = (kind: SectionKindId) => (focused?.kind === kind ? focused : blocks.find(block => block.kind === kind));
   const designLabel = (block: PageBlock) => (block.presetId === undefined ? undefined : presets.summary(block.presetId)?.title) ?? 'Edited in code';
   const statusText = !blocks.length ? (catalogLoading ? 'Loading sections…' : 'Empty page')
@@ -453,7 +505,7 @@ setup
     // A project already on a painted theme opens in the style it was painted in, so a shuffle continues from there.
     setPaint(paintOfId(installed) ?? DEFAULT_PAINT);
     setView('preview');
-    setMaximized(false);
+    setLaidOut(true);
     // Fine Layout's selection belongs to the page that was open last time, so a reopened studio starts outside it.
     exitDesigning();
     pendingEdit.current = undefined;
@@ -481,7 +533,7 @@ setup
       // Esc already reaches the dialog and is discarded. It steps back one mode at a time: Fine Layout first, then
       // the maximised preview. Esc pressed inside the preview frame arrives as a design `exit` event instead.
       if (designingRef.current) exitDesigning();
-      else if (maximizedRef.current) setMaximized(false);
+      else if (maximizedRef.current) toggleMaximized();
     };
     const onClose = () => { settleThemePreview(); setOpen(false); session.setStudioThemePreview(undefined); };
     element.addEventListener('cancel', onCancel);
@@ -497,7 +549,8 @@ setup
     preview.current = instance;
     setPreviewEpoch(epoch => epoch + 1);
     return () => { instance.dispose(); preview.current = null; };
-  }, [open]);
+    // Crossing the phone breakpoint swaps the layout, and with it the frames, so the preview is rebuilt on them.
+  }, [open, narrow]);
   // Rebuild shortly after the page settles, so a drag or a burst of clicks compiles once.
   useEffect(() => {
     if (!open || !blocks.length || !ready) return;
@@ -519,7 +572,27 @@ setup
     });
     observer.observe(stage.current);
     return () => observer.disconnect();
-  }, [open]);
+  }, [open, narrow]);
+  useEffect(() => {
+    const media = window.matchMedia(NARROW_QUERY);
+    const change = () => setNarrow(media.matches);
+    media.addEventListener('change', change);
+    return () => media.removeEventListener('change', change);
+  }, []);
+  // The panels follow the toggles. Re-applied on open, since a closed dialog lays out at zero width and may have
+  // left a panel folded that the toggles say is showing.
+  useEffect(() => {
+    writePanels(panels);
+    if (!open || narrow) return;
+    for (const [panel, handle] of [['library', libraryPanel.current], ['aside', asidePanel.current]] as const) {
+      if (!handle) continue;
+      if (panels[panel] && handle.isCollapsed()) {
+        handle.expand();
+        // A panel folded in an earlier session has no width to return to and reopens at its minimum.
+        if (handle.getSize().inPixels <= PANEL_SIZES[panel].min + 1) handle.resize(`${PANEL_SIZES[panel].initial}px`);
+      } else if (!panels[panel] && !handle.isCollapsed()) handle.collapse();
+    }
+  }, [panels, open, narrow]);
   useEffect(() => { preview.current?.setTheme(theme); }, [theme]);
   useEffect(() => { preview.current?.setTokens(themeCss(pageTheme)); }, [open, themeId, themeRows, generated, hunted, repainted]);
   useEffect(() => { preview.current?.setDesigning(designing); }, [open, designing]);
@@ -532,20 +605,24 @@ setup
   useEffect(() => { setCopied(false); }, [code]);
 
 button(className='bg-background dark:bg-muted/50 hover:dark:bg-muted py-1.5 px-3 rounded-2xl transition-colors duration-180 ease-out' type='button' title={compact ? 'Open Design Studio' : undefined} onClick={event => { event.currentTarget.focus(); show(); }})
-  div(className='flex items-center justify-center rounded-full gap-1.5')
+  div(className='flex items-center justify-center rounded-full gap-1')
     Icon(name='design' className='size-4 text-accent')
     if !compact
-      span(className='font-sans text-muted-foreground text-sm -tracking-[0.02em] truncate capitalize') Design Studio
+      span(className='font-sans text-muted-foreground text-sm -tracking-[0.02em] truncate capitalize select-none') Design Studio
 // No backdrop blur: the dialog covers nearly the whole window, and a blur over the live preview behind it is
 // recomputed every frame that preview animates.
-dialog(className={cn(dialogPanel, 'backdrop:backdrop-blur-none h-[min(920px,calc(100dvh-24px))] w-[min(1440px,calc(100vw-24px))] max-h-none overflow-hidden p-0 open:grid grid-rows-[auto_minmax(0,1fr)_auto] light:rounded-2xl')} ref={dialog} aria-labelledby='design-studio-title')
+dialog(className={cn(dialogPanel, 'backdrop:backdrop-blur-none h-[min(920px,calc(100dvh-12px))] w-[min(1720px,calc(100vw-12px))] max-h-none overflow-hidden p-0 open:grid grid-rows-[auto_minmax(0,1fr)_auto] light:rounded-2xl')} ref={dialog} aria-labelledby='design-studio-title')
   StudioHeader(
     ~ width={width}
     ~ scale={scale}
     ~ device={device}
     ~ onDevice={setDevice}
+    ~ libraryOpen={panels.library}
+    ~ asideOpen={panels.aside}
+    ~ onToggleLibrary={() => togglePanel('library')}
+    ~ onToggleAside={() => togglePanel('aside')}
     ~ maximized={maximized}
-    ~ onToggleMaximized={() => setMaximized(value => !value)}
+    ~ onToggleMaximized={toggleMaximized}
     ~ designing={designing}
     ~ canDesign={blocks.length > 0 && view !== 'code'}
     ~ onToggleDesigning={toggleDesigning}
@@ -565,55 +642,121 @@ dialog(className={cn(dialogPanel, 'backdrop:backdrop-blur-none h-[min(920px,calc
       ~ container={dialog}
       ~ )
 
-  div(id='design-studio-body' className={bodyClass})
-    SectionLibrary(blocks={blocks} presets={presets} targetOf={targetOf} openKind={openKind} onOpenKind={setOpenKind} onUse={chooseDesign} onAdd={addAnother} maximized={maximized})
-    StudioStage(
-      ~ className={mainClass}
-      ~ view={view}
-      ~ onView={setView}
-      ~ focusedName={focused?.name}
-      ~ codeFile={codeFile}
-      ~ onCodeFile={setCodeFile}
-      ~ code={code}
-      ~ codePath={codePath}
-      ~ copied={copied}
-      ~ onCopy={copyCode}
-      ~ status={{ text: statusText, state: blocks.length ? status.state : 'idle' }}
-      ~ empty={!blocks.length}
-      ~ catalogLoading={catalogLoading}
-      ~ recipes={recipes}
-      ~ onRecipe={startRecipe}
-      ~ stage={stage}
-      ~ frame={frame}
-      ~ standby={standby}
-      ~ stageSize={stageSize}
-      ~ width={width}
-      ~ scale={scale}
-      ~ )
-      if designing && ready
-        DesignOverlay(
-          ~ selected={selectedNode}
-          ~ hovered={hoveredNode}
-          ~ scale={scale}
-          ~ edited={!!targetNode && !!targetBlock?.overrides?.[targetNode.nodeId]}
-          ~ onEdit={applyEdit}
-          ~ onEditText={() => selectedNode && preview.current?.editText(selectedNode.nodeId, true)}
-          ~ onReset={resetNode}
-          ~ onDismiss={() => setSelectedNode(undefined)}
-          ~ )
-    StudioAside(
-      ~ hidden={maximized}
-      ~ blocks={blocks}
-      ~ presets={presets}
-      ~ recipes={recipes}
-      ~ selected={focused?.name}
-      ~ onSelect={select}
-      ~ onReorder={next => setBlocks(next)}
-      ~ onRemove={remove}
-      ~ onRecipe={startRecipe}
-      ~ theme={pageTheme}
-      ~ onPreviewTheme={previewGenerated}
-      ~ )
+  if narrow
+    div(id='design-studio-body' className='flex min-h-0 flex-col overflow-auto')
+      SectionLibrary(blocks={blocks} presets={presets} targetOf={targetOf} openKind={openKind} onOpenKind={setOpenKind} onUse={chooseDesign} onAdd={addAnother} className={cn('order-2 h-[70dvh] shrink-0 border-b border-edge', !panels.library && 'hidden')})
+      StudioStage(
+        ~ className={mainClass}
+        ~ view={view}
+        ~ onView={setView}
+        ~ focusedName={focused?.name}
+        ~ codeFile={codeFile}
+        ~ onCodeFile={setCodeFile}
+        ~ code={code}
+        ~ codePath={codePath}
+        ~ copied={copied}
+        ~ onCopy={copyCode}
+        ~ status={{ text: statusText, state: blocks.length ? status.state : 'idle' }}
+        ~ empty={!blocks.length}
+        ~ catalogLoading={catalogLoading}
+        ~ recipes={recipes}
+        ~ onRecipe={startRecipe}
+        ~ stage={stage}
+        ~ frame={frame}
+        ~ standby={standby}
+        ~ stageSize={stageSize}
+        ~ width={width}
+        ~ scale={scale}
+        ~ )
+        if designing && ready
+          DesignOverlay(
+            ~ selected={selectedNode}
+            ~ hovered={hoveredNode}
+            ~ scale={scale}
+            ~ edited={!!targetNode && !!targetBlock?.overrides?.[targetNode.nodeId]}
+            ~ onEdit={applyEdit}
+            ~ onEditText={() => selectedNode && preview.current?.editText(selectedNode.nodeId, true)}
+            ~ onReset={resetNode}
+            ~ onDismiss={() => setSelectedNode(undefined)}
+            ~ )
+      StudioAside(
+        ~ className={cn('order-1 max-h-[45dvh] shrink-0 border-b border-edge', !panels.aside && 'hidden')}
+        ~ blocks={blocks}
+        ~ presets={presets}
+        ~ recipes={recipes}
+        ~ selected={focused?.name}
+        ~ onSelect={select}
+        ~ onReorder={next => setBlocks(next)}
+        ~ onRemove={remove}
+        ~ onRecipe={startRecipe}
+        ~ theme={pageTheme}
+        ~ onPreviewTheme={previewGenerated}
+        ~ )
+  else
+    if laidOut
+      // Dragging a separator across the preview would lose the pointer to its frame, so frames ignore it meanwhile.
+      Group(
+        ~ id='design-studio-body'
+        ~ orientation='horizontal'
+        ~ className='min-h-0 has-[[data-separator=active]]:[&_iframe]:pointer-events-none'
+        ~ defaultLayout={savedLayout.defaultLayout}
+        ~ onLayoutChanged={layoutChanged}
+        ~ )
+        Panel(id='library' panelRef={libraryPanel} defaultSize={PANEL_SIZES.library.initial + 'px'} minSize={PANEL_SIZES.library.min + 'px'} maxSize='45%' collapsible={true} collapsedSize={0} className='min-w-0 overflow-hidden')
+          SectionLibrary(blocks={blocks} presets={presets} targetOf={targetOf} openKind={openKind} onOpenKind={setOpenKind} onUse={chooseDesign} onAdd={addAnother} className='h-full')
+        Separator(className={panelSeparator} aria-label='Resize the section library')
+        Panel(id='stage' minSize='320px' className='min-w-0 overflow-hidden')
+          StudioStage(
+            ~ className={mainClass}
+            ~ view={view}
+            ~ onView={setView}
+            ~ focusedName={focused?.name}
+            ~ codeFile={codeFile}
+            ~ onCodeFile={setCodeFile}
+            ~ code={code}
+            ~ codePath={codePath}
+            ~ copied={copied}
+            ~ onCopy={copyCode}
+            ~ status={{ text: statusText, state: blocks.length ? status.state : 'idle' }}
+            ~ empty={!blocks.length}
+            ~ catalogLoading={catalogLoading}
+            ~ recipes={recipes}
+            ~ onRecipe={startRecipe}
+            ~ stage={stage}
+            ~ frame={frame}
+            ~ standby={standby}
+            ~ stageSize={stageSize}
+            ~ width={width}
+            ~ scale={scale}
+            ~ )
+            if designing && ready
+              DesignOverlay(
+                ~ selected={selectedNode}
+                ~ hovered={hoveredNode}
+                ~ scale={scale}
+                ~ edited={!!targetNode && !!targetBlock?.overrides?.[targetNode.nodeId]}
+                ~ onEdit={applyEdit}
+                ~ onEditText={() => selectedNode && preview.current?.editText(selectedNode.nodeId, true)}
+                ~ onReset={resetNode}
+                ~ onDismiss={() => setSelectedNode(undefined)}
+                ~ )
+        Separator(className={panelSeparator} aria-label='Resize the outline and theme panel')
+        Panel(id='aside' panelRef={asidePanel} defaultSize={PANEL_SIZES.aside.initial + 'px'} minSize={PANEL_SIZES.aside.min + 'px'} maxSize='40%' collapsible={true} collapsedSize={0} className='min-w-0 overflow-hidden')
+          StudioAside(
+            ~ className='h-full'
+            ~ blocks={blocks}
+            ~ presets={presets}
+            ~ recipes={recipes}
+            ~ selected={focused?.name}
+            ~ onSelect={select}
+            ~ onReorder={next => setBlocks(next)}
+            ~ onRemove={remove}
+            ~ onRecipe={startRecipe}
+            ~ theme={pageTheme}
+            ~ onPreviewTheme={previewGenerated}
+            ~ )
+    else
+      div(id='design-studio-body')
 
   StudioFooter(
     ~ note={installNote}

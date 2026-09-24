@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { toHex } from '../src/lib/api/colorhunt';
 import { paintOfTheme, paletteOfTheme, repaintTheme, themeFromHuntedId, themeFromPalette, themeSwatches } from '../src/playground/studio/colorhunt';
-import { builtInThemes, INHERIT_THEME, paintedThemeId, readPaintedId } from '../src/playground/studio/themes';
+import { builtInThemes, INHERIT_THEME, paintedThemeId, readPaintedId, themeCss } from '../src/playground/studio/themes';
 import { themeFromId } from '../src/jev/theme-model';
 
 /** A real feed entry: a cream, an olive, an ochre and a sand, in Color Hunt's own order. */
@@ -83,13 +83,16 @@ test('brand paint spends the most chromatic color on the brand, and the rest as 
   expect(theme.paint).toBe('brand');
 });
 
-test('a brand page keeps the ground it is dropped into, under a wash of its quietest level', () => {
+test('a brand page keeps its own background and type in both modes', () => {
   const theme = themeFromPalette(palette, 'brand');
-  // Translucent, so the project's own ground still shows through; no type color at all, so the page stays neutral.
-  expect(theme.tokens.color.bg).toBe('color-mix(in oklab, #F5EFE3 22%, transparent)');
+  // No ground and no type color at all, so the palette reaches only the accented elements.
+  expect(theme.tokens.color.bg).toBeUndefined();
   expect(theme.tokens.color.fg).toBeUndefined();
-  expect(theme.dark?.color.bg).toBe('color-mix(in oklab, #4F5B2A 22%, transparent)');
+  expect(theme.dark?.color.bg).toBeUndefined();
   expect(theme.dark?.color.fg).toBeUndefined();
+  const css = themeCss(theme);
+  expect(css).not.toContain('--studio-bg');
+  expect(css).not.toContain('--studio-fg');
 });
 
 test('the levels reverse for dark, so level 1 is still the one nearest the ground', () => {
@@ -159,8 +162,9 @@ test('the accent becomes the brand, and ground and type become the outer levels 
   expect(color['accent-1']).toBe(midnight.tokens.color.fg);
   expect(color['accent-3']).toBe(midnight.tokens.color.bg);
   expect(color['accent-2']).toBe(`color-mix(in oklab, ${midnight.tokens.color.fg} 50%, ${midnight.tokens.color.bg})`);
-  expect(color.bg).toBe(`color-mix(in oklab, ${midnight.tokens.color.fg} 22%, transparent)`);
-  // No type colour, so the page keeps whatever it was dropped into — the same bargain a hunted brand theme makes.
+  // No ground and no type colour, so the page keeps whatever it was dropped into — the same bargain a hunted brand
+  // theme makes.
+  expect(color.bg).toBeUndefined();
   expect(color.fg).toBeUndefined();
 });
 

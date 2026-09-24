@@ -15,8 +15,9 @@
  *   with the most chroma, which is the one you would put on a button — becomes
  *   `--color-brand`, and the other three become `--color-accent-1` …
  *   `--color-accent-3`, ordered from the level nearest the ground to the one
- *   furthest from it. The page itself keeps whatever ground surrounds it, under
- *   a wash of the quietest level.
+ *   furthest from it. The page itself is left alone: its background and type
+ *   stay whatever the project gives them, in both modes, and only the accented
+ *   elements take the brand.
  *
  * Nothing else is invented. A palette says nothing about radius, font or
  * spacing, so a hunted theme leaves all three alone and changes only color.
@@ -29,7 +30,7 @@
  */
 
 import { type Palette, toHex } from '@/lib/api/colorhunt'
-import { brandReading, groundWash, parseColor } from './palette'
+import { brandReading, parseColor } from './palette'
 import { DEFAULT_PAINT, type PaintStyle, paintedThemeId, paintStyles, readPaintedId, type ThemeDocument } from './themes'
 
 const PREFIX = 'colorhunt-'
@@ -104,6 +105,11 @@ export const paintOfTheme = (themeId: string): PaintStyle | undefined => readHun
 export const themeSwatches = (theme: ThemeDocument): string[] => {
   const hunted = paletteOfTheme(theme.themeId)
   if (hunted) return hunted
+  // A brand reading declares no ground or type, only its levels and the brand, so those are what it shows.
+  if (theme.paint === 'brand') {
+    const { brand, 'accent-1': quiet, 'accent-2': middle, 'accent-3': loud } = theme.tokens.color
+    return [quiet, middle, loud, brand].filter((value): value is string => Boolean(value))
+  }
   const { accent, bg, fg } = theme.tokens.color
   return [bg, accent, fg].filter((value): value is string => Boolean(value))
 }
@@ -135,8 +141,8 @@ const brandTokens = (colors: string[]) => {
   const [light, mid, dark] = ranked
   return {
     brand,
-    light: { bg: groundWash(light), brand, 'accent-1': light, 'accent-2': mid, 'accent-3': dark },
-    dark: { bg: groundWash(dark), brand, 'accent-1': dark, 'accent-2': mid, 'accent-3': light }
+    light: { brand, 'accent-1': light, 'accent-2': mid, 'accent-3': dark },
+    dark: { brand, 'accent-1': dark, 'accent-2': mid, 'accent-3': light }
   }
 }
 

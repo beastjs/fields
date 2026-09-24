@@ -271,6 +271,9 @@ function bootstrap(channel: string, build: number) {
     if (event.source !== parent || message?.version !== 1 || message.channel !== channel) return;
     if (message.type === 'theme' && (message.theme === 'dark' || message.theme === 'light')) {
       document.documentElement.dataset.theme = message.theme;
+      // What the page's scheme falls back to when its own stylesheet leaves `color-scheme` at `normal` — which
+      // `:root { color-scheme: inherit }` also does, since the root has nothing to inherit from.
+      document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', message.theme);
       return;
     }
     if (message.type === 'design' && typeof message.enabled === 'boolean') {
@@ -406,7 +409,7 @@ export function previewDocument(channel: string, build: number, theme: Theme = '
 }
 
 function documentWithScript(script: string, theme: Theme): string {
-  return `<!doctype html><html data-theme="${theme}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' blob:; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'"><style>html{color:#deded8;background:#303030;color-scheme:dark}html[data-theme="light"]{color:#111113;background:#ffffff;color-scheme:light}body{margin:0;font-family:system-ui,sans-serif;color:inherit}*{box-sizing:border-box}</style></head><body><div id="app"></div><script>${script.replaceAll('</script', '<\\/script')}</script></body></html>`;
+  return `<!doctype html><html data-theme="${theme}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="${theme}"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' blob:; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'"><style>html{color:#deded8;background:#303030;color-scheme:dark}html[data-theme="light"]{color:#111113;background:#ffffff;color-scheme:light}body{margin:0;font-family:system-ui,sans-serif;color:inherit}*{box-sizing:border-box}</style></head><body><div id="app"></div><script>${script.replaceAll('</script', '<\\/script')}</script></body></html>`;
 }
 
 
@@ -421,6 +424,7 @@ function hostedBootstrap(start: typeof bootstrap) {
       !['dark', 'light'].includes(message.theme)) return;
     removeEventListener('message', connect);
     document.documentElement.dataset.theme = message.theme;
+    document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', message.theme);
     start(message.channel, message.build);
   };
   addEventListener('message', connect);

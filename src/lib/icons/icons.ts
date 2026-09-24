@@ -293,7 +293,7 @@ export const icons = {
   },
   refresh: {
     symbol:
-      '<g transform="scale(0.667)"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7.5 6H13a7 7 0 0 1 7 7v1M9.5 3.5 7 6l2.5 2.5m7 9.5H11a7 7 0 0 1-7-7v-1m10.5 10.5L17 18l-2.5-2.5"/></g>',
+      '<g transform="scale(0.667)"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7.5 6H13a7 7 0 0 1 7 7v1M9.5 3.5 7 6l2.5 2.5m7 9.5H11a7 7 0 0 1-7-7v-1m10.5 10.5L17 18l-2.5-2.5"/></g>',
     viewBox: '0 0 16 16',
     set: 'svg'
   },

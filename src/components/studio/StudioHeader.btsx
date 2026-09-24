@@ -1,6 +1,7 @@
 import type { OctaneNode } from 'octane'
 import { Icon } from '@/lib/icons'
 import Button from '../ui/button.btsx'
+import { useTheme } from '../theme/theme-context'
 import { devices, type Device } from './studio'
 
 module
@@ -9,6 +10,11 @@ module
     scale: number
     device: Device
     onDevice: (device: Device) => void
+    /** Which side panels are showing; each toggles on its own, and maximising hides both. */
+    libraryOpen: boolean
+    asideOpen: boolean
+    onToggleLibrary: () => void
+    onToggleAside: () => void
     maximized: boolean
     onToggleMaximized: () => void
     designing: boolean
@@ -20,13 +26,18 @@ module
     children?: OctaneNode
   }
 
-props { width, scale, device, onDevice, maximized, onToggleMaximized, designing, canDesign, onToggleDesigning, onClose, children }: HeaderProps
+  const panelToggle = 'flex size-7 items-center justify-center rounded-[4px] text-dim hover:text-fg aria-pressed:bg-control aria-pressed:text-brand aria-pressed:shadow-xs'
 
-header(className='flex flex-wrap items-center justify-between gap-x-6 border-b border-edge-strong px-5 py-3')
+props { width, scale, device, onDevice, libraryOpen, asideOpen, onToggleLibrary, onToggleAside, maximized, onToggleMaximized, designing, canDesign, onToggleDesigning, onClose, children }: HeaderProps
+setup
+  // The app's own light/dark theme, shared with the topbar's toggle; the studio preview follows it too.
+  const { theme, toggleTheme } = useTheme();
+
+header(className='flex items-center justify-between border-b border-edge-strong px-3 py-2')
   div(className='min-w-0 -space-y-1.5')
     div(className='flex flex-wrap items-baseline gap-x-3')
-      h2#design-studio-title(className='font-semibold text-foreground/80 text-lg -tracking-[0.028em]') Design Studio
-    span(className='font-serif script text-brand/80 text-sm') for web apps
+      h2#design-studio-title(className='font-semibold text-foreground/80 text-sm -tracking-[0.03em]') Design Studio
+    span(className='font-mono text-foreground/40 text-xs') for the web
   div(className='flex items-center justify-center gap-2')
     span(className='hidden font-code text-[10px] text-faint sm:inline' title='Preview width and zoom') #{width}px · #{Math.round(scale * 100)}%
     div(className='flex gap-0.5 rounded-[6px] border border-edge bg-inset p-0.5' role='radiogroup' aria-label='Preview size')
@@ -41,15 +52,34 @@ header(className='flex flex-wrap items-center justify-between gap-x-6 border-b b
           ~ onClick={() => onDevice(option.id)}
           ~ )
           Icon(name={option.icon} className='size-3.5')
-    button(
-      ~ type='button'
-      ~ aria-pressed={maximized}
-      ~ aria-label={maximized ? 'Show the side panels' : 'Maximize the preview'}
-      ~ title={maximized ? 'Show the library and outline (Esc)' : 'Hide the side panels and fill the studio with the preview'}
-      ~ className='flex size-7 items-center justify-center rounded-[4px] text-dim hover:text-fg aria-pressed:bg-control aria-pressed:text-brand'
-      ~ onClick={onToggleMaximized}
-      ~ )
-      span ⛶
+    div(className='flex gap-0.5 rounded-[6px] border border-edge bg-inset p-0.5' role='group' aria-label='Panels')
+      button(
+        ~ type='button'
+        ~ aria-pressed={libraryOpen}
+        ~ aria-label='Section library'
+        ~ title={libraryOpen ? 'Hide the section library' : 'Show the section library'}
+        ~ className={panelToggle}
+        ~ onClick={onToggleLibrary}
+        ~ )
+        Icon(name='sidebar' className='size-3.5')
+      button(
+        ~ type='button'
+        ~ aria-pressed={maximized}
+        ~ aria-label={maximized ? 'Show the side panels' : 'Maximize the preview'}
+        ~ title={maximized ? 'Bring the side panels back (Esc)' : 'Hide the side panels and fill the studio with the preview'}
+        ~ className={panelToggle}
+        ~ onClick={onToggleMaximized}
+        ~ )
+        span(className='text-[13px] leading-none') ⛶
+      button(
+        ~ type='button'
+        ~ aria-pressed={asideOpen}
+        ~ aria-label='Outline and theme'
+        ~ title={asideOpen ? 'Hide the outline and theme panel' : 'Show the outline and theme panel'}
+        ~ className={panelToggle}
+        ~ onClick={onToggleAside}
+        ~ )
+        Icon(name='sidebar' className='size-3.5 -scale-x-100')
   div(className='flex items-center gap-2')
     button(
       ~ type='button'
@@ -63,5 +93,14 @@ header(className='flex flex-wrap items-center justify-between gap-x-6 border-b b
       // span Fine Layout
     div(className='flex items-center gap-1.5')
       | #{children}
+    button(
+      ~ type='button'
+      ~ aria-label='Light mode'
+      ~ aria-pressed={theme === 'light'}
+      ~ title={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'}
+      ~ className='flex items-center rounded-[6px] p-1 text-dim transition-colors hover:text-brand'
+      ~ onClick={toggleTheme}
+      ~ )
+      Icon(name='theme' className='size-4')
 
-    Button(variant='ghost' size='icon' aria-label='Close Design Studio' onClick={onClose} className='relative -translate-y-3 translate-x-3') ×
+    Button(variant='ghost' size='icon' aria-label='Close Design Studio' onClick={onClose} className='relative rounded-full -translate-y-3 translate-x-5') ×

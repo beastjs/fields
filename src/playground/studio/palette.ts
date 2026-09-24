@@ -290,15 +290,6 @@ export function composeTheme(axes: ThemeAxes, identity: { themeId: string; name:
  * Reading a palette the other way, for the brand paint style
  * ------------------------------------------------------------------ */
 
-/**
- * The ground a `brand` page sits on: its quietest level, barely there.
- *
- * Translucent on purpose. The brand style deliberately does not claim the page, so this composites over whatever
- * ground the project already has and tints it rather than replacing it — which is also what lets one declaration
- * work in both modes, since each mode washes with its own level.
- */
-export const groundWash = (color: string) => `color-mix(in oklab, ${color} 22%, transparent)`
-
 /** Halfway between two colours, for a level a theme does not itself declare. */
 const midpoint = (from: string, to: string) => `color-mix(in oklab, ${from} 50%, ${to})`
 
@@ -311,6 +302,9 @@ const midpoint = (from: string, to: string) => `color-mix(in oklab, ${from} 50%,
  * lightness rather than by role, because under this style the page is near-neutral in both modes and what matters
  * is which level sits nearer whatever ground the page was dropped into. Level 2 is the midpoint, since three
  * colours cannot fill four jobs.
+ *
+ * No ground and no type: under this style the page keeps whatever background and text colour it already has, in
+ * both modes, and the palette reaches only the accented elements.
  *
  * The brand does not move between modes. A theme's own dark accent exists to stay readable on that theme's dark
  * ground, and under this style there is no such ground to read against — so the one colour the whole page is named
@@ -328,8 +322,8 @@ export function brandReading(tokens: ThemeTokens): { light: Record<string, strin
   const [lighter, darker] = groundL >= typeL ? [bg, fg] : [fg, bg]
   const middle = midpoint(lighter, darker)
   return {
-    light: { bg: groundWash(lighter), brand: accent, 'accent-1': lighter, 'accent-2': middle, 'accent-3': darker },
-    dark: { bg: groundWash(darker), brand: accent, 'accent-1': darker, 'accent-2': middle, 'accent-3': lighter }
+    light: { brand: accent, 'accent-1': lighter, 'accent-2': middle, 'accent-3': darker },
+    dark: { brand: accent, 'accent-1': darker, 'accent-2': middle, 'accent-3': lighter }
   }
 }
 

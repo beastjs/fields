@@ -10,7 +10,7 @@ import Button from "../ui/button.btsx";
 component Arrange
   props { arranging, onToggle }: { arranging: boolean; onToggle: VoidFunction }
   button(
-    ~ className='inline-flex shrink-0 items-center justify-center rounded-sm text-muted-foreground/70 text-[10px] transition-[color,background-color,border-color,scale] duration-160 ease-[ease] hover:opacity-90 hover:text-accent focus-visible:bg-surface-hover focus-visible:text-fg active:scale-[0.97] aria-pressed:border-brand aria-pressed:bg-brand aria-pressed:text-[#1b1b1b] aria-pressed:shadow-none light:size-8 light:rounded-lg light:text-dim light:hover:text-fg light:aria-pressed:text-white max-[760px]:w-8 max-[760px]:p-0'
+    ~ className='inline-flex shrink-0 items-center justify-center ml-1.5 rounded-sm text-foreground/70 text-[10px] transition-[color,background-color,border-color,scale] duration-160 ease-[ease] hover:opacity-90 hover:text-accent focus-visible:bg-surface-hover focus-visible:text-fg active:scale-[0.97] aria-pressed:border-brand aria-pressed:bg-brand aria-pressed:text-[#1b1b1b] aria-pressed:shadow-none light:size-8 light:rounded-lg light:text-dim light:hover:text-fg light:aria-pressed:text-white max-[760px]:w-8 max-[760px]:p-0'
     ~ type='button'
     ~ aria-label={arranging ? 'Finish arranging panes' : 'Arrange panes'}
     ~ aria-pressed={arranging}
@@ -31,7 +31,7 @@ setup
   const paneTitle = (pane: typeof toolbarPanes[number]) => (visible[pane.id] ? 'Collapse ' : 'Expand ') + pane.label
     + (pane.id === 'editor' && errorCount ? ` · ${errorCount} ${errorCount === 1 ? 'error needs' : 'errors need'} attention` : '');
 
-div(className='hidden min-w-0 items-center gap-3 overflow-x-auto bg-seam p-0 md:flex md:gap-0.5 md:px-1.5' role='group' aria-label='Workspace views')
+div(className='hidden min-w-0 items-center gap-6 overflow-x-auto bg-seam p-0 md:flex md:gap-0.5 md:px-1.5' role='group' aria-label='Workspace views')
   FluidTooltip
     ButtonGroup(className='bg-background light:gap-0.5 light:rounded-[14px] light:border-transparent light:divide-transparent light:bg-muted light:p-1')
       each pane in toolbarPanes key pane.id

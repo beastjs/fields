@@ -1,6 +1,23 @@
+/**
+ * The stylesheet every new project starts with, as `/src/style.css`.
+ *
+ * The tokens, the `@theme inline` mapping and the base layer are copied from `src/styles/theme.css`, so a project
+ * starts on the same design tokens as the playground and can use `bg-background`, `text-muted-foreground`,
+ * `rounded-lg`, `shadow-sm` and the rest from its first line. Two things differ, both because the preview is not the
+ * playground:
+ *
+ * - Dark mode keys on `data-theme="dark"`, which is what the preview stamps on its `<html>` when the playground is
+ *   dark, as well as on the `.dark` class `theme.css` uses. Keyed on the class alone, a preview would stay light.
+ * - `html` takes the background too. The preview document paints its own ground behind the page, and a short page
+ *   would otherwise show a band of it below the content.
+ *
+ * Below the copy are the starter page's own classes, rebuilt on the tokens so they follow the theme with it.
+ */
+export const STARTER_STYLES = `/* Tailwind utilities are available as classes: div.flex.gap-4 or div(class='p-4 text-sm'). */
+/* The design tokens below come from the playground's own theme; change them to restyle the whole project. */
 @import 'tailwindcss';
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *, .dark, .dark *));
 
 :root {
   --background: oklch(1 0 0);
@@ -59,6 +76,7 @@
   --spacing: 0.25rem;
 }
 
+:root[data-theme='dark'],
 .dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
@@ -171,7 +189,26 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html,
   body {
     @apply bg-background text-foreground;
   }
 }
+
+/* The starter page. Layered as components, so a utility on the same element still wins. */
+@layer components {
+  .page { max-width: 620px; margin: 0 auto; padding: 80px 40px; }
+  .eyebrow { color: var(--muted-foreground); font-size: 10px; letter-spacing: .16em; font-weight: 650; }
+  h1 { margin: 25px 0 14px; font-size: clamp(36px, 7vw, 52px); font-weight: 500; letter-spacing: -.06em; }
+  .intro { margin: 0 0 10px; font-size: 17px; }
+  .description { font-size: 13px; line-height: 1.8; color: var(--muted-foreground); }
+  .counter { margin-top: 38px; padding: 24px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); color: var(--card-foreground); box-shadow: var(--shadow-sm); }
+  .caption { font-size: 9px; letter-spacing: .14em; color: var(--muted-foreground); }
+  .counter-row { display: flex; align-items: center; gap: 28px; margin: 24px 0; }
+  .step { width: 38px; height: 38px; border: 1px solid var(--border); border-radius: 50%; background: var(--secondary); color: var(--secondary-foreground); box-shadow: var(--shadow-xs); font-size: 22px; cursor: pointer; }
+  .step:hover { background: var(--accent); color: var(--accent-foreground); }
+  .value { min-width: 30px; font-size: 38px; font-family: var(--font-mono); font-weight: 400; text-align: center; }
+  .counter-note { font-size: 11px; color: var(--muted-foreground); margin: 0; }
+  footer { margin-top: 44px; font-size: 10px; color: var(--muted-foreground); }
+}
+`

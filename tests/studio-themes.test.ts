@@ -51,6 +51,9 @@ test('a paint style adds its rules to the block, and the default style adds none
   // The rules are layered below the utilities on purpose: a preset that already muted an element keeps its tone.
   expect(css).toContain('@layer base {');
   expect(css).toContain('[data-page] [data-section] :where(a, button) { color: var(--color-brand); }');
+  // Only the accented elements take a colour: headings keep the page's own type.
+  expect(css).not.toContain(':where(h1');
+  expect(css).not.toContain('var(--color-accent-');
   expect(css.indexOf('@layer base {')).toBeLessThan(css.indexOf('/* end Design Studio theme */'));
   // Washed is the style every theme had before paint styles existed, and it writes exactly what it always did.
   expect(themeCss(midnight)).not.toContain('@layer');

@@ -4,6 +4,7 @@ import { sectionFile } from '../../playground/studio/page'
 import type { PresetRecipe } from '../../playground/studio/presets'
 import RecipeCard from './RecipeCard.btsx'
 import { fileLabel, type CodeFile, type StudioView } from './studio'
+import { cn } from '@/lib/utils';
 
 module
   interface StageProps {
@@ -65,8 +66,8 @@ setup
     ? { width: width + 'px', height: stageSize.height / scale + 'px', ...(scale === 1 ? {} : { transform: 'scale(' + scale + ')' }) }
     : { width: '100%', height: '100%' };
 
-main(className={className})
-  div(className='hidden _flex items-center justify-between gap-3 border-b border-edge bg-surface-toolbar px-2.5 py-1.5')
+main(className={cn('bg-background', className)})
+  div(className='hidden _flex items-center justify-between gap-3 border-b border-edge bg-surface-toolbar px-0.5 py-1.5')
     div(className='flex gap-0.5' role='tablist' aria-label='Studio view')
       button(className='rounded-[4px] px-2.5 py-1 text-[10px] text-dim aria-selected:bg-control aria-selected:text-fg' type='button' role='tab' aria-selected={view === 'preview'} onClick={() => onView('preview')}) Preview
       button(className='rounded-[4px] px-2.5 py-1 text-[10px] text-dim aria-selected:bg-control aria-selected:text-fg disabled:opacity-50' type='button' role='tab' aria-selected={view === 'code'} disabled={empty} onClick={() => onView('code')}) Code
@@ -78,9 +79,9 @@ main(className={className})
         button(className='shrink-0 rounded-[4px] px-2 py-1 text-[10px] text-fg-secondary hover:bg-control hover:text-fg' type='button' onClick={onCopy}) #{copied ? 'Copied ✓' : 'Copy'}
     else
       span(className='min-w-0 truncate font-code text-[10px] text-faint data-[state=error]:text-warning' role='status' data-state={status.state}) #{status.text}
-  div(className='relative min-h-0 flex-1')
-    div(className='absolute inset-3' ref={stage} hidden={view !== 'preview'})
-      div(className='relative mx-auto h-full transition-[width] duration-300 ease-out' style={{ width: stageSize.width ? width * scale + 'px' : '100%' }})
+  div(className='relative min-h-0 flex-1 size-full')
+    div(className='absolute inset-2' ref={stage} hidden={view !== 'preview'})
+      div(className='relative mx-auto h-full rounded-none transition-[width] duration-300 ease-out' style={{ width: stageSize.width ? width * scale + 'px' : '100%' }})
         iframe(ref={frame} style={frameStyle} className={frameClass})
         iframe(ref={standby} style={frameStyle} className={frameClass})
         | #{children}

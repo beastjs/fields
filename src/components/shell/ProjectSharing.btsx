@@ -64,7 +64,7 @@ setup
     return () => { revision.current++; window.removeEventListener('hashchange', readLink); };
   }, [session]);
 
-button(className='text-muted-foreground hover:text-foreground' type='button' aria-label='Share project' title='Share project' onClick={event => { event.currentTarget.focus(); void share(); }})
+button(className='text-foreground/60 hover:text-foreground' type='button' aria-label='Share project' title='Share project' onClick={event => { event.currentTarget.focus(); void share(); }})
   Icon(name='share' className='size-4')
 if transfer
   ProjectTransferDialog(transfer={transfer} onClose={close} onCopy={copy} onImport={importProject})
