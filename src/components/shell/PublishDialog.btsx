@@ -111,7 +111,7 @@ dialog(className={dialogPanel} ref={dialog} aria-labelledby='publish-title' onCa
   if summary === undefined
     div(className={statusRow})
       span(className='text-dim') Loading…
-  elseif live
+  elseif summary && live
     div(className={statusRow})
       span(className={statusDot})
       span(className='shrink-0') Live

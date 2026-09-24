@@ -37,5 +37,3 @@ A.Root(
     Image(src={src} alt={alt})
   elseif fallback
     Fallback #{fallback}
-  else
-    null

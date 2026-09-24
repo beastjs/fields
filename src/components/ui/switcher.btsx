@@ -19,7 +19,7 @@ module
     createLabelIcon?: IconName
     onSelect?: (item: SwitcherItem) => void
     onCreate?: () => void
-    icon? IconName
+    icon?: IconName
   }
 
 component SwitcherRoot

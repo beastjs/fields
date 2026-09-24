@@ -8,7 +8,7 @@
     "dev": "bun run prepare:runtime && rsbuild dev",
     "build": "bun run prepare:runtime && rsbuild build",
     "preview": "rsbuild preview",
-    "typecheck": "bun run prepare:runtime && tsrx-tsc --noEmit && tsc -p tsconfig.tests.json",
+    "typecheck": "bun run prepare:runtime && bun scripts/typecheck.ts && tsrx-tsc --noEmit -p tsconfig.tests.json",
     "test": "bun run prepare:runtime && bun test tests",
     "test:browser": "playwright test",
     "test:browser:hosted": "playwright test --config playwright.hosted.config.ts",
