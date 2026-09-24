@@ -4,10 +4,12 @@
   "account_id": "3e5e21a8e670deeba6401b80e003df01",
   "main": "src/worker.ts",
   "compatibility_date": "2026-09-01",
-  // The admin API is reached on workers.dev; sites on `*.SITES_DOMAIN` (routes added when the domain is set up).
+  // The admin API is reached on workers.dev; sites on `*.bigticket.ph`, whose `*` DNS record must be proxied.
+  // The route skips the apex and any record that is not proxied (`www` points elsewhere, unproxied).
   "workers_dev": true,
-  // `.invalid` matches no host until the real domain is set; `.dev.vars` sets `localhost` for `wrangler dev`.
-  "vars": { "SITES_DOMAIN": "sites.invalid" },
+  "routes": [{ "pattern": "*.bigticket.ph/*", "zone_name": "bigticket.ph" }],
+  // `.dev.vars` sets `localhost` for `wrangler dev`.
+  "vars": { "SITES_DOMAIN": "bigticket.ph" },
   "r2_buckets": [{ "binding": "SITES", "bucket_name": "play-sites" }],
   "kv_namespaces": [{ "binding": "ROUTES", "id": "4eb4a82949734b0cb994417dcbaa0cf9" }]
   // ADMIN_TOKEN: `wrangler secret put ADMIN_TOKEN` in production, `.dev.vars` locally.
