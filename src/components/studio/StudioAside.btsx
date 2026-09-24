@@ -1,0 +1,39 @@
+import { useState } from 'octane'
+import { Icon } from '@/lib/icons'
+import { cn } from '@/lib/utils'
+import type { PageBlock } from '../../playground/studio/page'
+import type { PresetLookup, PresetRecipe } from '../../playground/studio/presets'
+import type { ThemeDocument } from '../../playground/studio/themes'
+import PageOutline from './PageOutline.btsx'
+import ThemeDesigner from './ThemeDesigner.btsx'
+
+module
+  interface AsideProps {
+    /** Hidden rather than unmounted, so the theme designer keeps its brief, design and answers. */
+    hidden: boolean
+    blocks: PageBlock[]
+    presets: PresetLookup
+    recipes: PresetRecipe[]
+    selected?: string
+    onSelect: (name: string) => void
+    onReorder: (blocks: PageBlock[]) => void
+    onRemove: (name: string) => void
+    onRecipe: (recipe: PresetRecipe) => void
+    theme: ThemeDocument
+    onPreviewTheme: (theme: ThemeDocument) => void
+  }
+
+props { hidden, blocks, presets, recipes, selected, onSelect, onReorder, onRemove, onRecipe, theme, onPreviewTheme }: AsideProps
+setup
+  const [panel, setPanel] = useState<'outline' | 'theme'>('outline');
+
+aside(className={cn('flex min-h-0 flex-col border-l border-edge bg-panel-deep max-[1180px]:col-start-1 max-[1180px]:row-start-2 max-[1180px]:border-t max-[1180px]:border-l-0 max-[1180px]:border-r max-[760px]:order-1 max-[760px]:max-h-[45dvh] max-[760px]:shrink-0 max-[760px]:border-r-0 max-[760px]:border-b', hidden && 'hidden')} aria-label='Page outline and theme')
+  div(className='flex h-9 shrink-0 gap-0.5 border-b border-edge bg-surface-toolbar px-1.5 py-1.5' role='tablist' aria-label='Right panel')
+    button(className='rounded-[4px] px-2 py-0.5 text-[10px] text-dim aria-selected:bg-control aria-selected:text-fg' type='button' role='tab' aria-selected={panel === 'outline'} onClick={() => setPanel('outline')}) Outline
+    button(className='flex items-center gap-1 rounded-[4px] px-2 py-0.5 text-[10px] text-dim aria-selected:bg-control aria-selected:text-fg' type='button' role='tab' aria-selected={panel === 'theme'} onClick={() => setPanel('theme')})
+      Icon(name='sparkle' className='size-2.5')
+      span Theme
+  if panel === 'theme'
+    ThemeDesigner(onPreview={onPreviewTheme} current={theme})
+  else
+    PageOutline(blocks={blocks} presets={presets} recipes={recipes} selected={selected} onSelect={onSelect} onReorder={onReorder} onRemove={onRemove} onRecipe={onRecipe})

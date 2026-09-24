@@ -1,5 +1,5 @@
 import type { api } from '../../../convex/_generated/api'
-import { useEffect, useState, useSyncExternalStore } from 'octane'
+import { memo, useEffect, useState, useSyncExternalStore } from 'octane'
 import { useConvexAuth } from '@/hooks/use-convex'
 import { useConvexQuery } from '@/hooks/use-convex-query'
 import type { WorkspaceProps } from '../types'
@@ -10,7 +10,7 @@ import ViewToolbar from '../layout/ViewToolbar.btsx'
 import { Icon, IconName } from '@/lib/icons'
 import { useTheme } from '../theme/theme-context'
 import Switcher from '../ui/switcher.btsx'
-import DesignStudio from "../studio/DesignStudio.btsx";
+import DesignStudioPanel from "../studio/DesignStudio.btsx";
 import ProjectSharing from "./ProjectSharing.btsx";
 import { signInWithGoogle } from '@/lib/firebase/auth';
 
@@ -22,6 +22,9 @@ module
   const listTeamsQuery = 'teams:listMine' as unknown as typeof api.teams.listMine
   const listProjectsQuery = 'projects:listByTeam' as unknown as typeof api.projects.listByTeam
   const paginationOpts = { cursor: null, numItems: 100 }
+  // The topbar re-renders on every session change — console output, build status, saves. The studio's only prop is
+  // the session, so memo keeps all of that from re-rendering it; it subscribes to what it needs itself.
+  const DesignStudio = memo(DesignStudioPanel)
 
   const starterWorkspace = (): SavedWorkspace => ({
     version: 1,

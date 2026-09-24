@@ -1,0 +1,36 @@
+import { useState } from 'octane'
+import { Icon } from '@/lib/icons'
+import { cn } from '@/lib/utils'
+import type { PresetRecipe } from '../../playground/studio/presets'
+import { plural } from './studio'
+
+module
+  interface RecipeCardProps {
+    recipe: PresetRecipe
+    onRecipe: (recipe: PresetRecipe) => void
+    /** The tighter card for the outline panel, which counts sections without naming the unit. */
+    compact?: boolean
+  }
+
+props { recipe, onRecipe, compact = false }: RecipeCardProps
+setup
+  // Collapsed so the recipes scan as titles, like the section library's cards.
+  const [expanded, setExpanded] = useState(false);
+
+// The card chrome sits on the wrapper so the description toggle can live beside, not inside, the main button.
+div(className={cn('rounded-[6px] border border-edge bg-surface-recessed text-left transition-colors hover:bg-surface-hover', compact ? 'hover:border-edge-strong' : 'hover:border-brand')})
+  button(type='button' className={cn('flex w-full items-baseline justify-between gap-2 text-left', compact ? 'px-2.5 pt-2 pb-0.5' : 'px-3 pt-3 pb-1')} onClick={() => onRecipe(recipe)})
+    span(className={cn('text-fg', compact ? 'text-[11px]' : 'text-[12px]')}) #{recipe.title}
+    span(className='font-code text-[9px] text-faint') #{compact ? recipe.presetIds.length : plural(recipe.presetIds.length, 'section')}
+  if recipe.description
+    button(
+      ~ type='button'
+      ~ aria-expanded={expanded}
+      ~ aria-label={(expanded ? 'Hide' : 'Show') + ' description of ' + recipe.title}
+      ~ className={cn('group/about flex w-full items-center gap-1 text-left text-[10px] text-faint hover:text-fg-secondary', compact ? 'px-2.5 pb-1.5' : 'px-3 pb-2')}
+      ~ onClick={() => setExpanded(value => !value)}
+      ~ )
+      Icon(name='chevron-down-tiny' className='size-3 shrink-0 -rotate-90 transition-transform group-aria-expanded/about:rotate-0')
+      span About
+    if expanded
+      p(className={cn('text-[10px] leading-[1.5] text-dim', compact ? 'px-2.5 pb-2' : 'px-3 pb-3')}) #{recipe.description}

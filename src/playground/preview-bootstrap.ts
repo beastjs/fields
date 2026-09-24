@@ -61,8 +61,9 @@ function bootstrap(channel: string, build: number) {
    * Fine Layout's agent.
    *
    * It only runs while the host turns it on, and it does two jobs: report the box under the pointer, and apply a
-   * class change straight to the DOM while a handle is being dragged. The second is what makes dragging feel
-   * direct — the authoritative rebuild lands afterwards, debounced, from the host.
+   * drag straight to the DOM as inline style while a handle is held. The second is what makes dragging feel
+   * direct — the authoritative rebuild lands afterwards, debounced, from the host, and clears the inline style
+   * once it has painted.
    */
   let designing = false;
   let probe: HTMLElement | undefined;
@@ -98,6 +99,19 @@ function bootstrap(channel: string, build: number) {
       count: document.querySelectorAll(`[data-node="${(element as HTMLElement).dataset.node}"]`).length
     };
   };
+  /** The only properties a drag may set inline, and what each touched element held before, to restore. */
+  const liveProperties = new Set(['padding-top', 'padding-right', 'padding-bottom', 'padding-left',
+    'margin-top', 'margin-right', 'margin-bottom', 'margin-left', 'width', 'height']);
+  const live = new Map<HTMLElement, Map<string, string>>();
+  const clearLive = () => {
+    for (const [element, previous] of live) {
+      for (const [property, value] of previous) {
+        if (value) element.style.setProperty(property, value);
+        else element.style.removeProperty(property);
+      }
+    }
+    live.clear();
+  };
   const nodesOf = (nodeId: string) => document.querySelectorAll<HTMLElement>(`[data-node="${CSS.escape(nodeId)}"]`);
   const nodeAt = (target: EventTarget | null) => (target instanceof Element ? target.closest<HTMLElement>('[data-node]') : null);
 
@@ -110,18 +124,45 @@ function bootstrap(channel: string, build: number) {
     hovered = element.dataset.node;
     send('design-hover', { node: measure(element) });
   };
+  /**
+   * Reports the selected node's box, and remembers what was reported.
+   *
+   * Every report re-renders the studio. Scroll and pointer events already arrive at most once a frame, so `track`
+   * only has to skip a box that has not moved — a scroll that leaves the selection off-screen or pinned, a drag
+   * that stays inside one spacing step.
+   */
+  let reported = '';
+  const reportSelected = (element: HTMLElement) => {
+    const node = measure(element);
+    reported = JSON.stringify(node);
+    send('design-select', { node });
+  };
   const onDown = (event: PointerEvent) => {
     const element = nodeAt(event.target);
     if (!element) return;
     event.preventDefault();
     event.stopPropagation();
     selected = element;
-    send('design-select', { node: measure(element) });
+    reportSelected(element);
   };
   // A link or button inside a section must not navigate while its box is being edited.
   const swallow = (event: Event) => { if (designing) { event.preventDefault(); event.stopPropagation(); } };
   const track = () => {
-    if (selected?.isConnected) send('design-select', { node: measure(selected) });
+    if (!selected?.isConnected) return;
+    const node = measure(selected);
+    const key = JSON.stringify(node);
+    if (key === reported) return;
+    reported = key;
+    send('design-select', { node });
+  };
+  // Focus lands in the frame once a node is clicked, so the studio never sees Escape unless it is passed up.
+  const onKey = (event: KeyboardEvent) => {
+    if (event.key !== 'Escape') return;
+    event.preventDefault();
+    // Escape while editing text finishes the edit (its blur commits it) rather than leaving Fine Layout.
+    const editing = event.target instanceof HTMLElement && event.target.isContentEditable;
+    if (editing) (event.target as HTMLElement).blur();
+    else send('design-exit');
   };
   const setDesigning = (on: boolean) => {
     if (on === designing) return;
@@ -132,6 +173,7 @@ function bootstrap(channel: string, build: number) {
       document.addEventListener('pointerdown', onDown, options);
       document.addEventListener('click', swallow, options);
       document.addEventListener('submit', swallow, options);
+      document.addEventListener('keydown', onKey, options);
       addEventListener('scroll', track, { passive: true });
       addEventListener('resize', track);
       document.documentElement.style.cursor = 'crosshair';
@@ -140,9 +182,11 @@ function bootstrap(channel: string, build: number) {
       document.removeEventListener('pointerdown', onDown, options);
       document.removeEventListener('click', swallow, options);
       document.removeEventListener('submit', swallow, options);
+      document.removeEventListener('keydown', onKey, options);
       removeEventListener('scroll', track);
       removeEventListener('resize', track);
       document.documentElement.style.cursor = '';
+      reported = '';
       hovered = undefined;
       selected = undefined;
     }
@@ -212,6 +256,8 @@ function bootstrap(channel: string, build: number) {
       if (reported) return;
       reported = true;
       busy = false;
+      // The rebuild now carries the drag as classes, so the inline stand-in can go without anything moving.
+      clearLive();
       if (revision === build) send('rendered', { update });
     };
     // Two frames is the accurate "it has painted" signal, but requestAnimationFrame never fires while the
@@ -231,15 +277,30 @@ function bootstrap(channel: string, build: number) {
       setDesigning(message.enabled);
       return;
     }
-    if (message.type === 'design-style' && typeof message.nodeId === 'string' && typeof message.className === 'string') {
-      // Applied straight to the DOM so a drag reads at pointer speed; the host rebuilds from the document after.
-      for (const element of nodesOf(message.nodeId)) element.className = message.className;
-      if (selected?.isConnected) send('design-select', { node: measure(selected) });
+    if (message.type === 'design-style' && typeof message.nodeId === 'string' && message.style && typeof message.style === 'object') {
+      // Inline, so a drag reads at pointer speed even for a value the built stylesheet has no utility for yet.
+      if (!selected?.isConnected) selected = nodesOf(message.nodeId)[0];
+      const entries = Object.entries(message.style as Record<string, unknown>)
+        .filter((entry): entry is [string, string] => liveProperties.has(entry[0]) && typeof entry[1] === 'string' && entry[1].length <= 80);
+      for (const element of nodesOf(message.nodeId)) {
+        let previous = live.get(element);
+        if (!previous) live.set(element, (previous = new Map()));
+        for (const [property, value] of entries) {
+          if (!previous.has(property)) previous.set(property, element.style.getPropertyValue(property));
+          element.style.setProperty(property, value);
+        }
+      }
+      // A drag sends one of these per pointer move; a box that did not change is not reported again.
+      track();
       return;
     }
     if (message.type === 'design-measure' && typeof message.nodeId === 'string') {
       const element = nodesOf(message.nodeId)[0];
-      if (element) send('design-select', { node: measure(element) });
+      if (!element) return;
+      // A rebuild can replace the node that was clicked, so the selection follows the one that now stands for it;
+      // otherwise the next drag or scroll would measure a detached element and report nothing.
+      selected = element;
+      reportSelected(element);
       return;
     }
     if (message.type === 'design-text' && typeof message.nodeId === 'string' && typeof message.editing === 'boolean') {

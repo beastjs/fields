@@ -1,0 +1,67 @@
+import type { OctaneNode } from 'octane'
+import { Icon } from '@/lib/icons'
+import Button from '../ui/button.btsx'
+import { devices, type Device } from './studio'
+
+module
+  interface HeaderProps {
+    width: number
+    scale: number
+    device: Device
+    onDevice: (device: Device) => void
+    maximized: boolean
+    onToggleMaximized: () => void
+    designing: boolean
+    /** Fine Layout needs a page on screen: it is off while the page is empty or the code view is showing. */
+    canDesign: boolean
+    onToggleDesigning: () => void
+    onClose: () => void
+    /** The theme controls, which sit between Fine Layout and the close button. */
+    children?: OctaneNode
+  }
+
+props { width, scale, device, onDevice, maximized, onToggleMaximized, designing, canDesign, onToggleDesigning, onClose, children }: HeaderProps
+
+header(className='flex flex-wrap items-center justify-between gap-x-6 border-b border-edge-strong px-5 py-3')
+  div(className='min-w-0 -space-y-1.5')
+    div(className='flex flex-wrap items-baseline gap-x-3')
+      h2#design-studio-title(className='font-semibold text-foreground/80 text-lg -tracking-[0.028em]') Design Studio
+    span(className='font-serif script text-brand/80 text-sm') for web apps
+  div(className='flex items-center justify-center gap-2')
+    span(className='hidden font-code text-[10px] text-faint sm:inline' title='Preview width and zoom') #{width}px · #{Math.round(scale * 100)}%
+    div(className='flex gap-0.5 rounded-[6px] border border-edge bg-inset p-0.5' role='radiogroup' aria-label='Preview size')
+      each option in devices key option.id
+        button(
+          ~ type='button'
+          ~ role='radio'
+          ~ aria-checked={device === option.id}
+          ~ aria-label={option.label}
+          ~ title={option.label}
+          ~ className='flex size-7 items-center justify-center rounded-[4px] text-dim hover:text-fg aria-checked:bg-control aria-checked:text-brand aria-checked:shadow-xs'
+          ~ onClick={() => onDevice(option.id)}
+          ~ )
+          Icon(name={option.icon} className='size-3.5')
+    button(
+      ~ type='button'
+      ~ aria-pressed={maximized}
+      ~ aria-label={maximized ? 'Show the side panels' : 'Maximize the preview'}
+      ~ title={maximized ? 'Show the library and outline (Esc)' : 'Hide the side panels and fill the studio with the preview'}
+      ~ className='flex size-7 items-center justify-center rounded-[4px] text-dim hover:text-fg aria-pressed:bg-control aria-pressed:text-brand'
+      ~ onClick={onToggleMaximized}
+      ~ )
+      span ⛶
+  div(className='flex items-center gap-2')
+    button(
+      ~ type='button'
+      ~ aria-pressed={designing}
+      ~ disabled={!canDesign}
+      ~ title={designing ? 'Leave Fine Layout (Esc)' : 'Hover the preview to inspect a section, then drag its padding, margin or size'}
+      ~ className='flex items-center gap-1.5 rounded-[6px] p-1 text-dim transition-colors hover:text-brand aria-pressed:text-brand disabled:opacity-40 aria-pressed:border-brand'
+      ~ onClick={onToggleDesigning}
+      ~ )
+      Icon(name='layout' className='size-5' )
+      // span Fine Layout
+    div(className='flex items-center gap-1.5')
+      | #{children}
+
+    Button(variant='ghost' size='icon' aria-label='Close Design Studio' onClick={onClose} className='relative -translate-y-3 translate-x-3') ×

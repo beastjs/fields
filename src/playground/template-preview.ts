@@ -9,6 +9,8 @@ export type DesignEvent =
   | { type: 'hover'; node: DesignNode }
   | { type: 'select'; node: DesignNode }
   | { type: 'out' }
+  /** Escape pressed inside the frame, which the studio cannot hear on its own. */
+  | { type: 'exit' }
   | { type: 'text'; nodeId: string; text: string };
 type Reveal = { selector: string; highlight: boolean };
 
@@ -105,7 +107,7 @@ export class TemplatePreview {
     for (const preview of this.previews) preview.setDesigning(enabled);
   }
 
-  applyDesignStyle(nodeId: string, className: string) { this.previews[this.front].applyDesignStyle(nodeId, className); }
+  applyDesignStyle(nodeId: string, style: Record<string, string>) { this.previews[this.front].applyDesignStyle(nodeId, style); }
   measureNode(nodeId: string) { this.previews[this.front].measureNode(nodeId); }
   editText(nodeId: string, editing: boolean) { this.previews[this.front].editText(nodeId, editing); }
 
@@ -128,6 +130,7 @@ export class TemplatePreview {
       // Only the frame the person can actually see reports; the standby frame is inert.
       if (index !== this.front || !this.designing) return;
       if (event.type === 'design-out') this.onDesign?.({ type: 'out' });
+      else if (event.type === 'design-exit') this.onDesign?.({ type: 'exit' });
       else if (event.type === 'design-text-change') this.onDesign?.({ type: 'text', nodeId: event.nodeId!, text: event.text! });
       else this.onDesign?.({ type: event.type === 'design-hover' ? 'hover' : 'select', node: event.node! });
       return;

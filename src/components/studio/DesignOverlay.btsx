@@ -44,12 +44,28 @@ module
     size: 'nwse-resize'
   }
   const MAX_STEP = 96
+  /**
+   * Spacing moves in quarter steps — one pixel at Tailwind's default `--spacing`, and the finest step Tailwind
+   * generates a utility for (`pt-4.25`). Shift snaps to whole steps.
+   */
+  const FINE_STEPS = 4
+  const MIN_SIZE = 1
+  /** An edge handle's grab area across its edge, in pixels. */
+  const HANDLE_HIT = 7
+  /** How thick an edge handle is drawn, in pixels. */
+  const HANDLE_LINE = 1
+  /**
+   * The grab area around the drawn line. It is padding the background does not paint (`bg-clip-content`), so the
+   * line stays hairline-thin but is still as easy to grab.
+   */
+  const HANDLE_INSET = (HANDLE_HIT - HANDLE_LINE) / 2
   const round = (value: number) => Math.round(value * 10) / 10
   const px = (value: number) => `${value}px`
 
 props { selected, hovered, scale, edited, onEdit, onEditText, onReset, onDismiss }: OverlayProps
 setup
-  const drag = useRef<{ handle: Handle; x: number; y: number; from: { width: number; height: number; spacing: number } } | null>(null);
+  /** The drag in progress: where it started, and the last value sent, so a move that rounds the same sends nothing. */
+  const drag = useRef<{ handle: Handle; x: number; y: number; step: number; from: { width: number; height: number; spacing: number }; sent: string } | null>(null);
   const [active, setActive] = useState<Handle | undefined>(undefined);
 
   const startOf = (node: DesignNode, handle: Handle) => {
@@ -65,29 +81,47 @@ setup
     event.stopPropagation();
     // Capture keeps the drag alive past the handle's edges; it throws if the pointer is already gone.
     try { (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId); } catch { /* drag still tracks */ }
-    drag.current = { handle, x: event.clientX, y: event.clientY, from: startOf(selected, handle) };
+    drag.current = { handle, x: event.clientX, y: event.clientY, step: selected.step, from: startOf(selected, handle), sent: '' };
     setActive(handle);
+  };
+
+  /** Sends a live edit unless it rounds to what the frame already shows. */
+  const send = (edits: DesignEdit[]) => {
+    const state = drag.current!;
+    const key = edits.map(edit => edit.field + edit.value).join();
+    if (key === state.sent) return;
+    state.sent = key;
+    onEdit(edits, true);
   };
 
   const move = (event: PointerEvent) => {
     const state = drag.current;
-    if (!state || !selected) return;
+    if (!state) return;
     // The preview is scaled to fit, so pointer travel is divided back into the preview's own pixels.
     const dx = (event.clientX - state.x) / scale;
     const dy = (event.clientY - state.y) / scale;
 
     if (state.handle === 'size') {
-      onEdit([
-        { group: 'size', field: 'w', value: Math.max(16, Math.round(state.from.width + dx)) },
-        { group: 'size', field: 'h', value: Math.max(16, Math.round(state.from.height + dy)) }
-      ], true);
+      let width = state.from.width + dx;
+      let height = state.from.height + dy;
+      // Shift keeps the proportions, following whichever axis the pointer has moved further along.
+      if (event.shiftKey && state.from.width > 0 && state.from.height > 0) {
+        const ratio = state.from.width / state.from.height;
+        if (Math.abs(dx) >= Math.abs(dy)) height = width / ratio;
+        else width = height * ratio;
+      }
+      send([
+        { group: 'size', field: 'w', value: Math.max(MIN_SIZE, Math.round(width)) },
+        { group: 'size', field: 'h', value: Math.max(MIN_SIZE, Math.round(height)) }
+      ]);
       return;
     }
     const { axis, sign } = GROWS[state.handle];
     const next = state.from.spacing + sign * (axis === 'x' ? dx : dy);
     // Spacing is expressed in the theme's own step, so the value stays meaningful when the theme changes density.
-    const steps = Math.min(MAX_STEP, Math.max(0, Math.round((next / selected.step) * 2) / 2));
-    onEdit([{ group: 'spacing', field: SPACING_FIELD[state.handle], value: steps }], true);
+    const resolution = event.shiftKey ? 1 : FINE_STEPS;
+    const steps = Math.min(MAX_STEP, Math.max(0, Math.round((next / state.step) * resolution) / resolution));
+    send([{ group: 'spacing', field: SPACING_FIELD[state.handle], value: steps }]);
   };
 
   const end = (event: PointerEvent) => {
@@ -124,7 +158,9 @@ setup
     const vertical = side === 'top' || side === 'bottom';
     return {
       [side]: px(offset),
-      ...(vertical ? { left: px(0), right: px(0), height: px(7) } : { top: px(0), bottom: px(0), width: px(7) }),
+      ...(vertical
+        ? { left: px(0), right: px(0), height: px(HANDLE_HIT), paddingBlock: px(HANDLE_INSET) }
+        : { top: px(0), bottom: px(0), width: px(HANDLE_HIT), paddingInline: px(HANDLE_INSET) }),
       cursor: CURSOR[handle]
     } as Record<string, string>;
   };
@@ -147,7 +183,7 @@ div(className='pointer-events-none absolute inset-0 z-10 overflow-hidden' aria-h
 
         each handle in ['pad-top', 'pad-right', 'pad-bottom', 'pad-left'] key handle
           div(
-            ~ className={'pointer-events-auto absolute rounded-full transition-colors hover:bg-brand/70 ' + (active === handle ? 'bg-brand' : 'bg-brand/35')}
+            ~ className='pointer-events-auto absolute bg-[#ffd6a8] bg-clip-content'
             ~ style={handleStyle(selected, handle)}
             ~ onPointerDown={begin(handle)}
             ~ onPointerMove={move}
@@ -156,7 +192,7 @@ div(className='pointer-events-none absolute inset-0 z-10 overflow-hidden' aria-h
             ~ )
         each handle in ['margin-top', 'margin-right', 'margin-bottom', 'margin-left'] key handle
           div(
-            ~ className={'pointer-events-auto absolute rounded-full transition-colors hover:bg-warning/70 ' + (active === handle ? 'bg-warning' : 'bg-warning/35')}
+            ~ className='pointer-events-auto absolute bg-[#57c4dc] bg-clip-content'
             ~ style={handleStyle(selected, handle)}
             ~ onPointerDown={begin(handle)}
             ~ onPointerMove={move}

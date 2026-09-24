@@ -26,7 +26,7 @@ export interface PreviewEvent {
   channel: string;
   build: number;
   type: 'ready' | 'rendered' | 'reload-required' | 'module-manifest' | 'console' | 'runtime-error'
-    | 'design-hover' | 'design-select' | 'design-out' | 'design-text-change';
+    | 'design-hover' | 'design-select' | 'design-out' | 'design-exit' | 'design-text-change';
   node?: DesignNode;
   nodeId?: string;
   text?: string;
@@ -62,7 +62,7 @@ export function isPreviewEvent(value: unknown, channel: string, build: number): 
   if (!value || typeof value !== 'object') return false;
   const event = value as PreviewEvent;
   if (event.version !== 1 || event.channel !== channel || event.build !== build) return false;
-  if (event.type === 'ready' || event.type === 'reload-required' || event.type === 'design-out') return true;
+  if (event.type === 'ready' || event.type === 'reload-required' || event.type === 'design-out' || event.type === 'design-exit') return true;
   if (event.type === 'design-hover' || event.type === 'design-select') return isDesignNode(event.node);
   if (event.type === 'design-text-change') return typeof event.nodeId === 'string' && event.nodeId.length <= 64 &&
     typeof event.text === 'string' && event.text.length <= 4000;
@@ -94,6 +94,8 @@ export class Preview {
   private accepting = false;
   private tokens = '';
   private designing = false;
+  /** The last hot-update plan, so `canUpdate` followed by `load` for the same result diffs the modules once. */
+  private planned?: { from: CompilationResult; to: CompilationResult; update: ReturnType<typeof planHotUpdate> };
   constructor(private iframe: HTMLIFrameElement, private onEvent: (event: ResolvedPreviewEvent) => void, private theme: Theme = 'dark', private hostedURL?: string) {
     iframe.setAttribute('sandbox', 'allow-scripts');
     iframe.referrerPolicy = 'no-referrer';
@@ -134,7 +136,8 @@ export class Preview {
   load(result: CompilationResult, forceReload = false) {
     if (!result.entry) return;
     clearTimeout(this.timeout);
-    const update = !forceReload && this.live && this.result && this.updates < 40 ? planHotUpdate(this.result, result) : undefined;
+    const update = !forceReload && this.live && this.updates < 40 ? this.plan(result) : undefined;
+    this.planned = undefined;
     this.result = result;
     this.live = false;
     this.failed = false;
@@ -172,8 +175,8 @@ export class Preview {
     this.post({ type: 'design', enabled });
   }
 
-  /** Applies a class list straight to the node in the frame, for the length of a drag. */
-  applyDesignStyle(nodeId: string, className: string) { this.post({ type: 'design-style', nodeId, className }); }
+  /** Applies inline CSS straight to the node in the frame, for the length of a drag; the next render clears it. */
+  applyDesignStyle(nodeId: string, style: Record<string, string>) { this.post({ type: 'design-style', nodeId, style }); }
 
   measureNode(nodeId: string) { this.post({ type: 'design-measure', nodeId }); }
 
@@ -199,7 +202,15 @@ export class Preview {
   }
   /** Whether loading `result` would update the running app in place rather than reload it. */
   canUpdate(result: CompilationResult) {
-    return Boolean(this.live && this.result && this.updates < 40 && planHotUpdate(this.result, result));
+    return Boolean(this.live && this.updates < 40 && this.plan(result));
+  }
+  private plan(result: CompilationResult) {
+    if (!this.result) return undefined;
+    const planned = this.planned;
+    if (planned?.from === this.result && planned.to === result) return planned.update;
+    const update = planHotUpdate(this.result, result);
+    this.planned = { from: this.result, to: result, update };
+    return update;
   }
   reload() { if (this.result) this.load(this.result, true); }
   /** Stops the running app and releases its document; the next load starts fresh. */
@@ -207,6 +218,7 @@ export class Preview {
     this.accepting = false;
     this.live = false;
     this.result = undefined;
+    this.planned = undefined;
     clearTimeout(this.timeout);
     this.iframe.removeAttribute('src');
     this.iframe.srcdoc = '';
