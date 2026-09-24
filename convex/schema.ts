@@ -3,11 +3,13 @@ import { userValidator } from './users/v'
 import {
   buildRunValidator,
   chatValidator,
+  deploymentValidator,
   pageRecipeValidator,
   projectFileValidator,
   projectLogValidator,
   projectValidator,
   sectionPresetValidator,
+  siteValidator,
   teamInvitationValidator,
   teamMemberValidator,
   teamValidator,
@@ -58,6 +60,14 @@ export default defineSchema({
     .index('by_projectId_and_occurredAt', ['projectId', 'occurredAt'])
     .index('by_projectId_and_source_and_occurredAt', ['projectId', 'source', 'occurredAt'])
     .index('by_buildId_and_occurredAt', ['buildId', 'occurredAt']),
+
+  sites: defineTable(siteValidator)
+    .index('by_slug', ['slug'])
+    .index('by_projectId', ['projectId']),
+
+  deployments: defineTable(deploymentValidator)
+    .index('by_projectId_and_createdAt', ['projectId', 'createdAt'])
+    .index('by_status_and_createdAt', ['status', 'createdAt']),
 
   sectionPresets: defineTable(sectionPresetValidator)
     .index('by_presetId', ['presetId'])

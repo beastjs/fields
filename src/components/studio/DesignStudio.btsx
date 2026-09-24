@@ -604,7 +604,7 @@ setup
   useEffect(() => { if (open && blocks.length) setStatus({ state: 'compiling' }); }, [designing]);
   useEffect(() => { setCopied(false); }, [code]);
 
-button(className='bg-background dark:bg-muted/50 hover:dark:bg-muted py-1.5 px-3 rounded-2xl transition-colors duration-180 ease-out' type='button' title={compact ? 'Open Design Studio' : undefined} onClick={event => { event.currentTarget.focus(); show(); }})
+button(className='bg-background dark:bg-muted/50 hover:dark:bg-muted border border-panel-deep py-1.5 px-3 rounded-2xl transition-colors duration-180 ease-out' type='button' title={compact ? 'Open Design Studio' : undefined} onClick={event => { event.currentTarget.focus(); show(); }})
   div(className='flex items-center justify-center rounded-full gap-1')
     Icon(name='design' className='size-4 text-accent')
     if !compact

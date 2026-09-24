@@ -12,3 +12,7 @@ public/preview.html
 .runtime-build/
 playwright-report/
 test-results/
+
+# Cloudflare Worker local secrets
+.dev.vars
+.wrangler/

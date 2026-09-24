@@ -5,12 +5,12 @@ import { init, parse } from 'es-module-lexer';
 import MagicString from 'magic-string';
 import remapping from '@jridgewell/remapping';
 import { runtimeImports, runtimeModules } from '../generated/runtime';
-import type { CompilationProject, CompilationResult, CompiledModule, Diagnostic } from './contracts';
+import { moduleId, type CompilationProject, type CompilationResult, type CompiledModule, type Diagnostic } from './contracts';
 import { normalizePath, VirtualFileSystem } from './virtual-fs';
 import { mapPosition, normalizeError, offsetPosition } from './diagnostics';
 import { compileTailwind, extractCandidates, usesTailwind } from './tailwind';
 
-export const moduleId = (path: string) => `@playground${path}`;
+export { moduleId };
 
 function composeMaps(output: string, input?: string): string {
   return input ? JSON.stringify(remapping([JSON.parse(output), JSON.parse(input)], () => null)) : output;
@@ -21,8 +21,8 @@ export function compileBeastModule(source: string, filename: string) {
   return { code: result.code, sourceMap: JSON.stringify(result.map) };
 }
 
-export function compileOctaneModule(source: string, filename: string, sourceMap?: string) {
-  const result = compileOctane(source, filename, { mode: 'client', hmr: 'vite', dev: false });
+export function compileOctaneModule(source: string, filename: string, sourceMap?: string, hmr = true) {
+  const result = compileOctane(source, filename, { mode: 'client', hmr: hmr ? 'vite' : false, dev: false });
   return { code: result.code, sourceMap: composeMaps(JSON.stringify(result.map), sourceMap),
     diagnostics: result.diagnostics.map(d => ({
       file: filename, source: 'octane' as const, code: d.code, severity: d.severity, message: d.message,
@@ -57,7 +57,14 @@ export function linkModule(module: CompiledModule, resolve: (request: string) =>
   return { ...module, code, sourceMap };
 }
 
-export async function compileProject(project: CompilationProject): Promise<CompilationResult> {
+/**
+ * `preview` feeds the editor's iframe: HMR boundaries and source maps included. `site` is what gets published:
+ * the same module graph with neither, since nothing hot-swaps or maps stacks back to the editor there.
+ */
+export type CompileTarget = 'preview' | 'site';
+
+export async function compileProject(project: CompilationProject, target: CompileTarget = 'preview'): Promise<CompilationResult> {
+  const preview = target === 'preview';
   const started = performance.now();
   const result: CompilationResult = {
     modules: [], assets: [], diagnostics: [], intermediate: {},
@@ -114,7 +121,7 @@ export async function compileProject(project: CompilationProject): Promise<Compi
         stage = 'octane';
         const start = performance.now();
         try {
-          const compiled = compileOctaneModule(code, file.replace(/\.btsx$/, '.tsrx'), sourceMap);
+          const compiled = compileOctaneModule(code, file.replace(/\.btsx$/, '.tsrx'), sourceMap, preview);
           result.diagnostics.push(...compiled.diagnostics.map(d => ({ ...d, file })));
           code = compiled.code;
           sourceMap = compiled.sourceMap;
@@ -132,7 +139,7 @@ export async function compileProject(project: CompilationProject): Promise<Compi
       const dependencies: string[] = [];
       const start = performance.now();
       try {
-        if (/\.(btsx|tsrx)$/.test(file)) {
+        if (preview && /\.(btsx|tsrx)$/.test(file)) {
           const edited = new MagicString(code);
           edited.prepend(`import.meta.hot = globalThis.__playgroundHot(${JSON.stringify(moduleId(file))});\n`);
           sourceMap = composeMaps(edited.generateMap({ source: file, includeContent: true, hires: true }).toString(), sourceMap);
@@ -143,8 +150,9 @@ export async function compileProject(project: CompilationProject): Promise<Compi
           const path = fs.resolve(request, file);
           dependencies.push(path);
           return moduleId(path);
-        });
-        if (/\.(btsx|tsrx|css)$/.test(file)) {
+        }, preview);
+        if (!preview) delete linked.sourceMap;
+        else if (/\.(btsx|tsrx|css)$/.test(file)) {
           const [imports, exports] = parse(linked.code);
           linked.hot = { kind: file.endsWith('.css') ? 'style' : 'component',
             imports: [...new Set(imports.flatMap(item => item.specifier ? [item.specifier] : []))].sort(),

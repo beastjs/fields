@@ -127,6 +127,45 @@ export const chatValidator = v.object({
   archivedAt: v.optional(v.number())
 })
 
+/**
+ * `uploading` until the hosting Worker seals the files, then `ready` (routable) or `failed`. `deleted` once its
+ * files are removed from storage. Whether it is live is the site's `liveDeploymentId`, not a status.
+ */
+export const deploymentStatusValidator = v.union(
+  v.literal('uploading'),
+  v.literal('ready'),
+  v.literal('failed'),
+  v.literal('deleted')
+)
+
+/** A project's published address. One per project, created when it first claims a slug. */
+export const siteValidator = v.object({
+  projectId: v.id('projects'),
+  teamId: v.id('teams'),
+  slug: v.string(),
+  liveDeploymentId: v.optional(v.id('deployments')),
+  publishedAt: v.optional(v.number()),
+  publishedBy: v.optional(v.id('users')),
+  createdBy: v.id('users'),
+  createdAt: v.number(),
+  updatedAt: v.number()
+})
+
+/** One immutable upload of a compiled project to the hosting Worker. */
+export const deploymentValidator = v.object({
+  projectId: v.id('projects'),
+  /** The slug when this was published; the site's may change later. */
+  slug: v.string(),
+  status: deploymentStatusValidator,
+  projectRevision: v.number(),
+  createdBy: v.id('users'),
+  fileCount: v.optional(v.number()),
+  bytes: v.optional(v.number()),
+  error: v.optional(v.string()),
+  createdAt: v.number(),
+  completedAt: v.optional(v.number())
+})
+
 export const buildRunValidator = v.object({
   projectId: v.id('projects'),
   initiatedBy: v.id('users'),

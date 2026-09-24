@@ -287,7 +287,7 @@ export const icons = {
   },
   plus: {
     symbol:
-      '<path fill-rule="evenodd" d="M8.004 2.335a1 1 0 0 1 1 1v3.669h3.669a1 1 0 0 1 0 2H9.004v3.669a1 1 0 0 1-2 0V9.004H3.335a1 1 0 0 1 0-2h3.669V3.335a1 1 0 0 1 1-1" clip-rule="evenodd" fill="currentColor"/>',
+      '<g transform="scale(0.667)"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="M5 12h14m-7 7V5"/></g>',
     viewBox: '0 0 16 16',
     set: 'svg'
   },
@@ -341,7 +341,7 @@ export const icons = {
   },
   browser: {
     symbol:
-      '<g transform="scale(0.667)"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><rect width="20" height="16" rx="2" transform="translate(2 4)"/><path d="M10 4v4M2 8h20M6 4v4" fill="currentColor"/></g></g>',
+      '<g transform="scale(0.667)"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><rect width="20" height="16" rx="2" transform="translate(2 4)"/><path d="M10 4v4M2 8h20M6 4v4" fill="currentColor"/></g></g>',
     viewBox: '0 0 16 16',
     set: 'lucide'
   },

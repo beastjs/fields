@@ -39,12 +39,16 @@ export interface CompilationResult {
 export interface PlaygroundCompiler {
   compile(project: CompilationProject): Promise<CompilationResult>;
 }
+/** The bare specifier a project file compiles to; the preview and published sites map it through an import map. */
+export const moduleId = (path: string) => `@playground${path}`;
 export const PROTOCOL_VERSION = 1;
 export type WorkerRequest = {
   version: typeof PROTOCOL_VERSION;
   type: 'compile';
   id: number;
   project: CompilationProject;
+  /** Omitted for the editor preview; `site` compiles for publishing. */
+  target?: 'preview' | 'site';
 };
 export type WorkerResponse = {
   version: typeof PROTOCOL_VERSION;

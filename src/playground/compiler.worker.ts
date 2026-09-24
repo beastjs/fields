@@ -5,9 +5,10 @@ import { normalizeError } from './diagnostics';
 self.addEventListener('message', async (event: MessageEvent<WorkerRequest>) => {
   const request = event.data;
   if (request?.version !== PROTOCOL_VERSION || request.type !== 'compile' ||
-      !Number.isSafeInteger(request.id) || !isProject(request.project)) return;
+      !Number.isSafeInteger(request.id) || !isProject(request.project) ||
+      (request.target !== undefined && request.target !== 'preview' && request.target !== 'site')) return;
   try {
-    const result = await compileProject(request.project);
+    const result = await compileProject(request.project, request.target);
     self.postMessage({ version: PROTOCOL_VERSION, type: 'compile-result', id: request.id, result } satisfies WorkerResponse);
   } catch (error) {
     self.postMessage({ version: PROTOCOL_VERSION, type: 'compile-result', id: request.id,
