@@ -64,6 +64,13 @@ function nodeLines(node: Node, depth: number, options: RenderOptions): string[] 
   }
   let placed = false
   for (const [name, value] of Object.entries(node.attrs ?? {})) {
+    // Older catalog documents still contain home-page placeholders. Keep them inert in both
+    // preview and installed source without requiring a database reseed or changing node ids.
+    if (node.type === 'element' && node.tag === 'a' && name === 'href' && value.kind === 'literal' && ['', '#', '/'].includes(value.value.trim())) {
+      if (!node.attrs?.role) attrs.push("role='link'")
+      if (!node.attrs?.['aria-disabled']) attrs.push("aria-disabled='true'")
+      continue
+    }
     if (value.kind !== 'style') { attrs.push(attrText(name, value)); continue }
     const text = classText()
     if (text) { attrs.push(text); placed = true }

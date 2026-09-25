@@ -2,16 +2,18 @@ import { CompilationCoordinator, type CompilerWorker } from './coordinator';
 import type { CompilationProject, CompilationResult } from './contracts';
 
 /** Independent worker: checking a proposal cannot replace the live preview. */
-export function verifyProject(project: CompilationProject, file: string, createWorker: () => CompilerWorker, signal: AbortSignal): Promise<void> {
+export function verifyProject(project: CompilationProject, file: string, createWorker: () => CompilerWorker, signal: AbortSignal): Promise<CompilationResult> {
   return new Promise((resolve, reject) => {
     let checkingFile = false;
+    let projectResult: CompilationResult;
     const finish = (error?: Error) => {
       coordinator.dispose();
       signal.removeEventListener('abort', cancel);
-      if (error) reject(error); else resolve();
+      if (error) reject(error); else resolve(projectResult);
     };
     const cancel = () => finish(new Error('Verification cancelled. No files changed.'));
     const onResult = (result: CompilationResult) => {
+      if (!checkingFile) projectResult = result;
       const errors = result.diagnostics.filter(diagnostic => diagnostic.severity === 'error');
       if (errors.length || !result.entry) {
         finish(new Error(errors.slice(0, 5).map(diagnostic => `${diagnostic.file}:${diagnostic.start.line}:${diagnostic.start.column} ${diagnostic.message}`).join('\n') || 'Compilation produced no entry.'));

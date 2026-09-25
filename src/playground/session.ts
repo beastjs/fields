@@ -73,6 +73,7 @@ export class PlaygroundSession {
     lineNumbers?: boolean;
     persistLineNumbers?: (visible: boolean) => void;
     debounce?: number;
+    verifyRuntime?: (result: CompilationResult, signal: AbortSignal) => Promise<void>;
   }) {
     this.project = new PlaygroundProject(options.project);
     if (options.activeFile) this.project.open(options.activeFile);
@@ -156,7 +157,12 @@ export class PlaygroundSession {
     signal.addEventListener('abort', cancel, { once: true });
     this.proposalChecks.add(abort);
     try {
-      await verifyProject({ ...before.project, files: { ...before.project.files, [file]: source } }, file, this.options.createWorker, abort.signal);
+      const result = await verifyProject({ ...before.project, files: { ...before.project.files, [file]: source } }, file, this.options.createWorker, abort.signal);
+      if (this.state.project !== before.project || this.state.projectGeneration !== generation) {
+        throw new Error('The project changed during verification. No files changed; ask for a fresh recommendation.');
+      }
+      const verifyRuntime = this.options.verifyRuntime ?? (await import('./verify-runtime')).verifyRuntime;
+      await verifyRuntime(result, abort.signal);
       if (abort.signal.aborted || this.disposed) throw new Error('Verification cancelled. No files changed.');
       if (this.state.project !== before.project || this.state.projectGeneration !== generation) {
         throw new Error('The project changed during verification. No files changed; ask for a fresh recommendation.');

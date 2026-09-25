@@ -1,3 +1,4 @@
+import { lineChanges } from './line-changes';
 import { locateEditLines } from './edit-locations';
 import type { FileContext } from './contracts';
 import { normalizeFences } from './fences';
@@ -75,7 +76,7 @@ function findHunkMatches(source: string, search: string): HunkMatch[] {
 function applyHunks(original: string, body: string): HunkResult {
   const hunks = parseHunks(body);
   if (!hunks.length) return { error: 'That patch block has no SEARCH/REPLACE hunks, so there is nothing to apply. Ask again for a patch with SEARCH and REPLACE sections.' };
-  let source = original.replace(/\r\n/g, '\n');
+  let source = original;
   for (const { search, replace } of hunks) {
     if (!search) return { error: 'A hunk has an empty SEARCH section. Anchor insertions on a nearby line.' };
     const matches = findHunkMatches(source, search);
@@ -86,7 +87,21 @@ function applyHunks(original: string, body: string): HunkResult {
     }
     if (matches.length > 1) return { error: 'A hunk matches more than once. It needs more surrounding context.' };
     const { at, length } = matches[0];
-    source = source.slice(0, at) + replace + source.slice(at + length);
+    const matchedLines = source.slice(at, at + length).match(/[^\n]*\n|[^\n]+$/g) ?? [];
+    let line = 0;
+    const newline = original.includes('\r\n') ? '\r\n' : '\n';
+    const changes = lineChanges(search, replace);
+    const replacement = changes.map((change, index) => {
+      if (change.kind === 'same') {
+        const preserved = matchedLines[line++] ?? change.text;
+        // An EOF anchor without a newline needs a separator when inserting lines after it.
+        return !preserved.endsWith('\n') && change.text.endsWith('\n') && changes.slice(index + 1).some(next => next.kind !== 'del')
+          ? preserved + newline : preserved;
+      }
+      if (change.kind === 'del') { line++; return ''; }
+      return change.text.replace(/\n/g, newline);
+    }).join('');
+    source = source.slice(0, at) + replacement + source.slice(at + length);
   }
   return { source, hunks: hunks.length };
 }
@@ -142,6 +157,6 @@ export function fileRecommendation(raw: string, context?: FileContext, reference
   const applied = applyHunks(context.source, body.replace(/\r\n/g, '\n'));
   if (applied.source === undefined) return { file, error: applied.error };
   if (applied.source.length > 60000) return { file, error: 'The patched file is over 60,000 characters and cannot be applied.' };
-  if (applied.source === context.source.replace(/\r\n/g, '\n')) return { file, error: 'This change is already in the file.' };
+  if (applied.source === context.source) return { file, error: 'This change is already in the file.' };
   return { file, source: applied.source, hunks: applied.hunks };
 }

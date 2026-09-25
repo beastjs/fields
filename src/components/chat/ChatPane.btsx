@@ -29,7 +29,10 @@ component SmartBuilder
 
 props { layout, session }: WorkspaceProps
 setup
-  const chat = useMemo(() => new ChatController(readChatSettings(), saveChatSettings), []);
+  const chat = useMemo(() => new ChatController(readChatSettings(), saveChatSettings, fetch, () => {
+    const snapshot = session.getSnapshot();
+    return { files: snapshot.project.files, generation: snapshot.projectGeneration, activeFile: snapshot.activeFile };
+  }), [session]);
   const state = useSyncExternalStore(chat.subscribe, chat.getSnapshot);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [jevActive, setJevActive] = useState(false);
@@ -67,7 +70,7 @@ setup
     }
     const attached = [...(message.context ? [message.context] : []), ...(message.references ?? [])];
     const file = fileRecommendation(message.content, message.context, message.references)?.file ?? message.context?.file;
-    if (!file || !attached.some(context => context.file === file)) return;
+    if (!file) return;
     const attempt = message.attempt ?? 1;
     if (session.read(file) === undefined) return;
     const messages = chat.getSnapshot().messages;

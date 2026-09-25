@@ -1,4 +1,4 @@
-import { useField, useForm, useStore } from '@octanejs/tanstack-form'
+import { useField, useForm, useSelector, useStore } from '@octanejs/tanstack-form'
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'octane'
 import { MAX_REFERENCES, MAX_REFERENCE_CHARS } from '../../chat/contracts'
 import { chatReferences, relatedFiles } from '../../chat/project-context'
@@ -65,7 +65,7 @@ setup
       if (selection.current === abort) selection.current = null;
     }
   } });
-  const selecting = useStore(form.store, state => state.isSubmitting);
+  const selecting = useSelector(form.store, state => state.isSubmitting);
   const prompt = useField({ form, name: 'prompt', validators: { onSubmit: ({ value }) => value.trim() ? undefined : 'Write a message first.' } });
   const includeFile = useField({ form, name: 'includeFile' });
   const selectionInput = { prompt: prompt.state.value, project: project.project, activeFile: project.activeFile,
@@ -106,15 +106,15 @@ form(className='shrink-0 border-t border-edge bg-editor p-3 chat-short:p-2' onSu
         Checkbox(checked={includeFile.state.value} onCheckedChange={includeFile.handleChange} disabled={selecting} aria-label={'Include ' + fileLabel(project.activeFile)} indicatorClass='bg-accent' className=' data-checked:border-accent!')
         code(className='max-w-full overflow-hidden text-ellipsis rounded-[3px] border border-edge bg-surface-hover px-1 py-px font-code text-2xs text-brand-hover' title={project.activeFile}) #{fileLabel(project.activeFile)}
     label(className='mb-[9px] flex flex-wrap items-center gap-[5px] text-2xs text-dim [&_input]:m-0 [&_input]:size-[11px] [&_input]:accent-brand' htmlFor='auto')
-      Checkbox#auto(checked={auto} onCheckedChange={toggleAuto} indicatorClass='bg-accent' className=' data-checked:border-accent!')
+      Checkbox#auto(aria-label='Auto-apply' checked={auto} onCheckedChange={toggleAuto} indicatorClass='bg-accent' className=' data-checked:border-accent!')
       span(className='select-none') Auto
 
-  details(className='mb-2 rounded-md border border-edge px-2 py-1 text-[10px] text-dim' open={true})
+  details(className='mb-2 rounded-md bg-edge/50 px-2 py-1 text-[10px] text-dim' open={false})
     summary(className='cursor-pointer py-1 select-none') Reference files · #{checkedFiles.length} selected
     div(className='max-h-32 space-y-1 overflow-y-auto py-1' role='group' aria-label='Reference files')
       each file in available key file
         label(className='flex min-w-0 cursor-pointer items-center gap-2 py-0.5' title={file})
-          Checkbox(checked={checkedFiles.includes(file)} onCheckedChange={checked => toggleFile(file, checked)} disabled={selecting || (!checkedFiles.includes(file) && (selectionInput.picked.length >= MAX_REFERENCES || manualCharacters + project.project.files[file].length > MAX_REFERENCE_CHARS))} aria-label={'Include ' + fileLabel(file) + ' as reference'})
+          Checkbox(checked={checkedFiles.includes(file)} onCheckedChange={(checked: boolean) => toggleFile(file, checked)} disabled={selecting || (!checkedFiles.includes(file) && (selectionInput.picked.length >= MAX_REFERENCES || manualCharacters + project.project.files[file].length > MAX_REFERENCE_CHARS))} aria-label={'Include ' + fileLabel(file) + ' as reference'})
           code(className='min-w-0 flex-1 truncate font-code text-[9px]') #{fileLabel(file)}
           if checkedFiles.includes(file)
             span(className='shrink-0 text-[8px] text-brand') #{included.includes(file) ? 'Selected' : 'Auto included'}

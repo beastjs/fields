@@ -31,8 +31,9 @@ const viaJev: RankReferences = async (input, signal) => {
 
 export function defaultChatReferences(input: ReferenceSelection) {
   const picked = [...new Set(input.picked)].filter(file => input.project.files[file] !== undefined && !(input.includeActive && file === input.activeFile));
+  const named = Object.keys(input.project.files).filter(file => file !== input.activeFile && !input.excluded.includes(file) && (input.prompt.includes(file) || input.prompt.includes(file.split('/').at(-1)!)));
   const related = input.includeActive ? relatedFiles(input.project, input.activeFile).filter(file => !input.excluded.includes(file)) : [];
-  return chatReferences(input.project, picked, related);
+  return chatReferences(input.project, picked, [...named, ...related]);
 }
 
 export function sameReferenceSelection(a: ReferenceSelection | undefined, b: ReferenceSelection) {
@@ -53,7 +54,7 @@ export async function selectChatReferences(
     project.files[file] !== undefined && !(includeActive && file === activeFile));
   const excluded = new Set(input.excluded);
   const related = includeActive ? relatedFiles(project, activeFile).filter(file => !excluded.has(file)) : [];
-  const fallback = chatReferences(project, picked, related);
+  const fallback = defaultChatReferences(input);
   const remaining = MAX_REFERENCE_CHARS - picked.reduce((sum, file) => sum + project.files[file].length, 0);
   if (!prompt.trim() || picked.length >= MAX_REFERENCES || remaining <= 0) return fallback;
 
@@ -81,7 +82,7 @@ export async function selectChatReferences(
     });
     const ranked = await Promise.race([rank({ prompt, activeFile, candidates }, pending), interrupted]);
     signal.throwIfAborted();
-    return chatReferences(project, picked, [...ranked.map(file => file.path).filter(path => allowed.has(path)), ...related]);
+    return chatReferences(project, picked, [...ranked.map(file => file.path).filter(path => allowed.has(path)), ...fallback.references.map(file => file.file)]);
   } catch {
     // Cancellation must never turn into a fallback send. Unavailability can.
     signal.throwIfAborted();

@@ -46,7 +46,7 @@ test('patch hunks tolerate safe line-ending differences without guessing a locat
 
   const windowsSource = { file: patched.file, source: 'h1 Before\r\nh2 Keep\r\n' };
   expect(fileRecommendation(patch(hunk('h2 Keep\n', 'h2 Changed\n')), windowsSource))
-    .toEqual({ file: patched.file, source: 'h1 Before\nh2 Changed\n', hunks: 1 });
+    .toEqual({ file: patched.file, source: 'h1 Before\r\nh2 Changed\r\n', hunks: 1 });
 });
 
 test('line-aware matching still rejects whitespace-normalized ambiguity', () => {

@@ -208,6 +208,21 @@ function bootstrap(channel: string, build: number) {
   window.addEventListener('error', event => report(event.error ?? event.message,
     event.filename && event.lineno > 0 && event.colno > 0 ? { url: event.filename, line: event.lineno, column: event.colno } : undefined));
   window.addEventListener('unhandledrejection', event => { event.preventDefault(); report(event.reason); });
+  // srcdoc resolves relative links against the host URL. Old installed templates must not
+  // navigate to the playground/home page when a demo placeholder is clicked.
+  window.addEventListener('click', event => {
+    const anchor = event.target instanceof Element ? event.target.closest('a[href]') : null;
+    if (!anchor) return;
+    const href = anchor.getAttribute('href')!.trim();
+    if (!href || href === '#' || (href === '/' && anchor.closest('[data-section]'))) {
+      event.preventDefault();
+    } else if (href.startsWith('#')) {
+      event.preventDefault();
+      let id = href.slice(1);
+      try { id = decodeURIComponent(id); } catch { /* Literal ids can contain percent signs. */ }
+      document.getElementById(id)?.scrollIntoView();
+    }
+  });
   type HotContext = {
     data: Record<string, unknown>;
     accepted: boolean;
@@ -412,7 +427,7 @@ export function previewDocument(channel: string, build: number, theme: Theme = '
 export const BASE_DOCUMENT_STYLE = 'html{color:#deded8;background:#303030;color-scheme:dark}html[data-theme="light"]{color:#111113;background:#ffffff;color-scheme:light}body{margin:0;font-family:system-ui,sans-serif;color:inherit}*{box-sizing:border-box}';
 
 function documentWithScript(script: string, theme: Theme): string {
-  return `<!doctype html><html data-theme="${theme}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="${theme}"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' blob:; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'"><style>${BASE_DOCUMENT_STYLE}</style></head><body><div id="app"></div><script>${script.replaceAll('</script', '<\\/script')}</script></body></html>`;
+  return `<!doctype html><html data-theme="${theme}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="${theme}"><meta name="referrer" content="no-referrer"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' blob:; style-src 'unsafe-inline'; img-src https: data: blob:; font-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'"><style>${BASE_DOCUMENT_STYLE}</style></head><body><div id="app"></div><script>${script.replaceAll('</script', '<\\/script')}</script></body></html>`;
 }
 
 

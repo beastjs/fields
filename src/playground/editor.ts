@@ -1,3 +1,4 @@
+import { sourceChanges } from '../chat/line-changes';
 import { indentWithTab, isolateHistory } from '@codemirror/commands'
 import { css } from '@codemirror/lang-css'
 import { javascript } from '@codemirror/lang-javascript'
@@ -139,7 +140,7 @@ export class ProjectEditor {
     const state = path === this.active ? this.view.state : this.states.get(path)
     if (!state || state.doc.toString() === source) return
     const transaction = {
-      changes: { from: 0, to: state.doc.length, insert: source },
+      changes: sourceChanges(state.doc.toString(), source),
       annotations: isolateHistory.of('full')
     }
     if (path === this.active) this.view.dispatch(transaction)

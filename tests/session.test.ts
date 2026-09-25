@@ -135,7 +135,7 @@ test('a Design Studio theme preview is ephemeral and does not compile or enter s
 
 test('recommendations compile before mutation and reject intervening edits', async () => {
   const workers: FakeWorker[] = [];
-  const session = new PlaygroundSession({ project, createWorker: () => { const worker = new FakeWorker(); workers.push(worker); return worker; } });
+  const session = new PlaygroundSession({ project, verifyRuntime: async () => {}, createWorker: () => { const worker = new FakeWorker(); workers.push(worker); return worker; } });
   const source = project.files['/src/App.btsx'];
   const pending = session.applyRecommendation('/src/App.btsx', source, 'h1 Recommended\n', 0, new AbortController().signal);
   await tick();
@@ -170,6 +170,28 @@ test('failed and cancelled recommendation checks leave files intact', async () =
   const abort = new AbortController();
   const cancelled = session.applyRecommendation('/src/App.btsx', source, 'h1 Fine', 0, abort.signal).catch(error => error as Error);
   abort.abort(); expect((await cancelled)?.message).toContain('cancelled');
+  expect(session.read('/src/App.btsx')).toBe(source);
+  session.dispose();
+});
+
+test('runtime verification must succeed before mutation and receives the project build', async () => {
+  const worker = new FakeWorker();
+  let rejectRuntime!: (error: Error) => void;
+  let checked: CompilationResult | undefined;
+  const session = new PlaygroundSession({ project, createWorker: () => worker, verifyRuntime: async result => {
+    checked = result;
+    await new Promise<void>((_resolve, reject) => { rejectRuntime = reject; });
+  } });
+  const source = project.files['/src/App.btsx'];
+  const pending = session.applyRecommendation('/src/App.btsx', source, 'h1 Candidate\n', 0, new AbortController().signal).catch(error => error as Error);
+  await tick();
+  // App is unimported: compile it separately, but run the actual application entry.
+  worker.reply(result); await tick();
+  worker.reply({ ...result, entry: '/src/App.js' }); await tick();
+  expect(checked).toBe(result);
+  expect(session.read('/src/App.btsx')).toBe(source);
+  rejectRuntime(new Error('Runtime verification failed: mount crashed'));
+  expect((await pending)?.message).toContain('mount crashed');
   expect(session.read('/src/App.btsx')).toBe(source);
   session.dispose();
 });

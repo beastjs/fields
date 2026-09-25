@@ -83,7 +83,7 @@ test('reference files supply editable source after the active file without requi
   expect(payload.messages.at(-1).content).toContain('/src/Button.btsx');
   expect(payload.messages.at(-1).content).toContain('button Click');
   expect(payload.messages.at(-1).content).toContain('attached and eligible for editing');
-  expect(payload.messages[0].content).toContain('Do not ask the user to attach or open a file whose contents are already supplied');
+  expect(payload.messages[0].content).toContain('Do not ask for already attached files');
   expect(payload.messages.at(-1).content).not.toContain('Do not emit');
   expect(payload.messages.at(-1).content).toEndWith('Current request:\n' + input.messages[0].content);
 });

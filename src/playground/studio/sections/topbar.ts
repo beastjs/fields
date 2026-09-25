@@ -15,21 +15,21 @@ setup
 
 header(data-section='topbar' className='sticky top-0 z-20 border-b border-current/10 bg-current/5 backdrop-blur-xl')
   nav(className='mx-auto flex h-16 max-w-6xl items-center gap-7 px-4')
-    a(href='#' className='flex shrink-0 items-center gap-2.5')
+    a(role='link' aria-disabled='true' className='flex shrink-0 items-center gap-2.5')
       span(className='grid size-8 place-items-center rounded-xl border border-current/20 bg-current/10 text-[13px] font-bold') N
       span(className='text-[15px] font-semibold tracking-tight') Nova
     div(className='hidden items-center gap-7 text-sm text-current/60 md:flex')
       each link in links key link
-        a(href='#' className='transition-colors hover:text-current') #{link}
+        a(role='link' aria-disabled='true' className='transition-colors hover:text-current') #{link}
     div(className='ml-auto flex items-center gap-1.5 text-sm')
-      a(href='#' className='hidden rounded-lg px-3 py-2 text-current/70 transition-colors hover:bg-current/5 hover:text-current sm:block') Sign in
-      a(href='#' className='rounded-lg border border-current/20 bg-current/10 px-3.5 py-2 font-medium transition-colors hover:bg-current/15') Get started
+      a(role='link' aria-disabled='true' className='hidden rounded-lg px-3 py-2 text-current/70 transition-colors hover:bg-current/5 hover:text-current sm:block') Sign in
+      a(role='link' aria-disabled='true' className='rounded-lg border border-current/20 bg-current/10 px-3.5 py-2 font-medium transition-colors hover:bg-current/15') Get started
       button(type='button' aria-expanded={open} aria-label='Toggle menu' className='rounded-lg px-2 py-1.5 text-lg transition-colors hover:bg-current/5 md:hidden' onClick={() => setOpen(!open)}) #{open ? '✕' : '☰'}
   if open
     div(className='grid gap-1 border-t border-current/10 p-3 text-sm md:hidden')
       each link in links key link
-        a(href='#' className='rounded-lg px-3 py-2 transition-colors hover:bg-current/5' onClick={() => setOpen(false)}) #{link}
-      a(href='#' className='rounded-lg px-3 py-2 transition-colors hover:bg-current/5 sm:hidden') Sign in
+        a(role='link' aria-disabled='true' className='rounded-lg px-3 py-2 transition-colors hover:bg-current/5' onClick={() => setOpen(false)}) #{link}
+      a(role='link' aria-disabled='true' className='rounded-lg px-3 py-2 transition-colors hover:bg-current/5 sm:hidden') Sign in
 `
   },
   {
@@ -43,15 +43,15 @@ header(data-section='topbar' className='sticky top-0 z-20 border-b border-curren
 
 header(data-section='topbar' className='border-b border-current/10 backdrop-blur')
   nav(className='mx-auto flex h-14 max-w-6xl items-center gap-8 px-4')
-    a(href='#' className='flex items-center gap-2 font-semibold')
+    a(role='link' aria-disabled='true' className='flex items-center gap-2 font-semibold')
       span(className='grid size-7 place-items-center rounded-lg border border-current/20 bg-current/10 text-sm') N
       span Nova
     div(className='hidden items-center gap-5 text-sm text-current/60 sm:flex')
       each link in links key link
-        a(href='#' className='hover:text-current') #{link}
+        a(role='link' aria-disabled='true' className='hover:text-current') #{link}
     div(className='ml-auto flex items-center gap-2 text-sm')
-      a(href='#' className='rounded-lg px-3 py-1.5 text-current/70 hover:bg-current/5 hover:text-current') Sign in
-      a(href='#' className='rounded-lg border border-current/20 bg-current/10 px-3 py-1.5 font-medium hover:bg-current/15') Get started
+      a(role='link' aria-disabled='true' className='rounded-lg px-3 py-1.5 text-current/70 hover:bg-current/5 hover:text-current') Sign in
+      a(role='link' aria-disabled='true' className='rounded-lg border border-current/20 bg-current/10 px-3 py-1.5 font-medium hover:bg-current/15') Get started
 `
   },
   {
@@ -62,7 +62,7 @@ header(data-section='topbar' className='border-b border-current/10 backdrop-blur
     wireframe: ['logo line field gap dot avatar'],
     source: `header(data-section='topbar' className='border-b border-current/10')
   div(className='flex h-14 items-center gap-4 px-4')
-    a(href='#' className='flex shrink-0 items-center gap-2 font-semibold')
+    a(role='link' aria-disabled='true' className='flex shrink-0 items-center gap-2 font-semibold')
       span(className='grid size-7 place-items-center rounded-md border border-current/20 bg-current/10 text-sm') N
       span(className='hidden sm:inline') Nova
     label(className='flex max-w-md flex-1 items-center gap-2 rounded-lg border border-current/15 bg-current/5 px-3 py-1.5 text-sm text-current/60 focus-within:border-current/40')
@@ -89,12 +89,12 @@ header(data-section='topbar')
   nav(className='mx-auto grid h-16 max-w-6xl grid-cols-3 items-center px-4 text-sm')
     div(className='flex items-center gap-5')
       each link in links key link
-        a(href='#' className='hidden hover:underline sm:inline') #{link}
+        a(role='link' aria-disabled='true' className='hidden hover:underline sm:inline') #{link}
       button(type='button' aria-label='Open menu' className='sm:hidden') ☰
-    a(href='#' className='justify-self-center font-serif text-xl tracking-[0.3em] uppercase') Nova
+    a(role='link' aria-disabled='true' className='justify-self-center font-serif text-xl tracking-[0.3em] uppercase') Nova
     div(className='flex items-center justify-end gap-4')
-      a(href='#' className='hidden sm:inline') Account
-      a(href='#' className='rounded-full border border-current px-3 py-1') Bag (2)
+      a(role='link' aria-disabled='true' className='hidden sm:inline') Account
+      a(role='link' aria-disabled='true' className='rounded-full border border-current px-3 py-1') Bag (2)
 `
   },
   {
@@ -111,15 +111,15 @@ setup
 
 header(data-section='topbar' className='border-b border-current/10')
   nav(className='mx-auto flex h-14 max-w-6xl items-center justify-between px-4')
-    a(href='#' className='font-semibold tracking-tight') ▲ Nova
+    a(role='link' aria-disabled='true' className='font-semibold tracking-tight') ▲ Nova
     div(className='hidden items-center gap-6 text-sm text-current/60 md:flex')
       each link in links key link
-        a(href='#' className='hover:text-current') #{link}
+        a(role='link' aria-disabled='true' className='hover:text-current') #{link}
     button(type='button' aria-expanded={open} aria-label='Toggle menu' className='rounded-md px-2 py-1 text-lg hover:bg-current/5 md:hidden' onClick={() => setOpen(!open)}) #{open ? '✕' : '☰'}
   if open
     div(className='grid gap-1 border-t border-current/10 p-3 text-sm md:hidden')
       each link in links key link
-        a(href='#' className='rounded-md px-3 py-2 hover:bg-current/5' onClick={() => setOpen(false)}) #{link}
+        a(role='link' aria-disabled='true' className='rounded-md px-3 py-2 hover:bg-current/5' onClick={() => setOpen(false)}) #{link}
 `
   },
   {

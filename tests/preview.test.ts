@@ -48,6 +48,15 @@ test('bootstrap is independent from user source and restricts remote execution',
   expect(document).not.toContain('Hello, world.');
 });
 
+test('local and hosted previews allow HTTPS images without enabling remote scripts or fetch', () => {
+  for (const html of [previewDocument('images', 1), hostedPreviewDocument()]) {
+    expect(html).toContain('img-src https: data: blob:;');
+    expect(html).toContain("script-src 'unsafe-inline' blob:;");
+    expect(html).toContain("connect-src 'none';");
+    expect(html).toContain('<meta name="referrer" content="no-referrer">');
+  }
+});
+
 test('runtime-error budget suppresses serialization and resets after one second', () => {
   let now = 0;
   const listeners = new Map<string, (event: { message: unknown }) => void>();

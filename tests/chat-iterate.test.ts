@@ -13,7 +13,7 @@ test('failed changes are fed back with the error until the attempts run out', ()
 });
 
 test('failures another reply cannot fix do not iterate', () => {
-  for (const error of ['No file was attached to this message', 'This change is already in the file.', 'Verification cancelled. No files changed.']) {
+  for (const error of ['This change is already in the file.', 'Verification cancelled. No files changed.']) {
     expect(fixUpPrompt(error, '/src/App.btsx', 1)).toBeUndefined();
   }
 });
@@ -38,8 +38,8 @@ const failure = { prompt: 'make the heading tomato', file: '/src/App.btsx', erro
 test('the deterministic answers short-circuit before any evaluation is spent', async () => {
   const jev = decide();
   expect(await planRepair({ ...failure, attempt: MAX_ATTEMPTS }, jev)).toEqual({ action: 'stop', reason: EXHAUSTED });
-  expect(await planRepair({ ...failure, error: 'No file was attached to this message' }, jev)).toMatchObject({ action: 'stop' });
-  // "No file was attached" is not a judgment, so it never costs a call.
+  expect(await planRepair({ ...failure, error: 'Verification cancelled. No files changed.' }, jev)).toMatchObject({ action: 'stop' });
+  // Cancellation is deterministic and never costs a call.
   expect(jev.calls).toHaveLength(0);
 });
 
@@ -54,12 +54,12 @@ test('an uncertain reading keeps the blind retry rather than spending an attempt
   expect(await planRepair(failure, null)).toMatchObject({ action: 'retry', remedy: 'retry' });
 });
 
-test('a confident reading is allowed to save the remaining attempts', async () => {
-  expect(await planRepair(failure, decide({ remedy: 'stop' }))).toMatchObject({ action: 'stop', reason: expect.stringContaining('cannot fix this') });
-  expect(await planRepair(failure, decide({ remedy: 'ask_user' }))).toMatchObject({ action: 'stop', reason: expect.stringContaining('decision from you') });
-  expect(await planRepair(failure, decide({ fixable: false }))).toMatchObject({ action: 'stop', reason: expect.stringContaining('cannot fix this') });
-  // Retryable in principle, but the model does not expect the next one to land.
-  expect(await planRepair(failure, decide({ remedy: 'retry', prospect: 0.1 }))).toMatchObject({ action: 'stop', reason: expect.stringContaining('unlikely to land') });
+test('Jev cannot abandon a recoverable patch failure based on confidence alone', async () => {
+  for (const judgment of [{ remedy: 'stop' as const }, { remedy: 'ask_user' as const }, { fixable: false }, { prospect: 0.1 }]) {
+    expect(await planRepair(failure, decide(judgment))).toMatchObject({ action: 'retry' });
+  }
+  expect(await planRepair({ ...failure, error: 'An external product decision is required' }, decide({ remedy: 'ask_user' })))
+    .toMatchObject({ action: 'stop', reason: expect.stringContaining('decision from you') });
 });
 
 test('a remedy shapes the follow-up instead of resending the same request', async () => {
@@ -68,7 +68,7 @@ test('a remedy shapes the follow-up instead of resending the same request', asyn
   expect(smaller.action === 'retry' && smaller.prompt).toContain('smallest change');
 
   const split = await planRepair(failure, decide({ remedy: 'split' }));
-  expect(split.action === 'retry' && split.prompt).toContain('which other file');
+  expect(split.action === 'retry' && split.prompt).toContain('automatically');
 
   // The developer's own request reaches the decision, not just the error text.
   const jev = decide();

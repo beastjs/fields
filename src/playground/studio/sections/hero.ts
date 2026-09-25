@@ -19,8 +19,8 @@ section(data-section='hero' className='relative overflow-hidden px-4 py-24 sm:py
     h1(className='text-4xl font-semibold tracking-tight text-balance sm:text-6xl') Everything you need to ship your next idea
     p(className='max-w-xl text-lg text-pretty text-current/70') Nova gives you the workspace, the tools, and the momentum to get from a rough sketch to something real — in an afternoon.
     div(className='flex flex-wrap items-center justify-center gap-3')
-      a(href='#' className='rounded-xl border border-current/25 bg-current/15 px-6 py-3 font-medium transition-colors hover:bg-current/20') Get started free
-      a(href='#' className='rounded-xl border border-current/15 px-6 py-3 text-current/80 transition-colors hover:bg-current/5') Take the tour →
+      a(role='link' aria-disabled='true' className='rounded-xl border border-current/25 bg-current/15 px-6 py-3 font-medium transition-colors hover:bg-current/20') Get started free
+      a(role='link' aria-disabled='true' className='rounded-xl border border-current/15 px-6 py-3 text-current/80 transition-colors hover:bg-current/5') Take the tour →
     ul(className='flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-current/60')
       each item in reassurances key item
         li(className='flex items-center gap-1.5')
@@ -39,15 +39,15 @@ section(data-section='hero' className='relative overflow-hidden px-4 py-24 sm:py
 
 section(data-section='hero' className='px-4 py-24 text-center sm:py-32')
   div(className='mx-auto flex max-w-3xl flex-col items-center gap-6')
-    a(href='#' className='inline-flex items-center gap-2 rounded-full border border-current/15 py-1 pr-3 pl-1 text-xs text-current/70 hover:bg-current/5')
+    a(role='link' aria-disabled='true' className='inline-flex items-center gap-2 rounded-full border border-current/15 py-1 pr-3 pl-1 text-xs text-current/70 hover:bg-current/5')
       span(className='rounded-full bg-current/10 px-2 py-0.5 font-medium text-current') New
       span Nova 2.0 is here — see what changed
       span(aria-hidden='true') →
     h1(className='text-4xl font-semibold tracking-tight text-balance sm:text-6xl') Launch your idea in days, not months
     p(className='max-w-xl text-lg text-pretty text-current/70') Nova gives small teams everything they need to build, ship, and grow a modern product — without the busywork.
     div(className='flex flex-wrap items-center justify-center gap-3')
-      a(href='#' className='rounded-lg border border-current/20 bg-current/10 px-5 py-2.5 font-medium hover:bg-current/15') Start for free
-      a(href='#' className='rounded-lg px-5 py-2.5 text-current/70 hover:bg-current/5 hover:text-current') Book a demo →
+      a(role='link' aria-disabled='true' className='rounded-lg border border-current/20 bg-current/10 px-5 py-2.5 font-medium hover:bg-current/15') Start for free
+      a(role='link' aria-disabled='true' className='rounded-lg px-5 py-2.5 text-current/70 hover:bg-current/5 hover:text-current') Book a demo →
     div(className='flex items-center gap-3 text-sm text-current/60')
       div(className='flex gap-1')
         each initials in founders key initials
@@ -73,8 +73,8 @@ section(data-section='hero' className='px-4 py-20 sm:py-28')
       h1(className='text-4xl font-semibold tracking-tight text-balance sm:text-5xl') Your busywork, handled automatically
       p(className='max-w-lg text-lg text-current/70') Connect the tools you already use and let Nova route, remind, and report while your team focuses on work that matters.
       div(className='flex flex-wrap gap-3')
-        a(href='#' className='rounded-lg border border-current/20 bg-current/10 px-5 py-2.5 font-medium hover:bg-current/15') Get started
-        a(href='#' className='rounded-lg border border-current/15 px-5 py-2.5 hover:bg-current/5') Watch the tour
+        a(role='link' aria-disabled='true' className='rounded-lg border border-current/20 bg-current/10 px-5 py-2.5 font-medium hover:bg-current/15') Get started
+        a(role='link' aria-disabled='true' className='rounded-lg border border-current/15 px-5 py-2.5 hover:bg-current/5') Watch the tour
       ul(className='flex flex-wrap gap-x-5 gap-y-2 text-sm text-current/60')
         each point in points key point
           li(className='flex items-center gap-1.5')
@@ -140,8 +140,8 @@ section(data-section='hero' className='px-4 py-24 sm:py-36')
     div(className='flex flex-col justify-between gap-6 border-t border-current/15 pt-6 sm:flex-row sm:items-end')
       p(className='max-w-md text-lg text-current/70') From the first sketch to the thousandth customer, Nova keeps your whole product in one flow.
       div(className='flex shrink-0 gap-3')
-        a(href='#' className='rounded-lg border border-current/20 bg-current/10 px-5 py-2.5 font-medium hover:bg-current/15') Start building
-        a(href='#' className='rounded-lg border border-current/15 px-5 py-2.5 hover:bg-current/5') See pricing
+        a(role='link' aria-disabled='true' className='rounded-lg border border-current/20 bg-current/10 px-5 py-2.5 font-medium hover:bg-current/15') Start building
+        a(role='link' aria-disabled='true' className='rounded-lg border border-current/15 px-5 py-2.5 hover:bg-current/5') See pricing
     div(className='relative aspect-[21/9] overflow-hidden rounded-3xl border border-current/10 bg-linear-to-br from-current/15 via-current/5 to-transparent')
       div(className='absolute inset-0 bg-[radial-gradient(circle,currentColor_1px,transparent_1.5px)] bg-size-[22px_22px] opacity-15')
       span(className='absolute bottom-5 left-5 rounded-full border border-current/15 px-3 py-1 text-xs text-current/60 backdrop-blur') Replace with your product video

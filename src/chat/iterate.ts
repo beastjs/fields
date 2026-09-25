@@ -7,7 +7,7 @@ export const MAX_ATTEMPTS = 5;
 
 // Failures the model cannot fix by answering again: nothing to edit, nothing left to change,
 // or the user cancelled. The error states these outright, so they never cost an evaluation.
-const terminal = [/No file was attached/, /already in the file/, /Verification cancelled/];
+const terminal = [/already in the file/, /Verification cancelled/];
 
 export type Remedy = RepairPlan['remedy'];
 
@@ -27,7 +27,7 @@ const direction: Record<Remedy, string> = {
   simplify:
     'Your last attempt was too large to land in one patch. Make the smallest change that fixes the cause above, even if it leaves the rest for a follow-up.',
   split:
-    'This change appears to need code that is not attached. Make only the part the attached file can carry on its own, and say plainly which other file the rest belongs in.',
+    'If required source is missing, request its exact project path in a context JSON fence so the playground attaches it automatically. Then implement the original request with focused hunks.',
   ask_user: '',
   stop: ''
 };
@@ -42,7 +42,7 @@ export function fixUpPrompt(error: string, file: string, attempt: number, remedy
   return `Your change to ${file} was not applied (attempt ${attempt} of ${MAX_ATTEMPTS}). The playground reported:
 ${error.trim()}
 
-The attached file is its current contents; nothing from your last reply was applied. Fix the cause above and reply with one corrected patch for ${file} whose SEARCH lines are copied exactly from the attached file and whose result compiles with no errors.${extra ? '\n' + extra : ''}`;
+The attached file is its current contents; nothing from your last reply was applied. Fix the cause above and reply with one corrected patch for ${file} whose SEARCH lines are copied exactly from the attached file and whose result compiles and starts without runtime errors. Preserve unrelated lines and use small separate hunks.${extra ? '\n' + extra : ''}`;
 }
 
 export interface RepairInput {
@@ -72,7 +72,7 @@ const viaJev: Decide = async (input, signal) => {
  * ever to *save* attempts, never to spend them on a guess: anything it cannot separate confidently,
  * and any failure it cannot be reached for, falls back to exactly the retry this loop always did.
  *
- * The deterministic answers come first and cost nothing. "No file was attached" is not a judgment.
+ * Cancellation and already-present changes are deterministic and cost nothing.
  */
 export async function planRepair(input: RepairInput, decide: Decide | null = viaJev, signal?: AbortSignal): Promise<Repair> {
   signal?.throwIfAborted();
@@ -87,11 +87,15 @@ ${input.prompt}
 
 ${selected.length ? 'Located in the current source (copy these lines exactly; do not copy earlier failed SEARCH text):\n' + formatEditLocations(file, selected) : 'Read the current attached source again; do not reuse invented text from earlier replies.'}`;
   const fallback: Repair = { action: 'retry', prompt: grounded(retry), remedy: 'retry' };
+  // Actual patch/compiler/runtime feedback is evidence to repair, not a reason for a semantic
+  // confidence estimate to abandon the task. Jev can still choose a better repair shape.
+  const recoverable = /hunk|SEARCH|patch|compil|runtime|attached|cut off|targets|change block|:\d+:\d+/i.test(error);
   if (!decide) return fallback;
   try {
     const plan = await decide({ ...input, maxAttempts: MAX_ATTEMPTS, locations }, signal);
     signal?.throwIfAborted();
     if (!plan.certain) return fallback;
+    if (recoverable && (plan.remedy === 'stop' || plan.remedy === 'ask_user' || !plan.fixable || plan.prospect < PROSPECT_FLOOR)) return fallback;
     if (plan.remedy === 'stop' || !plan.fixable) return { action: 'stop', reason: UNFIXABLE };
     if (plan.remedy === 'ask_user') return { action: 'stop', reason: NEEDS_YOU };
     if (plan.prospect < PROSPECT_FLOOR) return { action: 'stop', reason: UNLIKELY };

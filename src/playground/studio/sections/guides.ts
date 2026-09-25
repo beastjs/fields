@@ -51,10 +51,10 @@ section(data-section='guides' className='px-4 py-20 sm:py-24')
       div
         h2(className='text-3xl font-semibold tracking-tight') Guides & playbooks
         p(className='mt-2 text-current/70') Practical advice from teams who have done it before.
-      a(href='#' className='text-sm font-medium text-current/70 hover:text-current') Browse all guides →
+      a(role='link' aria-disabled='true' className='text-sm font-medium text-current/70 hover:text-current') Browse all guides →
     div(className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3')
       each guide in guides key guide.title
-        a(href='#' className='group flex flex-col gap-6 rounded-2xl border border-current/10 p-6 transition hover:border-current/25 hover:bg-current/5')
+        a(role='link' aria-disabled='true' className='group flex flex-col gap-6 rounded-2xl border border-current/10 p-6 transition hover:border-current/25 hover:bg-current/5')
           div(className='flex items-center justify-between text-xs text-current/60')
             span(className='rounded-full border border-current/15 px-2.5 py-0.5') #{guide.topic}
             span #{guide.time}

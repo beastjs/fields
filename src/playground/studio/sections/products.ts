@@ -71,7 +71,7 @@ section(data-section='products' className='px-4 py-20 sm:py-24')
               li(className='flex items-center gap-2')
                 span(aria-hidden='true' className='text-current/50') —
                 span #{point}
-          a(href='#' className='mt-auto text-sm font-medium hover:underline') Explore #{product.name} →
+          a(role='link' aria-disabled='true' className='mt-auto text-sm font-medium hover:underline') Explore #{product.name} →
 `
   },
   {
@@ -103,7 +103,7 @@ section(data-section='products' className='px-4 py-20 sm:py-24')
         ul(className='flex flex-wrap gap-2')
           each highlight in product.highlights key highlight
             li(className='rounded-full border border-current/15 px-3 py-1 text-sm') #{highlight}
-        a(href='#' className='w-fit rounded-lg border border-current/20 bg-current/10 px-5 py-2.5 font-medium hover:bg-current/15') Try Nova #{product.name}
+        a(role='link' aria-disabled='true' className='w-fit rounded-lg border border-current/20 bg-current/10 px-5 py-2.5 font-medium hover:bg-current/15') Try Nova #{product.name}
       div(className='relative aspect-[4/3] overflow-hidden rounded-3xl border border-current/10 bg-linear-to-tr from-current/15 to-transparent')
         span(className='absolute inset-0 grid place-items-center text-6xl font-semibold tracking-tighter text-current/15') #{product.name}
 `

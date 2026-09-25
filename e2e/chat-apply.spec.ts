@@ -1,11 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
 const replacement = (source: string) => 'Use this complete file:\n\n```btsx file=/src/App.btsx\n' + source + '```';
 async function start(page: Page, content: string) {
+  await page.route('**/api/jev/status', route => route.fulfill({ json: { configured: false } }));
   await page.route('**/api/ai/status', route => route.fulfill({ json: { configured: { cohere: true, openrouter: false, custom: false } } }));
   await page.route('**/api/ai/chat', route => route.fulfill({ contentType: 'text/event-stream', body: `data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\ndata: [DONE]\n\n` }));
-  await page.goto('/?dock=0,70,30');
-  await expect(page.locator('#preview-status')).toHaveText('Live', { timeout: 20000 });
-  const autoApply = page.getByRole('checkbox', { name: 'Auto-apply', exact: true });
+  await page.goto('/playground?dock=0,70,30');
+  await expect(page.frameLocator('#preview-frame').getByRole('heading', { name: 'Hello, world.' })).toBeVisible({ timeout: 20000 });
+  const autoApply = page.getByRole('checkbox', { name: /^Auto-apply/ });
   if (await autoApply.isChecked()) await autoApply.click();
   await page.getByRole('textbox', { name: 'Message AI' }).fill('Improve this file');
   await page.getByRole('button', { name: 'Send message', exact: true }).click();
@@ -21,7 +22,7 @@ test('recommendation applies to the attached file after tab switching, compiles,
   const editor = page.getByRole('textbox', { name: 'Source editor' });
   await expect(editor).toContainText('h1 Applied from chat');
   await expect(page.frameLocator('#preview-frame').getByRole('heading', { name: 'Applied from chat' })).toBeVisible();
-  await expect(page.locator('#problem-count')).toHaveText('0');
+  await expect(page.locator('.chat-apply')).toContainText('startup verified');
   await page.screenshot({ path: `test-results/chat-applied-${test.info().project.name}.png`, fullPage: true });
   await editor.focus(); await page.keyboard.press('ControlOrMeta+z');
   await expect(page.frameLocator('#preview-frame').getByRole('heading', { name: 'Hello, world.' })).toBeVisible();
@@ -38,14 +39,14 @@ test('a uniquely matching end-of-file hunk applies when the model includes a fin
   ].join('\n');
   await page.route('**/api/ai/status', route => route.fulfill({ json: { configured: { cohere: true, openrouter: false, custom: false } } }));
   await page.route('**/api/ai/chat', route => route.fulfill({ contentType: 'text/event-stream', body: `data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\ndata: [DONE]\n\n` }));
-  await page.goto('/?dock=0,70,30');
-  await expect(page.locator('#preview-status')).toHaveText('Live', { timeout: 20000 });
+  await page.goto('/playground?dock=0,70,30');
+  await expect(page.frameLocator('#preview-frame').getByRole('heading', { name: 'Hello, world.' })).toBeVisible({ timeout: 20000 });
   const editor = page.getByRole('textbox', { name: 'Source editor' });
   await editor.focus();
   await page.keyboard.press('ControlOrMeta+a');
   await page.keyboard.insertText('h1 Before');
   await expect(page.frameLocator('#preview-frame').getByRole('heading', { name: 'Before' })).toBeVisible();
-  const autoApply = page.getByRole('checkbox', { name: 'Auto-apply', exact: true });
+  const autoApply = page.getByRole('checkbox', { name: /^Auto-apply/ });
   if (await autoApply.isChecked()) await autoApply.click();
   await page.getByRole('textbox', { name: 'Message AI' }).fill('Update the heading');
   await page.getByRole('button', { name: 'Send message', exact: true }).click();
@@ -78,4 +79,33 @@ test('stale recommendations cannot overwrite user edits and illustrative snippet
   await page.getByRole('button', { name: 'Send message', exact: true }).click();
   await expect(page.locator('.chat-message.assistant')).toHaveAttribute('data-message-state', 'complete');
   await expect(page.getByRole('button', { name: 'Apply & verify', exact: true })).toHaveCount(0);
+});
+
+test('runtime failures keep the current source and preview intact', async ({ page }) => {
+  await start(page, replacement("setup throw new Error('Candidate startup crashed');\n\nh1 Never shown\n"));
+  await page.getByRole('button', { name: 'Apply & verify', exact: true }).click();
+  await expect(page.locator('.chat-apply-error')).toContainText('Candidate startup crashed', { timeout: 20000 });
+  await expect(page.locator('.chat-apply')).not.toContainText('startup verified');
+  await expect(page.getByRole('textbox', { name: 'Source editor' })).toContainText('import Counter');
+  await expect(page.frameLocator('#preview-frame').getByRole('heading', { name: 'Hello, world.' })).toBeVisible();
+  await expect(page.locator('iframe[title="Verifying proposed change"]')).toHaveCount(0);
+});
+
+test('auto repairs a runtime failure before reporting verified completion', async ({ page }) => {
+  let calls = 0;
+  await page.route('**/api/ai/status', route => route.fulfill({ json: { configured: { cohere: true, openrouter: false, custom: false } } }));
+  await page.route('**/api/jev/status', route => route.fulfill({ json: { configured: false } }));
+  await page.route('**/api/ai/chat', route => {
+    const request = route.request().postDataJSON();
+    const content = ++calls === 1 ? replacement("setup throw new Error('Repair this startup crash');\n\nh1 Broken\n") : replacement('h1 Repaired and running\n');
+    if (calls === 2) expect(request.messages.at(-1).content).toContain('Repair this startup crash');
+    return route.fulfill({ contentType: 'text/event-stream', body: `data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\ndata: [DONE]\n\n` });
+  });
+  await page.goto('/playground?dock=0,70,30');
+  await expect(page.frameLocator('#preview-frame').getByRole('heading', { name: 'Hello, world.' })).toBeVisible({ timeout: 20000 });
+  await page.getByRole('textbox', { name: 'Message AI' }).fill('Change the heading');
+  await page.getByRole('button', { name: 'Send message', exact: true }).click();
+  await expect(page.locator('.chat-apply').last()).toContainText('startup verified', { timeout: 25000 });
+  expect(calls).toBe(2);
+  await expect(page.frameLocator('#preview-frame').getByRole('heading', { name: 'Repaired and running' })).toBeVisible();
 });

@@ -31,7 +31,7 @@ section(data-section='team' className='px-4 py-20 sm:py-24')
           p(className='max-w-56 text-sm text-current/70') #{person.bio}
     p(className='mt-14 text-center text-sm text-current/70')
       span We're hiring.
-      a(href='#' className='ml-1 font-medium underline underline-offset-4') See open roles →
+      a(role='link' aria-disabled='true' className='ml-1 font-medium underline underline-offset-4') See open roles →
 `
   },
   {

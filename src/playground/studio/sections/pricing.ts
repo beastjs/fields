@@ -38,7 +38,7 @@ section(data-section='pricing' className='px-4 py-20 sm:py-24')
             span(className='text-5xl font-semibold tracking-tight') $#{price(plan.monthly)}
             span(className='text-sm text-current/60') / month
           p(className='text-sm text-current/70') #{plan.text}
-          a(href='#' className={'rounded-lg border px-4 py-2.5 text-center font-medium ' + (plan.featured ? 'border-current/25 bg-current/15 hover:bg-current/20' : 'border-current/15 hover:bg-current/5')}) #{plan.cta}
+          a(role='link' aria-disabled='true' className={'rounded-lg border px-4 py-2.5 text-center font-medium ' + (plan.featured ? 'border-current/25 bg-current/15 hover:bg-current/20' : 'border-current/15 hover:bg-current/5')}) #{plan.cta}
           ul(className='grid gap-3 border-t border-current/10 pt-6 text-sm')
             each perk in plan.perks key perk
               li(className='flex items-center gap-2')
@@ -71,7 +71,7 @@ section(data-section='pricing' className='px-4 py-20 sm:py-24')
       p(className='flex items-baseline gap-1')
         span(className='text-6xl font-semibold tracking-tight') $249
         span(className='text-current/60') USD
-      a(href='#' className='w-full rounded-lg border border-current/25 bg-current/15 px-5 py-3 font-medium hover:bg-current/20') Get lifetime access
+      a(role='link' aria-disabled='true' className='w-full rounded-lg border border-current/25 bg-current/15 px-5 py-3 font-medium hover:bg-current/20') Get lifetime access
       p(className='text-xs text-current/50') 30-day money-back guarantee
 `
   },

@@ -145,3 +145,28 @@ test('a stored preset survives having every object key reordered, as the backend
     expect({ id: template.id, source: renderPreset(inflatePreset(returned)) }).toEqual({ id: template.id, source: renderPreset(document) });
   }
 });
+
+test('all built-in template links are inactive until a real destination is supplied', () => {
+  for (const template of sectionTemplates) {
+    for (const node of walk(documentOf(template).root)) {
+      if (node.type !== 'element' || node.tag !== 'a') continue;
+      expect(node.attrs?.href).toBeUndefined();
+      expect(node.attrs?.['aria-disabled']).toEqual({ kind: 'literal', value: 'true' });
+    }
+  }
+});
+
+test('old saved catalog links render safely without changing real destinations or node ids', () => {
+  const template = sectionTemplates[0];
+  const source = `nav\n  a(href='#') Placeholder\n  a(href='/') Home\n  a(href='') Empty\n  a(href='#pricing') Pricing\n  a(href='https://example.com/docs') Docs\n`;
+  const document = parsePreset(source, { id: template.id, kind: template.kind, title: template.title, description: '', wireframe: [] });
+  const before = JSON.stringify(document);
+  for (const inspectable of [false, true]) {
+    const rendered = renderPreset(document, { inspectable });
+    expect(rendered).not.toMatch(/href='(?:#|\/|)'/);
+    expect(rendered.match(/aria-disabled='true'/g)).toHaveLength(3);
+    expect(rendered).toContain("href='#pricing'");
+    expect(rendered).toContain("href='https://example.com/docs'");
+  }
+  expect(JSON.stringify(document)).toBe(before);
+});

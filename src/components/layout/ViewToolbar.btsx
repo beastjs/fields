@@ -17,7 +17,7 @@ component Arrange
     ~ title={arranging ? 'Keep this pane order' : 'Arrange panes'}
     ~ onClick={onToggle}
     ~ )
-    Icon(name={arranging ? 'check' : 'tweak'} className='size-4')
+    Icon(name={arranging ? 'check' : 'tweak'} className='size-4.5')
 
 props { session, layout, toggleArrangement }: WorkspaceProps & { toggleArrangement: VoidFunction }
 setup
@@ -50,7 +50,7 @@ div(className='hidden min-w-0 items-center gap-6 overflow-x-auto bg-seam p-0 md:
             ~ })}
             ~ )
             fragment
-              Icon(name={pane.icon} className={cn('size-3.5 opacity-75', { 'opacity-100': visible[pane.id] })})
+              Icon(name={pane.icon} className={cn('size-4 opacity-75', { 'opacity-100': visible[pane.id] })})
               if pane.id === 'editor' && errorCount > 0
                 span#editor-error-badge(className='pointer-events-none absolute top-1.5 right-2 size-1.5 rounded-full bg-destructive ring-2 ring-background' aria-hidden='true')
           FluidTooltipContent(className='font-mono text-[10px] capitalize') #{pane.label}

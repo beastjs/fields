@@ -31,14 +31,14 @@ setup
 
   // `automatic` marks auto-apply runs, whose failures are fed back to the model.
   const apply = async (automatic = false) => {
-    if (recommendation?.source === undefined || !targetContext || message.projectGeneration === undefined || pending.current || applyState === 'Applied and compiled successfully') return;
+    if (recommendation?.source === undefined || !targetContext || message.projectGeneration === undefined || pending.current || applyState === 'Applied · compiled · startup verified') return;
     const abort = new AbortController();
     pending.current = abort;
     setApplyError('');
-    setApplyState('Checking compilation…');
+    setApplyState('Checking compilation and startup…');
     try {
       await session.applyRecommendation(recommendation.file, targetContext.source, recommendation.source, message.projectGeneration, abort.signal);
-      setApplyState('Applied and compiled successfully');
+      setApplyState('Applied · compiled · startup verified');
     } catch (error) {
       setApplyState('');
       const reason = error instanceof Error ? error.message : 'Could not verify this change.';
@@ -80,7 +80,7 @@ article(className={'chat-message mb-6 ' + message.role} data-message-state={mess
     if message.attempt && message.attempt > 1
       span(className={messageState}) #{'ATTEMPT ' + message.attempt + '/' + MAX_ATTEMPTS}
     if message.role === 'assistant'
-      span(className={messageState}) #{message.state === 'streaming' ? 'WORKING' : message.state === 'stopped' ? 'STOPPED' : message.state === 'error' ? 'INTERRUPTED' : 'DONE'}
+      span(className={messageState}) #{message.state === 'streaming' ? 'WORKING' : message.state === 'stopped' ? 'STOPPED' : message.state === 'error' ? 'INTERRUPTED' : recommendation ? (applyState === 'Applied · compiled · startup verified' ? 'VERIFIED' : applyError || recommendation.error || halt ? 'NEEDS REPAIR' : applyState ? 'VERIFYING' : 'PROPOSED') : 'DONE'}
   if message.role === 'user'
     p(className='m-0 whitespace-pre-wrap text-[11px] leading-[1.8] text-fg-secondary [overflow-wrap:anywhere]') #{message.content}
     if message.attachments
@@ -118,12 +118,14 @@ article(className={'chat-message mb-6 ' + message.role} data-message-state={mess
         p(className={applyErrorClass} role='alert') #{recommendation.error}
       else
         if !applyState
-          button(className={cn(secondaryButton, 'disabled:cursor-default disabled:opacity-65')} type='button' onClick={() => apply()} disabled={!!applyState}) #{applyState === 'Checking compilation…' ? (autoOnArrival.current ? 'Auto-applying…' : 'Checking compilation…') : applyState ? 'Applied' : 'Apply & verify'}
-            p(role='status') #{applyState}
-        else
+          button(className={secondaryButton} type='button' onClick={() => apply()}) Apply & verify
+        elseif applyState === 'Applied · compiled · startup verified'
           span(className='space-x-1')
             span(className={cn(applyScope, 'text-brand')}) applied
             span(className={cn(applyScope, 'text-brand')}) compiled
+            span(className={cn(applyScope, 'text-brand')}) startup verified
+        else
+          p(role='status') #{applyState}
         if applyError
           p(className={applyErrorClass} role='alert') #{applyError}
       if halt

@@ -47,7 +47,7 @@ section(data-section='faq' className='px-4 py-20 sm:py-24')
     div(className='flex flex-col items-start gap-4')
       h2(className='text-3xl font-semibold tracking-tight') Questions? Answered.
       p(className='text-current/70') Can't find what you're looking for? Our team usually replies within an hour.
-      a(href='#' className='rounded-lg border border-current/15 px-4 py-2 text-sm font-medium hover:bg-current/5') Contact support
+      a(role='link' aria-disabled='true' className='rounded-lg border border-current/15 px-4 py-2 text-sm font-medium hover:bg-current/5') Contact support
     dl(className='grid gap-x-10 gap-y-8 sm:grid-cols-2')
       each faq in faqs key faq.question
         div

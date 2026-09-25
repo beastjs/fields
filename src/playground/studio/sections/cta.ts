@@ -14,8 +14,8 @@ export const ctaTemplates: SectionTemplate[] = [
       h2(className='max-w-2xl text-3xl font-semibold tracking-tight text-balance sm:text-4xl') Start building in the next five minutes
       p(className='max-w-lg text-current/70') Create an account and your first project is ready before your coffee lands.
       div(className='flex flex-wrap justify-center gap-3')
-        a(href='#' className='rounded-xl border border-current/25 bg-current/15 px-6 py-3 font-medium transition-colors hover:bg-current/20') Create your account
-        a(href='#' className='rounded-xl border border-current/15 px-6 py-3 text-current/80 transition-colors hover:bg-current/5') Talk to us
+        a(role='link' aria-disabled='true' className='rounded-xl border border-current/25 bg-current/15 px-6 py-3 font-medium transition-colors hover:bg-current/20') Create your account
+        a(role='link' aria-disabled='true' className='rounded-xl border border-current/15 px-6 py-3 text-current/80 transition-colors hover:bg-current/5') Talk to us
       p(className='text-sm text-current/50') Free forever for solo projects. No credit card required.
 `
   },
@@ -32,8 +32,8 @@ export const ctaTemplates: SectionTemplate[] = [
       h2(className='max-w-2xl text-3xl font-semibold tracking-tight text-balance sm:text-5xl') Ready to launch something great?
       p(className='max-w-xl text-lg text-current/70') Join thousands of founders building faster with Nova. Free to start, no credit card needed.
       div(className='flex flex-wrap justify-center gap-3')
-        a(href='#' className='rounded-lg border border-current/25 bg-current/15 px-6 py-3 font-medium hover:bg-current/20') Get started free
-        a(href='#' className='rounded-lg border border-current/15 px-6 py-3 hover:bg-current/5') Talk to sales
+        a(role='link' aria-disabled='true' className='rounded-lg border border-current/25 bg-current/15 px-6 py-3 font-medium hover:bg-current/20') Get started free
+        a(role='link' aria-disabled='true' className='rounded-lg border border-current/15 px-6 py-3 hover:bg-current/5') Talk to sales
 `
   },
   {
@@ -48,8 +48,8 @@ export const ctaTemplates: SectionTemplate[] = [
       h2(className='text-2xl font-semibold tracking-tight sm:text-3xl') Start your 14-day free trial
       p(className='mt-2 text-current/70') Full access to every feature. Set up in minutes, cancel anytime.
     div(className='flex shrink-0 flex-wrap gap-3')
-      a(href='#' className='rounded-lg border border-current/25 bg-current/15 px-5 py-2.5 font-medium hover:bg-current/20') Start free trial
-      a(href='#' className='rounded-lg px-5 py-2.5 text-current/70 hover:bg-current/5 hover:text-current') Book a demo →
+      a(role='link' aria-disabled='true' className='rounded-lg border border-current/25 bg-current/15 px-5 py-2.5 font-medium hover:bg-current/20') Start free trial
+      a(role='link' aria-disabled='true' className='rounded-lg px-5 py-2.5 text-current/70 hover:bg-current/5 hover:text-current') Book a demo →
 `
   }
 ]

@@ -2,6 +2,7 @@ import { fileRecommendation } from './recommendation';
 import type { FetchLike } from './contracts';
 import { MAX_PROJECT_PATHS, MAX_REFERENCE_CHARS, MAX_REFERENCES, type AIStatus, type ChatRequest, type ChatSettings, type ChatTurn, type FileContext } from './contracts';
 import { streamChat } from './transport';
+import { requestedFiles } from './context-request';
 
 export interface ChatMessage extends ChatTurn { reasoning?: string; context?: FileContext; references?: FileContext[]; attachments?: string[]; projectGeneration?: number; id: number; attempt?: number; model?: string; state?: 'complete' | 'streaming' | 'stopped' | 'error' }
 export interface ChatSnapshot {
@@ -22,7 +23,8 @@ export class ChatController {
   private lastGeneration?: number;
   private lastAttempt = 1;
   private disposed = false;
-  constructor(settings: ChatSettings, private persist: (settings: ChatSettings) => void, private send: FetchLike = fetch) {
+  constructor(settings: ChatSettings, private persist: (settings: ChatSettings) => void, private send: FetchLike = fetch,
+    private workspace?: () => { files: Record<string, string>; generation: number; activeFile?: string }) {
     this.state = { settings, messages: [], busy: false, error: '', connectionError: '' };
   }
   getSnapshot = () => this.state;
@@ -82,7 +84,50 @@ export class ChatController {
     this.patch({ busy: true, error: '', messages: [...this.state.messages, { id, role: 'assistant', content: '', model: request.model, state: 'streaming', context: request.context ? { ...request.context } : undefined, references: request.references?.map(reference => ({ ...reference })), projectGeneration: this.lastGeneration, attempt: this.lastAttempt }] });
     const update = (patch: Partial<ChatMessage>) => this.patch({ messages: this.state.messages.map(message => message.id === id ? { ...message, ...patch } : message) });
     try {
-      await streamChat(request, content => { if (this.abort === abort) update({ content }); }, abort.signal, this.send, reasoning => { if (this.abort === abort) update({ reasoning }); });
+      for (let round = 0; ; round++) {
+        let reply = '';
+        await streamChat(request, content => { reply = content; if (this.abort === abort) update({ content }); }, abort.signal, this.send, reasoning => { if (this.abort === abort) update({ reasoning }); });
+        abort.signal.throwIfAborted();
+        if (this.abort !== abort) return;
+        const workspace = this.workspace?.();
+        if (!workspace) break;
+        const attached = [request.context, ...(request.references ?? [])].filter((file): file is FileContext => !!file);
+        const needed = requestedFiles(reply, Object.keys(workspace.files), attached.map(file => file.file));
+        if (!attached.length && workspace.activeFile && /(?:\b(?:attach|select|include|open)\b[\s\S]{0,80}\bfile\b|<<<<<<< SEARCH)/i.test(reply)) {
+          if (!needed.includes(workspace.activeFile)) needed.push(workspace.activeFile);
+        }
+        if (!needed.length) {
+          if (/^```context\s*$/m.test(reply)) {
+            if (round >= 4) throw new Error('The assistant could not resolve its context request. Try a more focused request.');
+            request = { ...request, messages: [...request.messages.slice(0, -1), { role: 'user', content:
+              request.messages.at(-1)!.content + '\nAll requested existing files are already attached, or the requested paths are not in this project. Use the supplied source to answer; request only missing paths from the project list.' }] };
+            update({ content: '', reasoning: undefined });
+            continue;
+          }
+          break;
+        }
+        if (workspace.generation !== this.lastGeneration || attached.some(file => workspace.files[file.file] !== file.source)) {
+          throw new Error('The project changed while gathering files. Retry with the current source.');
+        }
+        if (round >= 4) throw new Error('The assistant could not finish gathering context. Retry with a more focused request.');
+        // Promote the requested owner to primary context; evict background references if needed.
+        const context = { file: needed[0], source: workspace.files[needed[0]] };
+        if (context.source.length > 60000) throw new Error(`${context.file} exceeds the 60,000-character context limit.`);
+        let characters = 0;
+        const references = [...needed.slice(1).map(file => ({ file, source: workspace.files[file] })), ...attached]
+          .filter((file, index, all) => file.file !== context.file && all.findIndex(other => other.file === file.file) === index)
+          .filter(file => {
+            if (characters + file.source.length > MAX_REFERENCE_CHARS) return false;
+            characters += file.source.length;
+            return true;
+          }).slice(0, MAX_REFERENCES);
+        request = { ...request, context, references, files: Object.keys(workspace.files).slice(0, MAX_PROJECT_PATHS) };
+        this.lastRequest = request;
+        update({ content: '', reasoning: undefined, context, references });
+        const user = this.state.messages.filter(message => message.role === 'user').at(-1);
+        if (user) this.patch({ messages: this.state.messages.map(message => message.id === user.id
+          ? { ...message, attachments: [context.file, ...references.map(file => file.file)] } : message) });
+      }
       if (this.abort === abort) update({ state: 'complete' });
     } catch (error) {
       if (this.abort !== abort) return;

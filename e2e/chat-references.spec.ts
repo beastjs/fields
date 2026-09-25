@@ -63,7 +63,7 @@ for (const stale of [false, true]) {
       return route.fulfill({ contentType: 'text/event-stream', body: `data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\ndata: [DONE]\n\n` });
     });
     await ready(page, false, workspace, '/src/Page.btsx');
-    if (stale) await page.getByRole('checkbox', { name: 'Auto', exact: true }).uncheck();
+    if (stale) await page.getByRole('checkbox', { name: /^Auto-apply/ }).uncheck();
     await page.getByRole('textbox', { name: 'Message AI' }).fill('Change the hero heading to Updated hero');
     await page.getByRole('button', { name: 'Send message', exact: true }).click();
     await expect(page.locator('.chat-message.assistant')).toHaveAttribute('data-message-state', 'complete');
@@ -217,7 +217,7 @@ test('reasoning and explanation collapse separately from the visible actionable 
     `data: ${JSON.stringify({ choices: [{ delta: { reasoning_content: 'The caption belongs to Counter.' } }] })}\n\n` +
     `data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\ndata: [DONE]\n\n` }));
   await ready(page, false);
-  await page.getByRole('checkbox', { name: 'Auto', exact: true }).uncheck();
+  await page.getByRole('checkbox', { name: /^Auto-apply/ }).uncheck();
   await page.getByRole('textbox', { name: 'Message AI' }).fill('Rename the counter caption');
   await page.getByRole('button', { name: 'Send message', exact: true }).click();
   const trigger = page.getByRole('button', { name: /Thinking & explanation/ });
@@ -253,4 +253,24 @@ test('a hallucinated Topbar hunk recovers using the original intent and exact cu
   expect(requests[1].messages[0].content).toContain('Original developer request:\nreplace sign in with Sign in with Google');
   expect(requests[1].messages[0].content).toContain("    a(href='/signin') Sign in");
   expect(requests[1].messages[0].content).not.toContain('button Google');
+});
+
+test('the assistant fetches an unselected file and completes the same request', async ({ page }) => {
+  const requests: ChatRequest[] = [];
+  await page.route('**/api/ai/chat', route => {
+    const request = route.request().postDataJSON() as ChatRequest;
+    requests.push(request);
+    const content = requests.length === 1 ? '```context\n["/src/notes.ts"]\n```'
+      : '```ts patch=/src/notes.ts\n<<<<<<< SEARCH\nexport const notes = 1;\n=======\nexport const notes = 2;\n>>>>>>> REPLACE\n```';
+    return route.fulfill({ contentType: 'text/event-stream', body: `data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\ndata: [DONE]\n\n` });
+  });
+  await ready(page, false);
+  await page.getByRole('textbox', { name: 'Message AI' }).fill('Update the secondary value');
+  await page.getByRole('button', { name: 'Send message', exact: true }).click();
+  await expect(page.locator('.chat-apply')).toContainText('startup verified', { timeout: 25000 });
+  expect(requests).toHaveLength(2);
+  expect(requests[0].references?.some(file => file.file === '/src/notes.ts')).toBeFalsy();
+  expect(requests[1].context?.file).toBe('/src/notes.ts');
+  await expect(page.locator('.chat-message.assistant')).toHaveCount(1);
+  await expect(page.locator('.chat-message.user')).toContainText('notes.ts');
 });
