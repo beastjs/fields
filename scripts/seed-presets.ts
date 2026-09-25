@@ -84,6 +84,13 @@ function run(name: string, args: unknown) {
       'Then run this again.'
     )
   }
+  if (detail.includes('ArgumentValidationError')) {
+    throw new Error(
+      `The ${prod ? 'production' : 'dev'} deployment's "${name}" predates this catalog's shape. Deploy the functions first:\n` +
+      (prod ? '  npx convex deploy\n' : '  npx convex dev --once\n') +
+      `Then run this again.\n\n${detail}`
+    )
+  }
   throw new Error(`convex run ${name} failed with status ${result.status}.\n${detail}`)
 }
 
