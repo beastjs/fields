@@ -239,7 +239,7 @@ export function planPageInstall(project: CompilationProject, blocks: PageBlock[]
   const previous = new Map(current.map(block => [block.name, block]))
 
   for (const block of blocks) {
-    if (block.presetId === undefined) continue
+    if (block.presetId === undefined && !Object.keys(block.overrides ?? {}).length) continue
     const path = sectionFile(block.name)
     const existing = project.files[path]
     const source = blockSource(project, block, presets)

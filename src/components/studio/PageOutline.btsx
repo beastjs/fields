@@ -3,7 +3,7 @@ import Sortable, { SortableContent, SortableItem, SortableItemHandle } from '@/l
 import { sectionKind } from '../../playground/studio/kinds'
 import type { PresetLookup, PresetRecipe } from '../../playground/studio/presets'
 import type { PageBlock } from '../../playground/studio/page'
-import RecipeCard from './RecipeCard.btsx'
+import RecipeBrowser from './RecipeBrowser.btsx'
 
 module
   interface OutlineProps {
@@ -62,6 +62,5 @@ div(className='flex min-h-0 flex-col')
         Icon(name='sparkle' className='size-3 text-brand')
         span(className='flex-1') Start from a recipe
         Icon(name='chevron-down-tiny' className='size-3 -rotate-90 text-dim transition-transform group-open/recipes:rotate-0')
-      div(className='grid gap-1.5 pt-1')
-        each recipe in recipes key recipe.recipeId
-          RecipeCard(recipe={recipe} onRecipe={onRecipe} compact={true})
+      div(className='pt-1')
+        RecipeBrowser(recipes={recipes} onRecipe={onRecipe} compact={true})

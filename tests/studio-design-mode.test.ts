@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { init } from 'es-module-lexer';
 import { compileProject } from '../src/playground/compiler';
 import { helloWorld } from '../src/playground/examples';
-import { addSection, blockDocument, blockSource, pagePreviewProject, planPageInstall, readNodeId, sectionFile } from '../src/playground/studio/page';
+import { addSection, blockDocument, blockSource, pagePreviewProject, planPageInstall, readNodeId, readPage, sectionFile, STUDIO_STYLESHEET } from '../src/playground/studio/page';
 import { applyOverrides, clearNodeOverride, mergeStyle, overrideCount, setNodeOverride } from '../src/playground/studio/ir/overrides';
 import { toClasses, toStyle } from '../src/playground/studio/ir/classes';
 import { nodeIndex } from '../src/playground/studio/ir/render';
@@ -10,6 +10,23 @@ import type { NodeOverride } from '../src/playground/studio/ir/types';
 import { builtInPresets } from './built-in-presets';
 
 const presets = builtInPresets;
+
+test('layout edits to a hand-written section are installed even without a preset', () => {
+  const source = "section(className='p-4' data-section='hero')\n  h1(className='p-2') Inspector example\n";
+  const project = { ...helloWorld, files: { ...helloWorld.files,
+    '/src/Page.btsx': "import Hero from './sections/Hero.btsx'\n\nmain(data-page)\n  Hero\n",
+    '/src/sections/Hero.btsx': source,
+    '/src/style.css': STUDIO_STYLESHEET,
+  } };
+  const block = readPage(project, presets)[0];
+  expect(block.presetId).toBeUndefined();
+  const node = [...nodeIndex(blockDocument(project, block, presets)!).values()].find(node => node.type === 'element' && node.tag === 'h1')!;
+  const edited = { ...block, overrides: setNodeOverride(undefined, node.id, { style: { spacing: { pt: 2.25 } } }) };
+  const install = planPageInstall(project, [edited], presets);
+  expect(install.files['/src/sections/Hero.btsx']).toContain('pt-2.25');
+  expect(install.files['/src/sections/Hero.btsx']).toContain('Inspector example');
+  expect(planPageInstall(project, [block], presets).files['/src/sections/Hero.btsx']).toBeUndefined();
+});
 const blockOf = (presetId: string, overrides?: Record<string, NodeOverride>) => {
   const { blocks } = addSection([], presetId, presets);
   return { ...blocks[0], overrides };

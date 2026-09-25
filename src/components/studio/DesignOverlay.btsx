@@ -1,5 +1,4 @@
 import { useRef, useState } from 'octane'
-import { Icon } from '@/lib/icons'
 import type { DesignNode } from '../../playground/preview'
 import type { SizeStyle, SpacingStyle } from '../../playground/studio/ir/types'
 
@@ -20,11 +19,7 @@ module
     hovered?: DesignNode
     /** The preview's scale, so the overlay lands on the same pixels the person sees. */
     scale: number
-    edited: boolean
     onEdit: (edits: DesignEdit[], live: boolean) => void
-    onEditText: () => void
-    onReset: () => void
-    onDismiss: () => void
   }
 
   const SIDES = ['top', 'right', 'bottom', 'left'] as const
@@ -63,10 +58,9 @@ module
    * line stays hairline-thin but is still as easy to grab.
    */
   const HANDLE_INSET = (HANDLE_HIT - HANDLE_LINE) / 2
-  const round = (value: number) => Math.round(value * 10) / 10
   const px = (value: number) => `${value}px`
 
-props { selected, hovered, scale, edited, onEdit, onEditText, onReset, onDismiss }: OverlayProps
+props { selected, hovered, scale, onEdit }: OverlayProps
 setup
   /** The drag in progress: where it started, and the last value sent, so a move that rounds the same sends nothing. */
   const drag = useRef<{ handle: Handle; x: number; y: number; step: number; from: { width: number; height: number; spacing: number }; sent: string } | null>(null);
@@ -169,8 +163,6 @@ setup
     } as Record<string, string>;
   };
   const label = (node: DesignNode) => `${node.tag} · ${Math.round(node.rect.width)} × ${Math.round(node.rect.height)}`;
-  const padSummary = (node: DesignNode) =>
-    `padding ${round(node.padding.top / node.step)} ${round(node.padding.right / node.step)} ${round(node.padding.bottom / node.step)} ${round(node.padding.left / node.step)}`;
 
 div(className='pointer-events-none absolute inset-0 z-10 overflow-hidden' aria-hidden='true')
   if hovered && (!selected || hovered.nodeId !== selected.nodeId)
@@ -211,15 +203,3 @@ div(className='pointer-events-none absolute inset-0 z-10 overflow-hidden' aria-h
           ~ onPointerUp={end}
           ~ onPointerCancel={end}
           ~ )
-
-      div(className='pointer-events-auto absolute flex items-center gap-1 rounded-[5px] border border-edge-strong bg-panel px-1.5 py-1 shadow-elevation' style={{ left: px(selected.rect.x * scale), top: px(Math.max(2, selected.rect.y * scale - 30)) }})
-        span(className='font-code text-[9px] whitespace-nowrap text-fg') #{label(selected)}
-        span(className='font-code text-[9px] whitespace-nowrap text-faint') #{padSummary(selected)}
-        if selected.count > 1
-          span(className='rounded-full bg-warning/15 px-1.5 py-px text-[9px] whitespace-nowrap text-warning' title='This section repeats this node, so the edit applies to every copy.') ×#{selected.count}
-        if selected.editable
-          button(className='rounded-[3px] px-1.5 py-px text-[9px] text-fg-secondary hover:bg-control hover:text-fg' type='button' onClick={onEditText}) Edit text
-        if edited
-          button(className='rounded-[3px] px-1.5 py-px text-[9px] text-warning hover:bg-control' type='button' title='Restore this section to its preset' onClick={onReset}) Reset
-        button(className='flex size-4 items-center justify-center rounded-[3px] text-faint hover:bg-control hover:text-fg' type='button' aria-label='Deselect' onClick={onDismiss})
-          Icon(name='close-small' className='size-3')

@@ -8,6 +8,7 @@
  *   bun run seed:presets --dry-run    # parse and validate only, printing what would change
  *   bun run seed:presets --out <path> # write the documents to a file instead of pushing
  *   bun run seed:presets --prod       # push to the production deployment instead of dev
+ *   bun run seed:presets --recipes-only # update recipes without rewriting presets or themes
  *
  * Presets go up in batches so each `convex run` argument stays well inside the shell's limit.
  */
@@ -31,6 +32,7 @@ const argument = (flag: string) => {
 const dryRun = process.argv.includes('--dry-run')
 const prod = process.argv.includes('--prod')
 const out = argument('--out')
+const recipesOnly = process.argv.includes('--recipes-only')
 
 function build() {
   return sectionTemplates.map(template => {
@@ -106,6 +108,9 @@ if (out) {
   console.info(`Wrote ${out}.`)
 } else if (dryRun) {
   console.info('Dry run: every preset parsed, flattened, validated, and round-tripped. Nothing was pushed.')
+} else if (recipesOnly) {
+  console.info(`Pushing recipes only to the ${prod ? 'production' : 'dev'} deployment.`)
+  console.info(run('presets:seedRecipes', { recipes }))
 } else {
   console.info(`Pushing to the ${prod ? 'production' : 'dev'} deployment.`)
   let inserted = 0

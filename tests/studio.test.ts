@@ -56,6 +56,23 @@ test('search matches kinds, keywords, and template text', () => {
   expect(searchTemplates('zzz')).toEqual([]);
 });
 
+test('every recipe is distinct and compiles as a complete installable page', async () => {
+  await init();
+  expect(new Set(pageRecipes.map(recipe => recipe.id)).size).toBe(pageRecipes.length);
+  expect(new Set(pageRecipes.map(recipe => recipe.title)).size).toBe(pageRecipes.length);
+  expect(new Set(pageRecipes.map(recipe => recipe.templates.join(','))).size).toBe(pageRecipes.length);
+  for (const recipe of pageRecipes) {
+    expect(sectionTemplate(recipe.templates[0])?.kind).toBe('topbar');
+    expect(sectionTemplate(recipe.templates.at(-1)!)?.kind).toBe('footer');
+    expect(recipe.templates.filter(id => sectionTemplate(id)?.kind === 'hero')).toHaveLength(1);
+    const blocks = recipeBlocks(recipe.templates, presets);
+    expect(blocks).toHaveLength(recipe.templates.length);
+    const install = planPageInstall(helloWorld, blocks, presets);
+    const result = await compileProject(withFiles(helloWorld, install.files, install.removes));
+    expect({ recipe: recipe.id, diagnostics: result.diagnostics }).toEqual({ recipe: recipe.id, diagnostics: [] });
+  }
+}, 30000);
+
 test('Convex catalog rows are narrowed to registered section kinds without breaking lookup caching', () => {
   const rows = [
     { presetId: 'hero-valid', kind: 'hero', title: 'Hero', description: '', wireframe: [], keywords: [], version: 1 },

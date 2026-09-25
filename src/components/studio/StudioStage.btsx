@@ -1,8 +1,10 @@
+import DesignInspector from './DesignInspector.btsx'
+import type { InspectorProps } from './DesignInspector.btsx'
 import type { OctaneNode, RefObject } from 'octane'
 import { Icon } from '@/lib/icons'
 import { sectionFile } from '../../playground/studio/page'
 import type { PresetRecipe } from '../../playground/studio/presets'
-import RecipeCard from './RecipeCard.btsx'
+import RecipeBrowser from './RecipeBrowser.btsx'
 import { fileLabel, type CodeFile, type StudioView } from './studio'
 import { cn } from '@/lib/utils';
 
@@ -30,7 +32,8 @@ module
     stageSize: { width: number; height: number }
     width: number
     scale: number
-    /** Drawn over the frames, for Fine Layout. */
+    /** Properties live outside the canvas; selection outlines stay over the frames. */
+    inspector?: InspectorProps
     children?: OctaneNode
   }
 
@@ -46,27 +49,23 @@ component EmptyPage
   props { catalogLoading, recipes, onRecipe }: EmptyPageProps
 
   div(className='absolute inset-0 flex flex-col items-center justify-center gap-5 rounded-[6px] border border-dashed border-edge-strong bg-canvas p-6 text-center')
-    Icon(name='design' className='size-7 text-brand')
-    div
+    Icon(name='design' className='size-7 shrink-0 text-brand')
+    div(className='shrink-0')
       p(className='text-[15px] font-medium text-fg') Start with a recipe, or pick sections one by one
       p(className='mt-1 text-[11px] text-dim') Every section is a real Beast component styled with Tailwind, and it follows your theme.
     if catalogLoading
       p(className='text-[11px] text-dim' role='status') Loading the section catalog…
     else
-      div(className='grid w-full max-w-2xl items-start gap-2 sm:grid-cols-2')
-        each recipe in recipes key recipe.recipeId
-          RecipeCard(recipe={recipe} onRecipe={onRecipe})
-        empty
-          p(className='text-[11px] text-dim' role='status') No recipes are published yet.
+      RecipeBrowser(recipes={recipes} onRecipe={onRecipe})
 
-props { className, view, onView, focusedName, codeFile, onCodeFile, code, codePath, copied, onCopy, status, empty, catalogLoading, recipes, onRecipe, stage, frame, standby, stageSize, width, scale, children }: StageProps
+props { className, view, onView, focusedName, codeFile, onCodeFile, code, codePath, copied, onCopy, status, empty, catalogLoading, recipes, onRecipe, stage, frame, standby, stageSize, width, scale, inspector, children }: StageProps
 setup
   // An identity transform would still promote the frame to its own layer, so it is left off at 100%.
   const frameStyle = stageSize.height
     ? { width: width + 'px', height: stageSize.height / scale + 'px', ...(scale === 1 ? {} : { transform: 'scale(' + scale + ')' }) }
     : { width: '100%', height: '100%' };
 
-main(className={cn('bg-background', className)})
+main(className={cn('@container/studio-stage bg-background', className)})
   div(className='hidden _flex items-center justify-between gap-3 border-b border-edge bg-surface-toolbar px-0.5 py-1.5')
     div(className='flex gap-0.5' role='tablist' aria-label='Studio view')
       button(className='rounded-[4px] px-2.5 py-1 text-[10px] text-dim aria-selected:bg-control aria-selected:text-fg' type='button' role='tab' aria-selected={view === 'preview'} onClick={() => onView('preview')}) Preview
@@ -79,13 +78,17 @@ main(className={cn('bg-background', className)})
         button(className='shrink-0 rounded-[4px] px-2 py-1 text-[10px] text-fg-secondary hover:bg-control hover:text-fg' type='button' onClick={onCopy}) #{copied ? 'Copied ✓' : 'Copy'}
     else
       span(className='min-w-0 truncate font-code text-[10px] text-faint data-[state=error]:text-warning' role='status' data-state={status.state}) #{status.text}
-  div(className='relative min-h-0 flex-1 size-full')
-    div(className='absolute inset-2' ref={stage} hidden={view !== 'preview'})
-      div(className='relative mx-auto h-full rounded-none transition-[width] duration-300 ease-out' style={{ width: stageSize.width ? width * scale + 'px' : '100%' }})
-        iframe(ref={frame} style={frameStyle} className={frameClass})
-        iframe(ref={standby} style={frameStyle} className={frameClass})
-        | #{children}
-      if empty
-        EmptyPage(catalogLoading={catalogLoading} recipes={recipes} onRecipe={onRecipe})
-    if view === 'code'
-      pre(className='absolute inset-0 m-0 overflow-auto bg-inset p-4 font-code text-[11px]/[1.75] text-fg-secondary' aria-label={fileLabel(codePath)}) #{code}
+  div(className='flex min-h-0 flex-1 flex-col gap-4 p-3 @min-[640px]/studio-stage:flex-row')
+    div(className='relative min-h-0 min-w-0 flex-1')
+      div(className='absolute inset-0' ref={stage} hidden={view !== 'preview'})
+        div(className='relative mx-auto h-full rounded-none transition-[width] duration-300 ease-out' style={{ width: stageSize.width ? width * scale + 'px' : '100%' }})
+          iframe(ref={frame} style={frameStyle} className={frameClass})
+          iframe(ref={standby} style={frameStyle} className={frameClass})
+          | #{children}
+        if empty
+          EmptyPage(catalogLoading={catalogLoading} recipes={recipes} onRecipe={onRecipe})
+      if view === 'code'
+        pre(className='absolute inset-0 m-0 overflow-auto bg-inset p-4 font-code text-[11px]/[1.75] text-fg-secondary' aria-label={fileLabel(codePath)}) #{code}
+    if inspector && view === 'preview'
+      aside(className='h-[42%] min-h-40 w-full shrink-0 @min-[640px]/studio-stage:h-full @min-[640px]/studio-stage:w-[280px]' aria-label='Layout inspector')
+        DesignInspector(key={inspector.selected?.nodeId ?? 'unselected'} {...inspector})

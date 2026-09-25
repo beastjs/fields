@@ -348,7 +348,7 @@ setup
       preview.current?.applyDesignStyle(selectedNode.nodeId, liveStyle(edits));
       return;
     }
-    const pending = pendingEdit.current;
+    const pending = edits.length ? { name: targetNode.name, nodeId: targetNode.nodeId, patch: patchOf(edits) } : pendingEdit.current;
     pendingEdit.current = undefined;
     if (!pending) return;
     setBlocks(blocks.map(block => (block.name === pending.name
@@ -599,7 +599,7 @@ setup
   // A rebuild replaces the node that was measured, so the overlay asks the new one for its box.
   useEffect(() => {
     if (designing && status.state === 'ready' && selectedNode) preview.current?.measureNode(selectedNode.nodeId);
-  }, [status, designing]);
+  }, [status, designing, stageSize]);
   // The preview must carry `data-node` to be inspectable, so entering or leaving Fine Layout rebuilds it once.
   useEffect(() => { if (open && blocks.length) setStatus({ state: 'compiling' }); }, [designing]);
   useEffect(() => { setCopied(false); }, [code]);
@@ -667,17 +667,14 @@ dialog(className={cn(dialogPanel, 'backdrop:backdrop-blur-none h-[min(920px,calc
         ~ stageSize={stageSize}
         ~ width={width}
         ~ scale={scale}
+        ~ inspector={designing ? { selected: selectedNode, edited: !!targetNode && !!targetBlock?.overrides?.[targetNode.nodeId], onEdit: applyEdit, onEditText: () => selectedNode && preview.current?.editText(selectedNode.nodeId, true), onReset: resetNode, onDismiss: () => setSelectedNode(undefined) } : undefined}
         ~ )
         if designing && ready
           DesignOverlay(
             ~ selected={selectedNode}
             ~ hovered={hoveredNode}
             ~ scale={scale}
-            ~ edited={!!targetNode && !!targetBlock?.overrides?.[targetNode.nodeId]}
             ~ onEdit={applyEdit}
-            ~ onEditText={() => selectedNode && preview.current?.editText(selectedNode.nodeId, true)}
-            ~ onReset={resetNode}
-            ~ onDismiss={() => setSelectedNode(undefined)}
             ~ )
       StudioAside(
         ~ className={cn('order-1 max-h-[45dvh] shrink-0 border-b border-edge', !panels.aside && 'hidden')}
@@ -728,17 +725,14 @@ dialog(className={cn(dialogPanel, 'backdrop:backdrop-blur-none h-[min(920px,calc
             ~ stageSize={stageSize}
             ~ width={width}
             ~ scale={scale}
+            ~ inspector={designing ? { selected: selectedNode, edited: !!targetNode && !!targetBlock?.overrides?.[targetNode.nodeId], onEdit: applyEdit, onEditText: () => selectedNode && preview.current?.editText(selectedNode.nodeId, true), onReset: resetNode, onDismiss: () => setSelectedNode(undefined) } : undefined}
             ~ )
             if designing && ready
               DesignOverlay(
                 ~ selected={selectedNode}
                 ~ hovered={hoveredNode}
                 ~ scale={scale}
-                ~ edited={!!targetNode && !!targetBlock?.overrides?.[targetNode.nodeId]}
                 ~ onEdit={applyEdit}
-                ~ onEditText={() => selectedNode && preview.current?.editText(selectedNode.nodeId, true)}
-                ~ onReset={resetNode}
-                ~ onDismiss={() => setSelectedNode(undefined)}
                 ~ )
         Separator(className={panelSeparator} aria-label='Resize the outline and theme panel')
         Panel(id='aside' panelRef={asidePanel} defaultSize={PANEL_SIZES.aside.initial + 'px'} minSize={PANEL_SIZES.aside.min + 'px'} maxSize='40%' collapsible={true} collapsedSize={0} className='min-w-0 overflow-hidden')

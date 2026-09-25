@@ -108,6 +108,12 @@ yet.
 
 ## Seeding
 
+The catalog includes 40 page recipes, authored in `src/playground/studio/recipes.ts`.
+They cover compact launches, product tours, software platforms, studios and services,
+company stories, storefronts, resources, and communities. Recipes compose the existing
+theme-aware sections; their sample copy remains editable after installation.
+Both recipe browsers support searching titles and descriptions and scrolling the results.
+
 The `.ts` templates under `src/playground/studio/sections` remain the authoring
 source for the built-ins. `scripts/seed-presets.ts` parses them, asserts each one
 round-trips through both the renderer and the flattener, checks its depth,
@@ -116,6 +122,7 @@ validates the result, and pushes it in batches:
 ```sh
 bun run seed:presets --dry-run   # parse and validate only
 bun run seed:presets             # push to the configured deployment
+bun run seed:presets --recipes-only # update only the recipe catalog
 ```
 
 Seeding is idempotent: re-running patches each preset in place and bumps its

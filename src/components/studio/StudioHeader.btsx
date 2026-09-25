@@ -33,12 +33,12 @@ setup
   // The app's own light/dark theme, shared with the topbar's toggle; the studio preview follows it too.
   const { theme, toggleTheme } = useTheme();
 
-header(className='flex items-center justify-between border-b border-edge-strong px-3 py-2')
+header(className='flex min-w-0 flex-wrap items-center justify-between gap-y-2 border-b border-edge-strong px-3 py-2')
   div(className='min-w-0 -space-y-1.5')
     div(className='flex flex-wrap items-baseline gap-x-3')
       h2#design-studio-title(className='font-semibold text-foreground/80 text-sm -tracking-[0.03em]') Design Studio
     span(className='font-mono text-foreground/40 text-xs') for the web
-  div(className='flex items-center justify-center gap-2')
+  div(className='order-3 flex w-full items-center justify-center gap-2 sm:order-none sm:w-auto')
     span(className='hidden font-code text-[10px] text-faint sm:inline' title='Preview width and zoom') #{width}px · #{Math.round(scale * 100)}%
     div(className='flex gap-0.5 rounded-[6px] border border-edge bg-inset p-0.5' role='radiogroup' aria-label='Preview size')
       each option in devices key option.id
@@ -84,8 +84,9 @@ header(className='flex items-center justify-between border-b border-edge-strong 
     button(
       ~ type='button'
       ~ aria-pressed={designing}
+      ~ aria-label='Fine Layout'
       ~ disabled={!canDesign}
-      ~ title={designing ? 'Leave Fine Layout (Esc)' : 'Hover the preview to inspect a section, then drag its padding, margin or size'}
+      ~ title={designing ? 'Leave Fine Layout (Esc)' : 'Select an element to edit its layout in the property panel'}
       ~ className='flex items-center gap-1.5 rounded-[6px] p-1 text-dim transition-colors hover:text-brand aria-pressed:text-brand disabled:opacity-40 aria-pressed:border-brand'
       ~ onClick={onToggleDesigning}
       ~ )

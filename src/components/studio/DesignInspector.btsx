@@ -1,0 +1,105 @@
+import { useEffect, useRef } from 'octane'
+import { useField, useForm } from '@octanejs/tanstack-form'
+import { Icon } from '@/lib/icons'
+import type { DesignNode } from '../../playground/preview'
+import type { DesignEdit } from './DesignOverlay.btsx'
+
+module
+  export interface InspectorProps {
+    selected?: DesignNode
+    edited: boolean
+    onEdit: (edits: DesignEdit[], live: boolean) => void
+    onEditText: () => void
+    onReset: () => void
+    onDismiss: () => void
+  }
+  interface PropertyProps {
+    label: string
+    name: string
+    value: number
+    min: number
+    max: number
+    step: number
+    onChange: (value: number, live: boolean) => void
+  }
+  const sides = [
+    { label: 'Top', side: 'top', padding: 'pt', margin: 'mt' },
+    { label: 'Right', side: 'right', padding: 'pr', margin: 'mr' },
+    { label: 'Bottom', side: 'bottom', padding: 'pb', margin: 'mb' },
+    { label: 'Left', side: 'left', padding: 'pl', margin: 'ml' }
+  ] as const
+  const shown = (value: number) => String(Math.round(value * 100) / 100)
+  const heading = 'px-1 text-[10px] font-medium tracking-[0.12em] text-dim uppercase'
+
+component PropertyRow
+  props { label, name, value, min, max, step, onChange }: PropertyProps
+  setup
+    const focused = useRef(false);
+    const sliderDraft = useRef<number | undefined>(undefined);
+    const form = useForm({ defaultValues: { amount: shown(value) }, onSubmit: ({ value: draft }) => {
+      const number = Number(draft.amount);
+      if (!draft.amount.trim() || !Number.isFinite(number)) { form.setFieldValue('amount', shown(value)); return; }
+      const next = Math.max(min, Math.min(max, Math.round(number / step) * step));
+      form.setFieldValue('amount', shown(next));
+      if (Math.abs(next - value) > 0.001) onChange(next, false);
+    } });
+    const amount = useField({ form, name: 'amount' });
+    useEffect(() => { if (!focused.current) form.setFieldValue('amount', shown(value)); }, [value]);
+    const fill = Math.max(0, Math.min(100, (value - min) / (max - min) * 100));
+    const submit = (event: SubmitEvent) => { event.preventDefault(); void form.handleSubmit(); };
+
+  form(className='group relative isolate flex h-12 shrink-0 items-center overflow-hidden rounded-xl border border-edge/70 bg-surface-recessed shadow-xs focus-within:border-brand/70' aria-label={name} onSubmit={submit} noValidate={true})
+    div(className='pointer-events-none absolute inset-y-0 left-0 right-[88px] overflow-hidden rounded-l-xl' aria-hidden={true})
+      span(className='absolute inset-y-0 left-0 rounded-r-lg bg-control/80' style={{ width: fill + '%' }})
+      span(className='absolute inset-y-3.5 w-[3px] rounded-full bg-fg-secondary/35' style={{ left: `calc(${fill}% - 3px)` }})
+      span(className='absolute inset-y-[19px] right-2 left-[52%] flex justify-between opacity-40')
+        each tick in [0, 1, 2, 3] key tick
+          span(className='w-px bg-edge-strong')
+    span(className='pointer-events-none relative min-w-0 flex-1 px-3 text-[12px] text-fg-secondary') #{label}
+    input(type='range' min={min} max={max} step={step} value={value} aria-label={name + ' slider'} aria-valuetext={shown(value) + ' pixels'} className='absolute inset-y-0 left-0 z-10 m-0 w-[calc(100%-88px)] cursor-ew-resize opacity-0' onInput={event => { sliderDraft.current = Number(event.currentTarget.value); onChange(sliderDraft.current, true); }} onChange={event => { const next = sliderDraft.current ?? Number(event.currentTarget.value); sliderDraft.current = undefined; onChange(next, false); }})
+    div(className='relative z-20 mr-2 flex w-20 shrink-0 items-center rounded-lg bg-panel/60 px-2 py-1.5 ring-1 ring-inset ring-edge/50')
+      input(type='number' aria-label={name} min={min} max={max} step={step} value={amount.state.value} className='w-full min-w-0 appearance-none border-0 bg-transparent p-0 text-right text-[12px] text-fg tabular-nums outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none' onInput={event => amount.handleChange(event.currentTarget.value)} onFocus={() => { focused.current = true; }} onBlur={() => { focused.current = false; amount.handleBlur(); void form.handleSubmit(); }} onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); form.setFieldValue('amount', shown(value)); event.currentTarget.blur(); } }})
+      span(className='ml-1 text-[9px] text-faint' aria-hidden={true}) px
+
+props { selected, edited, onEdit, onEditText, onReset, onDismiss }: InspectorProps
+setup
+  const spacingStep = Math.max(0.01, (selected?.step ?? 4) / 4);
+  const spacingMax = 96 * (selected?.step ?? 4);
+
+section(className='flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-edge-strong bg-panel shadow-elevation' aria-label='Element properties')
+  header(className='flex shrink-0 items-start justify-between gap-3 border-b border-edge/70 px-4 py-3.5')
+    div(className='min-w-0')
+      p(className='text-[10px] font-medium tracking-[0.12em] text-dim uppercase') Layout
+      h3(className='mt-1 truncate text-[15px] font-medium text-fg') #{selected ? '<' + selected.tag + '>' : 'Element properties'}
+    if selected
+      button(className='-mr-1 flex size-7 shrink-0 items-center justify-center rounded-lg text-dim hover:bg-control hover:text-fg focus-visible:outline-2 focus-visible:outline-brand' type='button' aria-label='Deselect element' onClick={onDismiss})
+        Icon(name='close-small' className='size-3.5')
+  if selected
+    fragment
+      div(className='min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain p-3 [scrollbar-gutter:stable]')
+        if selected.count > 1
+          p(className='rounded-lg bg-brand/10 px-3 py-2 text-[11px] leading-relaxed text-fg-secondary') Editing #{selected.count} repeated elements
+        if selected.editable
+          button(className='flex h-10 w-full items-center justify-between rounded-xl border border-edge bg-control/50 px-3 text-[12px] text-fg-secondary hover:bg-control hover:text-fg' type='button' onClick={onEditText})
+            span Edit text
+            span(aria-hidden={true} className='text-dim') ↗
+        fieldset(className='min-w-0 space-y-2')
+          legend(className={heading + ' mb-2'}) Size
+          PropertyRow(label='Width' name='Width' value={selected.rect.width} min={1} max={Math.max(4096, selected.rect.width)} step={1} onChange={(value, live) => onEdit([{ group: 'size', field: 'w', value }], live)})
+          PropertyRow(label='Height' name='Height' value={selected.rect.height} min={1} max={Math.max(4096, selected.rect.height)} step={1} onChange={(value, live) => onEdit([{ group: 'size', field: 'h', value }], live)})
+        fieldset(className='min-w-0 space-y-2')
+          legend(className={heading + ' mb-2'}) Padding
+          each side in sides key side.padding
+            PropertyRow(label={side.label} name={'Padding ' + side.side} value={selected.padding[side.side]} min={0} max={Math.max(spacingMax, selected.padding[side.side])} step={spacingStep} onChange={(value, live) => onEdit([{ group: 'spacing', field: side.padding, value: value / selected.step }], live)})
+        fieldset(className='min-w-0 space-y-2')
+          legend(className={heading + ' mb-2'}) Margin
+          each side in sides key side.margin
+            PropertyRow(label={side.label} name={'Margin ' + side.side} value={selected.margin[side.side]} min={Math.min(-spacingMax, selected.margin[side.side])} max={Math.max(spacingMax, selected.margin[side.side])} step={spacingStep} onChange={(value, live) => onEdit([{ group: 'spacing', field: side.margin, value: value / selected.step }], live)})
+      footer(className='flex shrink-0 items-center justify-between gap-2 border-t border-edge/70 px-4 py-3')
+        span(className='text-[10px] text-faint') Drag a row or enter a value
+        button(className='rounded-lg px-2 py-1 text-[11px] text-warning hover:bg-control disabled:text-faint disabled:opacity-50' type='button' disabled={!edited} onClick={onReset}) Reset
+  else
+    div(className='flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-6 py-8 text-center')
+      Icon(name='design' className='size-6 text-dim')
+      p(className='text-[12px] leading-relaxed text-fg-secondary') Select an element on the canvas to adjust its layout.
+      p(className='text-[11px] leading-relaxed text-dim') Your controls stay here. Your design stays in view.

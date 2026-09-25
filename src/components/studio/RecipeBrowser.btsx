@@ -1,0 +1,28 @@
+import { useField, useForm } from '@octanejs/tanstack-form'
+import { cn } from '@/lib/utils'
+import type { PresetRecipe } from '../../playground/studio/presets'
+import RecipeCard from './RecipeCard.btsx'
+
+module
+  interface Props {
+    recipes: PresetRecipe[]
+    onRecipe: (recipe: PresetRecipe) => void
+    compact?: boolean
+  }
+
+props { recipes, onRecipe, compact = false }: Props
+setup
+  const form = useForm({ defaultValues: { search: '' } });
+  const search = useField({ form, name: 'search' });
+  const words = search.state.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const matches = recipes.filter(recipe => words.every(word => `${recipe.title} ${recipe.description}`.toLowerCase().includes(word)));
+
+section(className={cn('flex min-h-0 w-full flex-col gap-3 text-left', compact ? 'max-h-96' : 'max-w-2xl flex-1')} aria-label='Page recipes')
+  div(className='flex shrink-0 items-center gap-2')
+    input(type='search' aria-label='Search recipes' placeholder='Search recipes…' value={search.state.value} onInput={event => search.handleChange(event.currentTarget.value)} onBlur={() => search.handleBlur()} className='h-9 min-w-0 flex-1 rounded-lg border border-edge-strong bg-panel px-3 text-[12px] text-fg outline-none placeholder:text-dim focus:border-brand')
+    span(className='shrink-0 font-code text-[10px] text-dim' role='status' aria-live='polite') #{matches.length} / #{recipes.length}
+  div(className={cn('grid min-h-0 content-start gap-2 overflow-y-auto overscroll-contain pr-1 pb-1', !compact && 'sm:grid-cols-2')})
+    each recipe in matches key recipe.recipeId
+      RecipeCard(recipe={recipe} onRecipe={onRecipe} compact={compact})
+    empty
+      p(className='col-span-full py-6 text-center text-[12px] text-dim') No matching recipes. Try “product”, “studio”, or “minimal”.

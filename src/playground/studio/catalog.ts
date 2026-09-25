@@ -1,4 +1,4 @@
-import type { PageRecipe, SectionKindId, SectionTemplate } from './types'
+import type { SectionKindId, SectionTemplate } from './types'
 import { sectionKind } from './kinds'
 import { topbarTemplates } from './sections/topbar'
 import { heroTemplates } from './sections/hero'
@@ -42,38 +42,7 @@ export const sectionTemplates: SectionTemplate[] = [
   ...footerTemplates
 ]
 
-export const pageRecipes: PageRecipe[] = [
-  {
-    id: 'saas-launch',
-    title: 'SaaS launch',
-    description: 'The classic software landing page, from hero to pricing.',
-    templates: ['topbar-marketing', 'hero-centered', 'partners-marquee', 'features-bento', 'guides-steps', 'testimonials-wall', 'pricing-tiers', 'faq-accordion', 'cta-banner', 'footer-columns']
-  },
-  {
-    id: 'waitlist',
-    title: 'Pre-launch waitlist',
-    description: 'Collect early sign-ups and tell your founding story.',
-    templates: ['topbar-responsive-menu', 'hero-waitlist', 'features-grid', 'team-founders', 'faq-accordion', 'footer-simple']
-  },
-  {
-    id: 'storefront',
-    title: 'Storefront',
-    description: 'Sell products with reviews and a newsletter.',
-    templates: ['topbar-centered', 'hero-statement', 'products-grid', 'testimonials-spotlight', 'newsletter-card', 'footer-columns']
-  },
-  {
-    id: 'platform',
-    title: 'Product platform',
-    description: 'A multi-product company page with proof and plan comparison.',
-    templates: ['topbar-marketing', 'hero-split', 'partners-dual-marquee', 'stats-row', 'products-suite', 'features-alternating', 'guides-walkthrough', 'pricing-compare', 'cta-split', 'footer-signoff']
-  },
-  {
-    id: 'signed-out-landing',
-    title: 'Signed-out landing',
-    description: 'The default page a visitor sees before signing in: topbar, hero, call to action, footer.',
-    templates: ['topbar-default', 'hero-default', 'cta-default', 'footer-default']
-  }
-]
+export { pageRecipes } from './recipes'
 
 const templatesById = new Map(sectionTemplates.map(template => [template.id, template]))
 
