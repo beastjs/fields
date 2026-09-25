@@ -38,7 +38,7 @@ export interface PageBlock {
 
 export const sectionFile = (name: string) => `${SECTIONS_DIRECTORY}${name}.btsx`
 
-/** Element defaults sections rely on when a project has no Preflight reset, plus the marquee keyframes. */
+/** Element defaults sections rely on when a project has no Preflight reset, plus the keyframes their motion uses. */
 const STUDIO_STYLES = `${STYLES_MARKER}: element defaults and motion. */
 @layer base {
   [data-section], [data-section] * { box-sizing: border-box; }
@@ -49,6 +49,7 @@ const STUDIO_STYLES = `${STYLES_MARKER}: element defaults and motion. */
   [data-section] :where(button, input, select, textarea) { font: inherit; color: inherit; background: transparent; border: 0 solid; }
 }
 @keyframes studio-marquee { to { transform: translateX(-50%); } }
+@keyframes studio-spin { to { transform: rotate(360deg); } }
 ${THEME_BASE}`
 /** Tailwind's `dark:` variant follows the preview's data-theme instead of the OS setting. */
 const DARK_VARIANT = '@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));'

@@ -294,8 +294,9 @@ export const seedRecipes = internalMutation({
     const now = Date.now()
     let inserted = 0
     let updated = 0
-    for (const recipe of args.recipes) {
-      const fields = { ...recipe, status: 'published' as const, updatedAt: now }
+    for (const [index, recipe] of args.recipes.entries()) {
+      // The catalog lists recipes by `updatedAt`, so offsetting each one keeps the authored order.
+      const fields = { ...recipe, status: 'published' as const, updatedAt: now + index }
       const existing = await ctx.db.query('pageRecipes').withIndex('by_recipeId', q => q.eq('recipeId', recipe.recipeId)).unique()
       if (existing) { await ctx.db.patch(existing._id, fields); updated++ }
       else { await ctx.db.insert('pageRecipes', { ...fields, createdAt: now }); inserted++ }

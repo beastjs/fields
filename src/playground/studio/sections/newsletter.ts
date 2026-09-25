@@ -54,5 +54,32 @@ section(data-section='newsletter' className='px-4 py-20')
         button(type='submit' onClick={event => { event.preventDefault(); if (event.currentTarget.form?.reportValidity()) setSubscribed(true); }} className='rounded-lg border border-current/25 bg-current/15 px-5 py-2.5 font-medium hover:bg-current/20') Notify me
     p(className='text-xs text-current/50') We respect your inbox. Unsubscribe with one click.
 `
+  },
+  {
+    id: 'newsletter-letterpress',
+    kind: 'newsletter',
+    title: 'Letterpress',
+    description: 'A large serif promise and an oversized underlined email field that reads like a handwritten line.',
+    wireframe: ['xs gap', 'huge', 'field gap btn'],
+    source: `import { useState } from 'octane'
+
+setup
+  const [email, setEmail] = useState('');
+  const [sent, setSent] = useState(false);
+
+section(data-section='newsletter' className='px-4 py-24 sm:px-8')
+  div(className='mx-auto max-w-5xl')
+    p(className='font-mono text-xs tracking-[0.3em] text-current/60 uppercase') The dispatch · every other Sunday
+    h2(className='mt-4 max-w-3xl font-serif text-5xl leading-[0.95] sm:text-7xl') Letters for people who still read slowly.
+    if sent
+      p(role='status' className='mt-12 border-b-2 border-current py-4 font-serif text-2xl italic') Thank you — the next letter will find #{email}.
+    else
+      form(className='mt-12 flex flex-col gap-4 border-b-2 border-current sm:flex-row sm:items-end')
+        label(for='letter-email' className='sr-only') Email address
+        input#letter-email(type='email' required placeholder='your@address' value={email} onInput={event => setEmail(event.currentTarget.value)} className='min-w-0 flex-1 py-4 font-serif text-3xl outline-none placeholder:text-current/30 sm:text-5xl')
+        button(type='submit' onClick={event => { event.preventDefault(); if (event.currentTarget.form?.reportValidity()) setSent(true); }} className='group flex items-center gap-2 pb-5 text-sm font-medium tracking-widest uppercase transition-colors hover:text-[var(--studio-accent)]')
+          span Subscribe
+          span(aria-hidden='true' className='transition-transform group-hover:translate-x-1') →
+`
   }
 ]

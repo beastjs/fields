@@ -104,4 +104,4 @@ header(className='flex min-w-0 flex-wrap items-center justify-between gap-y-2 bo
       ~ )
       Icon(name='theme' className='size-4')
 
-    Button(variant='ghost' size='icon' aria-label='Close Design Studio' onClick={onClose} className='relative rounded-full -translate-y-3 translate-x-5') ×
+    Button(variant='ghost' size='icon' aria-label='Close Design Studio' onClick={onClose} className='relative rounded-full -translate-y-3 translate-x-3') ×

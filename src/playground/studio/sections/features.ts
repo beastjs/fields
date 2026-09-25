@@ -107,5 +107,111 @@ section(data-section='features' className='px-4 py-20 sm:py-24')
             span(className='h-3 w-3/4 rounded bg-current/10')
             span(className='h-3 w-2/3 rounded bg-current/10')
 `
+  },
+  {
+    id: 'features-index',
+    kind: 'features',
+    title: 'Giant index',
+    description: 'Disciplines as a ruled index of huge uppercase words that slide and turn italic on hover.',
+    wireframe: ['xs gap xs', 'num huge line', 'num huge line', 'num huge line', 'num huge line'],
+    source: `setup
+  const services = [
+    { title: 'Identity', detail: 'Marks, wordmarks, and systems that misbehave on purpose.', tags: 'Brand · Type · Motion' },
+    { title: 'Spatial', detail: 'Exhibitions, signage, and rooms you remember with your body.', tags: 'Wayfinding · Sets' },
+    { title: 'Digital', detail: 'Websites that feel like objects rather than documents.', tags: 'Web · Interactive' },
+    { title: 'Editions', detail: 'Books, prints, and small runs of beautiful nonsense.', tags: 'Print · Risograph' }
+  ];
+
+section(data-section='features' className='border-b-2 border-current')
+  div(className='flex items-end justify-between border-b-2 border-current px-4 py-4 font-mono text-xs uppercase sm:px-8')
+    h2 What we do
+    span (#{services.length}) disciplines
+  ol
+    each service, index in services key service.title
+      li(className='group grid grid-cols-[2.5rem_1fr] items-baseline gap-x-4 gap-y-2 border-b-2 border-current px-4 py-6 transition-colors last:border-b-0 hover:bg-current/10 sm:grid-cols-[4rem_1fr_16rem_10rem] sm:px-8')
+        span(className='font-mono text-sm text-current/50') (#{index + 1})
+        h3(className='text-5xl font-black tracking-[-0.05em] uppercase transition-transform duration-300 group-hover:translate-x-3 group-hover:italic sm:text-7xl') #{service.title}
+        p(className='col-start-2 text-sm text-current/70 sm:col-start-auto') #{service.detail}
+        span(className='col-start-2 font-mono text-[11px] text-current/50 uppercase transition-colors group-hover:text-[var(--studio-accent)] sm:col-start-auto sm:text-right') #{service.tags}
+`
+  },
+  {
+    id: 'features-editorial',
+    kind: 'features',
+    title: 'Long read',
+    description: 'A magazine spread: a serif headline and byline beside two ruled columns with a drop cap and pull quote.',
+    wireframe: ['head text text', 'line text text', 'gap text text'],
+    source: `setup
+  const paragraphs = [
+    'The workshop smells of cedar and cold coffee. Nobody here is in a hurry, and that is precisely the point: every object on the long table has been sanded, tested, argued over, and sanded again.',
+    'Speed, the founders say, is a kind of forgetting. When you move fast you stop noticing the grain, the weight, the small resistance a good drawer gives before it opens.',
+    'So they built a practice around noticing. Each piece begins as a walk, then a sketch, then a model the size of a matchbox, then — only then — the real thing.',
+    'The result is furniture that feels less designed than discovered, as if it had always been waiting in the wood for someone patient enough to find it.'
+  ];
+
+section(data-section='features' className='px-4 py-20 sm:px-8')
+  div(className='mx-auto grid max-w-6xl gap-10 border-t-4 border-double border-current/60 pt-8 lg:grid-cols-[1fr_2fr]')
+    div(className='flex flex-col gap-4')
+      p(className='font-mono text-[10px] tracking-[0.3em] text-[var(--studio-accent)] uppercase') The long read
+      h2(className='font-serif text-4xl leading-tight font-black italic sm:text-5xl') On making things slowly
+      p(className='text-sm text-current/60') Words by Aurelio Mance · Photographs by nobody, on purpose
+    div(className='columns-1 gap-10 font-serif text-lg leading-relaxed text-current/80 sm:columns-2 [column-rule:1px_solid_color-mix(in_oklab,currentColor_15%,transparent)]')
+      each paragraph, index in paragraphs key index
+        div
+          p(className={'mb-5 ' + (index === 0 ? 'first-letter:float-left first-letter:mr-3 first-letter:text-7xl first-letter:leading-[0.8] first-letter:font-black first-letter:text-[var(--studio-accent)]' : '')}) #{paragraph}
+          if index === 1
+            blockquote(className='mb-5 break-inside-avoid border-y border-current/30 py-4 text-2xl leading-snug text-current italic') “Slowness is not the absence of speed. It is the presence of attention.”
+`
+  },
+  {
+    id: 'features-shapes',
+    kind: 'features',
+    title: 'Geometric course',
+    description: 'Three ruled panels, each led by a primary shape — circle, triangle, square — that spins on hover.',
+    wireframe: ['head gap', 'feature feature feature'],
+    source: `setup
+  const courses = [
+    { shape: 'rounded-full bg-[var(--studio-accent)]', title: 'Colour', body: 'Mix pigment before pixels. Learn why yellow is loud and blue keeps secrets.', length: '4 weeks' },
+    { shape: 'bg-current [clip-path:polygon(50%_0,100%_100%,0_100%)]', title: 'Type & grid', body: 'Set metal type by hand, then break every rule you just learned — deliberately.', length: '4 weeks' },
+    { shape: 'rotate-45 scale-75 border-[10px] border-current', title: 'Material', body: 'Wood, wool, clay, and steel. Each one argues back; we teach you to listen.', length: '4 weeks' }
+  ];
+
+section(data-section='features' className='px-4 py-20 sm:px-8')
+  div(className='mx-auto max-w-6xl')
+    h2(className='mb-12 max-w-2xl text-4xl leading-[0.95] font-black tracking-tight uppercase sm:text-6xl') The foundation course, reimagined.
+    div(className='grid divide-y divide-current/20 border border-current/20 md:grid-cols-3 md:divide-x md:divide-y-0')
+      each course, index in courses key course.title
+        article(className='group flex flex-col gap-5 p-8 transition-colors hover:bg-current/5')
+          div(aria-hidden='true' className={'size-20 transition-transform duration-700 group-hover:rotate-180 ' + course.shape})
+          span(className='mt-4 font-mono text-xs text-current/50') 0#{index + 1} / #{course.length}
+          h3(className='text-3xl font-black tracking-tight uppercase') #{course.title}
+          p(className='text-current/70') #{course.body}
+`
+  },
+  {
+    id: 'features-stickers',
+    kind: 'features',
+    title: 'Taped notes',
+    description: 'Four tilted paper notes with strips of tape, which straighten and lift when you hover them.',
+    wireframe: ['^ head', 'card card card card'],
+    source: `setup
+  const notes = [
+    { title: 'Photocopy everything', body: 'Grain is a feature. Toner streaks are free texture.', tilt: '-rotate-2' },
+    { title: 'Steal like a magpie', body: 'Keep a drawer of scraps: tickets, receipts, wrong turns.', tilt: 'rotate-1' },
+    { title: 'Staple it anyway', body: 'Finished is a feeling you get after you hand it out.', tilt: 'rotate-3' },
+    { title: 'Mail it to strangers', body: 'Every issue goes to ten people we have never met.', tilt: '-rotate-1' }
+  ];
+
+section(data-section='features' className='px-4 py-20')
+  div(className='mx-auto max-w-6xl')
+    h2(className='mb-16 text-center font-serif text-5xl italic sm:text-6xl') Rules for the cut-and-paste club
+    div(className='grid gap-10 sm:grid-cols-2 lg:grid-cols-4')
+      each note, index in notes key note.title
+        article(className={'relative border border-current/20 bg-current/5 p-6 pt-8 shadow-lg transition-transform duration-300 hover:-translate-y-2 hover:rotate-0 ' + note.tilt})
+          span(aria-hidden='true' className='absolute -top-3 left-1/2 h-6 w-20 -translate-x-1/2 -rotate-3 bg-current/15 backdrop-blur-sm')
+          span(className='font-mono text-xs text-[var(--studio-accent)]') rule no. #{index + 1}
+          h3(className='mt-2 text-2xl leading-tight font-black uppercase') #{note.title}
+          p(className='mt-3 text-sm text-current/70') #{note.body}
+`
   }
 ]

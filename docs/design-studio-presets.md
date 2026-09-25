@@ -45,7 +45,7 @@ Values are stored exactly as they appear after the utility's dash — `4`, `4xl`
 
 ## Guarantees
 
-`tests/studio-ir.test.ts` holds these for all 44 built-in templates:
+`tests/studio-ir.test.ts` holds these for every built-in template:
 
 - **Lossless.** `renderPreset(parsePreset(source))` equals the original source,
   byte for byte, once the tokens inside each `className` are sorted. No utility
@@ -108,10 +108,22 @@ yet.
 
 ## Seeding
 
-The catalog includes 40 page recipes, authored in `src/playground/studio/recipes.ts`.
+The catalog includes 52 page recipes, authored in `src/playground/studio/recipes.ts`.
 They cover compact launches, product tours, software platforms, studios and services,
-company stories, storefronts, resources, and communities. Recipes compose the existing
-theme-aware sections; their sample copy remains editable after installation.
+company stories, storefronts, resources, and communities, led by twelve art-directed pages —
+brutalist, kinetic type, gallery, Swiss poster, orbital, magazine, blueprint, festival,
+zine, generative, Bauhaus, and slow reading. Recipes compose the existing theme-aware
+sections; their sample copy remains editable after installation. The seed stamps each
+recipe's `updatedAt` in authored order, which is the order the catalog lists them in.
+
+The art-directed sections still follow the monotone rule, and they are what uses
+`--studio-accent`: outlines, glows, and highlights take the theme's accent. Since the
+Inherit theme's accent is `currentColor`, nothing with text sits on a solid accent fill —
+buttons use a translucent accent fill with an accent ring so they read in every theme.
+Outlined type uses `-webkit-text-fill-color: transparent` rather than `text-transparent`,
+which would also blank the `currentColor` stroke. Spinning motion uses the
+`studio-spin` keyframes in the studio stylesheet.
+
 Both recipe browsers support searching titles and descriptions and scrolling the results.
 
 The `.ts` templates under `src/playground/studio/sections` remain the authoring
@@ -178,7 +190,7 @@ variables — `p-4` is `calc(var(--spacing) * 4)`, `rounded-lg` is
 the compiled stylesheet, changing the variables repaints everything without
 touching a class name. Switching a theme sends one `tokens` message to the
 preview, which swaps a single `<style>` node. No rebuild, no recompile, and the
-44 presets are untouched.
+presets are untouched.
 
 Sections stay monochrome and derive colour from `currentColor`, so setting the
 page's colour and background carries the palette through every `current/15` tint.

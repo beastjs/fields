@@ -55,5 +55,33 @@ section(data-section='team' className='px-4 py-20 sm:py-24')
         p(className='font-serif text-xl italic') Ada & Kenji
         p(className='text-sm text-current/60') Co-founders, Nova
 `
+  },
+  {
+    id: 'team-artists',
+    kind: 'team',
+    title: 'Artist roll',
+    description: 'A ruled roll of names in large light type; hovering a name conjures a spinning colour study beside it.',
+    wireframe: ['head gap', 'head line xs', 'head line xs', 'head line xs'],
+    source: `setup
+  const artists = [
+    { name: 'Ines Okoro-Vale', medium: 'Painting', city: 'Lagos / Lisbon' },
+    { name: 'Tomasz Wren', medium: 'Sound sculpture', city: 'Kraków' },
+    { name: 'Aiko Brandt', medium: 'Textile', city: 'Kyoto' },
+    { name: 'Rafa Solís', medium: 'Light', city: 'Mexico City' },
+    { name: 'June Oyelaran', medium: 'Ceramics', city: 'Accra' }
+  ];
+
+section(data-section='team' className='px-4 py-20 sm:px-8')
+  div(className='mx-auto max-w-6xl')
+    h2(className='font-serif text-5xl italic sm:text-6xl') The makers
+    p(className='mt-4 mb-12 max-w-md text-current/70') Five practices, one season. Hover a name to meet the work.
+    ul(className='border-t border-current/20')
+      each artist, index in artists key artist.name
+        li(className='group relative grid grid-cols-[1fr_auto] items-center gap-4 border-b border-current/20 py-6 sm:grid-cols-[1fr_12rem_10rem]')
+          span(className='text-3xl font-light tracking-tight transition-all duration-500 group-hover:translate-x-4 group-hover:italic sm:text-5xl') #{artist.name}
+          span(className='hidden text-sm text-current/60 sm:block') #{artist.medium}
+          span(className='text-right font-mono text-xs text-current/50') #{artist.city}
+          span(aria-hidden='true' className='pointer-events-none absolute top-1/2 right-[38%] hidden size-32 -translate-y-1/2 scale-50 rotate-45 rounded-full opacity-0 blur-[1px] transition-all duration-500 group-hover:scale-100 group-hover:rotate-0 group-hover:opacity-100 sm:block' style={{ background: 'conic-gradient(from ' + index * 70 + 'deg, var(--studio-accent), transparent, currentColor, var(--studio-accent))' }})
+`
   }
 ]

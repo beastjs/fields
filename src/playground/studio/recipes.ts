@@ -3,6 +3,78 @@ import type { PageRecipe } from './types'
 /** Curated page compositions; keep stable ids so saved catalog references survive updates. */
 export const pageRecipes: PageRecipe[] = [
   {
+    id: 'brutalist-manifesto',
+    title: 'Brutalist manifesto',
+    description: 'Heavy rules, poster-scale type, and a marquee that shouts — a creative studio with opinions.',
+    templates: ['topbar-index', 'hero-manifesto', 'features-index', 'stats-giant', 'cta-shout', 'footer-wordmark']
+  },
+  {
+    id: 'kinetic-type-foundry',
+    title: 'Kinetic type foundry',
+    description: 'Giant words drifting in both directions, specimen cards that come alive, and a letterpress sign-up.',
+    templates: ['topbar-floating', 'hero-kinetic', 'products-specimen', 'stats-giant', 'testimonials-pullquote', 'newsletter-letterpress', 'footer-colophon']
+  },
+  {
+    id: 'gallery-exhibition',
+    title: 'Gallery exhibition',
+    description: 'A hushed gallery: a framed abstract canvas, a salon-hung wall of works, and a roll of artists.',
+    templates: ['topbar-gallery', 'hero-exhibition', 'products-salon', 'team-artists', 'testimonials-pullquote', 'footer-colophon']
+  },
+  {
+    id: 'swiss-poster',
+    title: 'Swiss poster',
+    description: 'International Typographic Style on the web: a visible grid, a colossal numeral, primary shapes, and a spinning stamp.',
+    templates: ['topbar-index', 'hero-swiss', 'features-shapes', 'stats-giant', 'cta-stamp', 'footer-wordmark']
+  },
+  {
+    id: 'orbital-studio',
+    title: 'Orbital studio',
+    description: 'Rings and glowing satellites circling a light headline, for an immersive or experiential studio.',
+    templates: ['topbar-floating', 'hero-orbit', 'features-index', 'testimonials-pullquote', 'cta-stamp', 'footer-wordmark']
+  },
+  {
+    id: 'editorial-magazine',
+    title: 'Editorial magazine',
+    description: 'A print magazine online: masthead nameplate, cover story, a two-column long read, and a colophon.',
+    templates: ['topbar-masthead', 'hero-cover', 'features-editorial', 'testimonials-pullquote', 'newsletter-letterpress', 'footer-colophon']
+  },
+  {
+    id: 'architect-blueprint',
+    title: 'Architect’s blueprint',
+    description: 'Drafting-paper grids, a line-drawn section with dimension marks, measured numbers, and a long read about craft.',
+    templates: ['topbar-gallery', 'hero-blueprint', 'stats-giant', 'features-editorial', 'cta-stamp', 'footer-colophon']
+  },
+  {
+    id: 'festival-poster',
+    title: 'Festival poster',
+    description: 'A turning sunburst, a billed lineup in three sizes, a tabbed running order, and a shouting ticket band.',
+    templates: ['topbar-floating', 'hero-lineup', 'guides-timetable', 'stats-giant', 'cta-shout', 'footer-wordmark']
+  },
+  {
+    id: 'cut-and-paste-zine',
+    title: 'Cut-and-paste zine',
+    description: 'Tilted word blocks, taped notes, starbursts, and stickers — a scrappy, handmade publication.',
+    templates: ['topbar-index', 'hero-collage', 'features-stickers', 'testimonials-pullquote', 'newsletter-letterpress', 'footer-wordmark']
+  },
+  {
+    id: 'generative-studio',
+    title: 'Generative art studio',
+    description: 'A shimmering field of computed dots, a disciplines index, and a salon of generative editions.',
+    templates: ['topbar-floating', 'hero-dotfield', 'features-index', 'products-salon', 'cta-stamp', 'footer-colophon']
+  },
+  {
+    id: 'bauhaus-school',
+    title: 'Bauhaus school',
+    description: 'Circles, triangles, and quarter-rounds that turn on hover, a geometric foundation course, and its makers.',
+    templates: ['topbar-index', 'hero-bauhaus', 'features-shapes', 'team-artists', 'cta-shout', 'footer-wordmark']
+  },
+  {
+    id: 'slow-reading-journal',
+    title: 'Slow-reading journal',
+    description: 'Staggered serif verses, wide margins, a long read with a drop cap, and letters by post.',
+    templates: ['topbar-masthead', 'hero-verse', 'features-editorial', 'newsletter-letterpress', 'footer-colophon']
+  },
+  {
     id: 'saas-launch',
     title: 'SaaS launch',
     description: 'The classic software landing page, from hero to pricing.',

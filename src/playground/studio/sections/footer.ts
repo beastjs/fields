@@ -121,5 +121,63 @@ footer(data-section='footer' className='overflow-hidden border-t border-current/
       p © #{new Date().getFullYear()} Nova Labs, Inc.
     p(aria-hidden='true' className='mt-10 text-center text-[clamp(5rem,22vw,18rem)] leading-[0.8] font-semibold tracking-tighter text-current/10 select-none') nova
 `
+  },
+  {
+    id: 'footer-wordmark',
+    kind: 'footer',
+    title: 'Giant wordmark',
+    description: 'Link columns above a page-wide wordmark that bleeds off the bottom edge.',
+    wireframe: ['text line line', 'xs gap xs', 'huge'],
+    source: `setup
+  const groups = [
+    { title: 'Studio', links: ['About', 'Manifesto', 'Careers'] },
+    { title: 'Elsewhere', links: ['Instagram', 'Are.na', 'Newsletter'] }
+  ];
+
+section(data-section='footer' className='overflow-hidden px-4 pt-16 sm:px-8')
+  div(className='mx-auto grid max-w-7xl gap-10 sm:grid-cols-[2fr_1fr_1fr]')
+    p(className='max-w-sm text-lg leading-snug') Made with stubbornness, good coffee, and the occasional small miracle.
+    each group in groups key group.title
+      div
+        h2(className='mb-3 font-mono text-[11px] tracking-widest text-current/50 uppercase') #{group.title}
+        ul(className='grid gap-1.5')
+          each link in group.links key link
+            li
+              a(role='link' aria-disabled='true' className='inline-block transition-all hover:translate-x-2 hover:text-[var(--studio-accent)]') #{link}
+  div(className='mx-auto mt-16 flex max-w-7xl justify-between border-t border-current/20 py-4 font-mono text-[10px] text-current/50 uppercase')
+    span © 2026 — all rights reversed
+    span 52.37° N · 4.89° E
+  p(aria-hidden='true' className='-mb-[0.18em] text-center text-[clamp(3rem,12vw,14rem)] leading-[0.8] font-black tracking-[-0.08em] whitespace-nowrap uppercase select-none') Stay curious
+`
+  },
+  {
+    id: 'footer-colophon',
+    kind: 'footer',
+    title: 'Colophon',
+    description: 'A book-like sign-off: an italic colophon note, typesetting credits, quiet links, and a fleuron.',
+    wireframe: ['title line line', 'text xs xs', '^ line'],
+    source: `setup
+  const colophon = [
+    { label: 'Typeset in', value: 'A serif and a monospace' },
+    { label: 'Edited by', value: 'Aurelio Mance' },
+    { label: 'Published from', value: 'A small room with a large window' }
+  ];
+  const links = ['Archive', 'Contributors', 'Stockists', 'Write to us'];
+
+section(data-section='footer' className='px-4 py-16 sm:px-8')
+  div(className='mx-auto grid max-w-6xl gap-10 border-t-4 border-double border-current/60 pt-10 md:grid-cols-[2fr_1fr_1fr]')
+    div
+      p(className='font-serif text-3xl italic') Colophon
+      p(className='mt-4 max-w-md font-serif text-current/70') This site was set by hand in a small room with a large window. It has no cookies, no tracking, and no opinion about the size of your screen.
+    dl(className='grid content-start gap-4 text-sm')
+      each entry in colophon key entry.label
+        div
+          dt(className='font-mono text-[10px] tracking-widest text-current/50 uppercase') #{entry.label}
+          dd #{entry.value}
+    nav(aria-label='Footer' className='grid content-start gap-2 text-sm')
+      each link in links key link
+        a(role='link' aria-disabled='true' className='transition-colors hover:text-[var(--studio-accent)] hover:italic') #{link}
+  p(className='mx-auto mt-12 max-w-6xl text-center font-mono text-[10px] tracking-[0.3em] text-current/40 uppercase') ❦ Printed on light, 2026 ❦
+`
   }
 ]

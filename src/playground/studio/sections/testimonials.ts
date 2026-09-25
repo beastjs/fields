@@ -82,5 +82,23 @@ section(data-section='testimonials' className='px-4 py-20 sm:py-24')
       each item, dot in stories key item.name
         button(type='button' aria-label={'Show story ' + (dot + 1)} aria-current={dot === index} onClick={() => setIndex(dot)} className={'h-1.5 rounded-full transition-all ' + (dot === index ? 'w-6 bg-current/60' : 'w-1.5 bg-current/20')})
 `
+  },
+  {
+    id: 'testimonials-pullquote',
+    kind: 'testimonials',
+    title: 'Giant pull quote',
+    description: 'One enormous serif quotation under a huge accent quote mark, signed with a conic-gradient portrait.',
+    wireframe: ['num gap', 'huge', 'huge', 'avatar line'],
+    source: `section(data-section='testimonials' className='relative overflow-hidden px-4 py-24 sm:px-8 sm:py-32')
+  span(aria-hidden='true' className='pointer-events-none absolute -top-16 left-0 font-serif text-[22rem] leading-none text-[var(--studio-accent)] opacity-25 select-none sm:-top-24 sm:text-[32rem]') “
+  figure(className='relative mx-auto max-w-5xl')
+    blockquote(className='font-serif text-3xl leading-[1.15] font-light text-balance sm:text-5xl lg:text-6xl')
+      p It changed how our whole studio talks about work. We stopped asking whether a thing was finished and started asking whether it was alive.
+    figcaption(className='mt-10 flex items-center gap-4')
+      span(aria-hidden='true' className='size-14 animate-[studio-spin_12s_linear_infinite] rounded-full bg-[conic-gradient(var(--studio-accent),currentColor,var(--studio-accent))] opacity-80 motion-reduce:animate-none')
+      span
+        span(className='block font-medium') Marguerite Ashdown
+        span(className='block text-sm text-current/60') Creative director, Hollow & Hue
+`
   }
 ]

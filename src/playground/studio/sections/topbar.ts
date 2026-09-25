@@ -144,5 +144,85 @@ header(data-section='topbar' className='flex h-12 items-center gap-3 border-b bo
     span Production
   button(type='button' className='ml-auto rounded-md border border-current/20 bg-current/10 px-3 py-1 font-medium hover:bg-current/15') Deploy
 `
+  },
+  {
+    id: 'topbar-index',
+    kind: 'topbar',
+    title: 'Brutalist index',
+    description: 'A heavy-ruled bar of numbered links in monospace, with a pulsing availability light.',
+    wireframe: ['title line line line line dot'],
+    source: `setup
+  const links = [{ n: '01', label: 'Work' }, { n: '02', label: 'Manifesto' }, { n: '03', label: 'Archive' }, { n: '04', label: 'Contact' }];
+
+section(data-section='topbar' className='border-b-2 border-current font-mono text-xs uppercase')
+  nav(aria-label='Main' className='flex flex-wrap items-stretch')
+    a(role='link' aria-disabled='true' className='flex w-full items-center px-4 py-3 font-sans text-lg font-black tracking-tighter normal-case sm:w-auto sm:border-r-2 sm:border-current') RAW/FORM
+    div(className='flex flex-1 flex-wrap border-t-2 border-current sm:border-t-0')
+      each link in links key link.n
+        a(role='link' aria-disabled='true' className='group flex basis-1/2 items-baseline gap-2 border-current px-4 py-3 transition-colors even:border-l-2 hover:bg-current/10 [&:nth-child(-n+2)]:border-b-2 sm:basis-auto sm:border-l-2 sm:first:border-l-0 sm:[&:nth-child(-n+2)]:border-b-0')
+          span(className='text-current/50 transition-colors group-hover:text-[var(--studio-accent)]') #{link.n}
+          span #{link.label}
+    span(className='hidden items-center gap-2 border-l-2 border-current px-4 py-3 lg:flex')
+      span(className='size-2 animate-pulse rounded-full bg-[var(--studio-accent)]')
+      span Open for commissions
+`
+  },
+  {
+    id: 'topbar-gallery',
+    kind: 'topbar',
+    title: 'Gallery',
+    description: 'A hushed, museum-like bar: an italic serif name, letterspaced links, and what is on show now.',
+    wireframe: ['title gap xs xs xs xs gap line'],
+    source: `setup
+  const links = ['Exhibitions', 'Artists', 'Visit', 'Journal'];
+
+section(data-section='topbar' className='px-4 py-5 sm:px-8')
+  nav(aria-label='Main' className='mx-auto flex max-w-7xl items-baseline justify-between gap-6')
+    a(role='link' aria-disabled='true' className='font-serif text-xl tracking-tight italic') Salle Neuf
+    ul(className='hidden gap-8 text-[11px] tracking-[0.3em] text-current/60 uppercase md:flex')
+      each link in links key link
+        li
+          a(role='link' aria-disabled='true' className='transition-colors hover:text-current') #{link}
+    span(className='text-[11px] tracking-[0.3em] text-current/60 uppercase') Now showing — Room 3
+`
+  },
+  {
+    id: 'topbar-masthead',
+    kind: 'topbar',
+    title: 'Magazine masthead',
+    description: 'An issue line, a giant serif nameplate spanning the page, and a double-ruled section index.',
+    wireframe: ['xs gap xs gap xs', '^ huge', '^ xs xs xs xs xs'],
+    source: `setup
+  const sections = ['Culture', 'Design', 'Ideas', 'Places', 'Letters'];
+
+section(data-section='topbar' className='px-4 pt-6 sm:px-8')
+  div(className='mx-auto max-w-7xl')
+    div(className='flex items-center justify-between border-b border-current/20 pb-2 font-mono text-[10px] tracking-widest text-current/60 uppercase')
+      span Vol. 12 — No. 4
+      span(className='hidden sm:inline') The Autumn Issue
+      span Est. 2014
+    a(role='link' aria-disabled='true' className='block py-2 text-center font-serif text-[clamp(3rem,13vw,9rem)] leading-none font-black tracking-[-0.06em]') Periphery
+    nav(aria-label='Sections' className='flex justify-center gap-5 overflow-x-auto border-y-4 border-double border-current/60 py-2 text-xs tracking-[0.2em] uppercase sm:gap-10')
+      each item in sections key item
+        a(role='link' aria-disabled='true' className='shrink-0 hover:italic') #{item}
+`
+  },
+  {
+    id: 'topbar-floating',
+    kind: 'topbar',
+    title: 'Floating pill',
+    description: 'A sticky, frosted capsule that hovers over the page, with a conic-gradient mark.',
+    wireframe: ['^ dot title xs xs xs btn'],
+    source: `setup
+  const links = ['Studio', 'Work', 'Lab', 'Say hi'];
+
+section(data-section='topbar' className='sticky top-0 z-20 flex justify-center px-4 py-4')
+  nav(aria-label='Main' className='flex items-center gap-1 rounded-full border border-current/15 bg-current/5 p-1.5 pl-4 text-sm shadow-lg backdrop-blur-xl')
+    a(role='link' aria-disabled='true' className='mr-2 flex items-center gap-2 font-semibold tracking-tight sm:mr-4')
+      span(aria-hidden='true' className='size-4 animate-[studio-spin_8s_linear_infinite] rounded-full bg-[conic-gradient(var(--studio-accent),transparent,var(--studio-accent))] motion-reduce:animate-none')
+      span Lumen
+    each link, index in links key link
+      a(role='link' aria-disabled='true' className={'rounded-full px-3 py-1.5 transition-colors ' + (index === links.length - 1 ? 'bg-current/15 font-medium hover:bg-current/20' : 'hidden text-current/70 hover:bg-current/10 hover:text-current sm:block')}) #{link}
+`
   }
 ]

@@ -99,5 +99,37 @@ section(data-section='guides' className='px-4 py-20 sm:py-24')
             span(aria-hidden='true' className='grid size-5 place-items-center rounded-full bg-current/15 text-[10px]') ✓
             span #{point}
 `
+  },
+  {
+    id: 'guides-timetable',
+    kind: 'guides',
+    title: 'Festival timetable',
+    description: 'A giant heading with day tabs over a ruled running order that slides and lights up on hover.',
+    wireframe: ['huge gap pill pill pill', 'xs head pill', 'xs head pill', 'xs head pill'],
+    source: `import { useState } from 'octane'
+
+setup
+  const days = [
+    { id: 'fri', label: 'Friday', sets: [{ time: '16:00', act: 'Ghost Orchard', stage: 'Meadow' }, { time: '18:30', act: 'Lake Eerie', stage: 'Tent' }, { time: '21:00', act: 'Dune Choir', stage: 'Main' }, { time: '23:15', act: 'Solenne', stage: 'Main' }] },
+    { id: 'sat', label: 'Saturday', sets: [{ time: '15:00', act: 'Oda', stage: 'Meadow' }, { time: '17:45', act: 'Velvet Static', stage: 'Tent' }, { time: '20:30', act: 'Mira Lux', stage: 'Main' }, { time: '22:45', act: 'The Paper Kites of Mars', stage: 'Main' }] },
+    { id: 'sun', label: 'Sunday', sets: [{ time: '14:00', act: 'Tomasz & the Tides', stage: 'Meadow' }, { time: '16:30', act: 'Nnamdi Ray', stage: 'Tent' }, { time: '19:00', act: 'Hollow Sun', stage: 'Main' }, { time: '21:30', act: 'Kofi Ansah', stage: 'Main' }] }
+  ];
+  const [day, setDay] = useState('fri');
+  const current = days.find(item => item.id === day) ?? days[0];
+
+section(data-section='guides' className='px-4 py-20 sm:px-8')
+  div(className='mx-auto max-w-5xl')
+    div(className='mb-10 flex flex-wrap items-end justify-between gap-6')
+      h2(className='text-5xl font-black tracking-[-0.05em] uppercase sm:text-7xl') Running order
+      div(role='tablist' aria-label='Festival day' className='flex gap-1 rounded-full border border-current/20 p-1')
+        each item in days key item.id
+          button(type='button' role='tab' aria-selected={item.id === day} onClick={() => setDay(item.id)} className='rounded-full px-4 py-2 text-sm font-medium text-current/60 transition-colors hover:text-current aria-selected:bg-current/15 aria-selected:text-current') #{item.label}
+    ol(className='border-t-2 border-current')
+      each set in current.sets key set.time
+        li(className='group grid grid-cols-[4rem_1fr_auto] items-center gap-4 border-b border-current/20 py-5 transition-all hover:pl-3')
+          span(className='font-mono text-sm text-current/60') #{set.time}
+          span(className='text-2xl font-bold tracking-tight uppercase transition-colors group-hover:text-[var(--studio-accent)] sm:text-4xl') #{set.act}
+          span(className='rounded-full border border-current/20 px-3 py-1 font-mono text-[10px] uppercase') #{set.stage}
+`
   }
 ]

@@ -4,6 +4,7 @@ import { compileProject } from '../src/playground/compiler';
 import { helloWorld } from '../src/playground/examples';
 import { pageRecipes, searchTemplates, sectionKinds, sectionTemplate, sectionTemplates, templatesOf } from '../src/playground/studio/catalog';
 import { addSection, composePage, pagePreviewProject, planPageInstall, readPage, recipeBlocks, sectionFile, swapPreset } from '../src/playground/studio/page';
+import { parsePreset } from '../src/playground/studio/ir/parse';
 import { presetsFor } from '../src/playground/studio/presets';
 import { builtInPresets, builtInRecipes } from './built-in-presets';
 
@@ -36,6 +37,26 @@ test('section templates are monotone and self-contained so they fit any theme an
     expect({ id: template.id, hue: template.source.match(hue)?.[0], dark: template.source.includes('dark:'), remote: /https?:\/\//.test(template.source) })
       .toEqual({ id: template.id, hue: undefined, dark: false, remote: false });
   }
+});
+
+test('every each and if branch renders a single node, which the preview compiler requires', () => {
+  const crowded: string[] = [];
+  const walk = (nodes: any[] = [], id: string) => {
+    for (const node of nodes) {
+      if (node.type === 'each' && node.children.length > 1) crowded.push(`${id}: each ${node.item}`);
+      if (node.type === 'if') {
+        for (const branch of node.branches) if (branch.children.length > 1) crowded.push(`${id}: if ${branch.test}`);
+        if (node.otherwise?.length > 1) crowded.push(`${id}: else`);
+      }
+      walk(node.children, id);
+      for (const branch of node.branches ?? []) walk(branch.children, id);
+      walk(node.otherwise, id);
+    }
+  };
+  for (const template of sectionTemplates) {
+    walk([parsePreset(template.source, { id: template.id, kind: template.kind, title: template.title, description: template.description, wireframe: template.wireframe }).root], template.id);
+  }
+  expect(crowded).toEqual([]);
 });
 
 test('every section template compiles in a page preview with Tailwind utilities and studio styles', async () => {
@@ -97,7 +118,7 @@ test('sections insert in story order, repeat with numbered names, and swap templ
 
 test('installing a page on the starter replaces it and round-trips through Page.btsx', async () => {
   await init();
-  const blocks = recipeBlocks(builtInRecipes[0].presetIds, presets);
+  const blocks = recipeBlocks(builtInRecipes.find(recipe => recipe.recipeId === 'saas-launch')!.presetIds, presets);
   const install = planPageInstall(helloWorld, blocks, presets);
   expect(install).toMatchObject({ replacesStarter: true, rendered: true, overwrites: [], removes: ['/src/Counter.btsx'] });
   expect(install.files['/src/App.btsx']).toBe("import Page from './Page.btsx'\n\nPage\n");
@@ -112,7 +133,7 @@ test('installing a page on the starter replaces it and round-trips through Page.
 });
 
 test('updating a page removes unused sections, keeps edited ones, and reports edits it replaces', () => {
-  const blocks = recipeBlocks(builtInRecipes[1].presetIds, presets);
+  const blocks = recipeBlocks(builtInRecipes.find(recipe => recipe.recipeId === 'waitlist')!.presetIds, presets);
   const installed = planPageInstall(helloWorld, blocks, presets);
   const project = withFiles(helloWorld, installed.files, installed.removes);
   const edited = withFiles(project, { [sectionFile('Hero')]: '// mine\n' + project.files[sectionFile('Hero')], [sectionFile('Team')]: 'section(data-section=\'team\') Custom\n' });

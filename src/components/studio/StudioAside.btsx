@@ -5,6 +5,7 @@ import type { PageBlock } from '../../playground/studio/page'
 import type { PresetLookup, PresetRecipe } from '../../playground/studio/presets'
 import type { ThemeDocument } from '../../playground/studio/themes'
 import PageOutline from './PageOutline.btsx'
+import RecipeBrowser from './RecipeBrowser.btsx'
 import ThemeDesigner from './ThemeDesigner.btsx'
 
 module
@@ -28,15 +29,20 @@ module
 
 props { className, blocks, presets, recipes, selected, onSelect, onReorder, onRemove, onRecipe, theme, onPreviewTheme }: AsideProps
 setup
-  const [panel, setPanel] = useState<'outline' | 'theme'>('outline');
+  const [panel, setPanel] = useState<'outline' | 'theme' | 'recipes'>('outline');
 
-aside(className={cn('flex min-h-0 min-w-0 flex-col bg-panel-deep', className)} aria-label='Page outline and theme')
+aside(className={cn('flex min-h-0 min-w-0 flex-col bg-panel', className)} aria-label='Page outline, theme and recipes')
   div(className='flex h-9 shrink-0 gap-0.5 border-b border-edge bg-surface-toolbar px-1.5 py-1.5' role='tablist' aria-label='Right panel')
     button(className='rounded-[4px] px-2 py-0.5 text-[10px] text-dim aria-selected:bg-control aria-selected:text-fg' type='button' role='tab' aria-selected={panel === 'outline'} onClick={() => setPanel('outline')}) Outline
     button(className='flex items-center gap-1 rounded-[4px] px-2 py-0.5 text-[10px] text-dim aria-selected:bg-control aria-selected:text-fg' type='button' role='tab' aria-selected={panel === 'theme'} onClick={() => setPanel('theme')})
       Icon(name='sparkle' className='size-2.5')
       span Theme
+    button(className='rounded-[4px] px-2 py-0.5 text-[10px] text-dim aria-selected:bg-control aria-selected:text-fg' type='button' role='tab' aria-selected={panel === 'recipes'} onClick={() => setPanel('recipes')}) Recipes
   if panel === 'theme'
     ThemeDesigner(onPreview={onPreviewTheme} current={theme})
   else
-    PageOutline(blocks={blocks} presets={presets} recipes={recipes} selected={selected} onSelect={onSelect} onReorder={onReorder} onRemove={onRemove} onRecipe={onRecipe})
+    if panel === 'recipes'
+      div(className='flex min-h-0 flex-1 flex-col p-2')
+        RecipeBrowser(recipes={recipes} onRecipe={onRecipe} compact={true})
+    else
+      PageOutline(blocks={blocks} presets={presets} selected={selected} onSelect={onSelect} onReorder={onReorder} onRemove={onRemove})

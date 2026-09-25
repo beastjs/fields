@@ -50,5 +50,26 @@ section(data-section='stats' className='px-4 py-20')
           dd(className='mt-3 text-4xl font-semibold tracking-tight') #{stat.value}
           dd(className='mt-2 text-sm text-current/60') #{stat.note}
 `
+  },
+  {
+    id: 'stats-giant',
+    kind: 'stats',
+    title: 'Outlined numerals',
+    description: 'Three colossal outlined numbers that fill with the accent colour when you hover them.',
+    wireframe: ['xs xs xs', 'huge huge huge'],
+    source: `setup
+  const stats = [
+    { value: '212', label: 'Things made by hand' },
+    { value: '38', label: 'Cities we have shown in' },
+    { value: '∞', label: 'Ideas still in the drawer' }
+  ];
+
+section(data-section='stats' className='overflow-hidden px-4 py-20 sm:px-8')
+  dl(className='mx-auto grid max-w-7xl gap-y-10 md:grid-cols-3')
+    each stat in stats key stat.label
+      div(className='group flex flex-col-reverse border-current/20 md:border-l md:px-6 md:first:border-l-0 md:first:pl-0')
+        dt(className='font-mono text-xs tracking-widest text-current/60 uppercase') #{stat.label}
+        dd(className='text-[clamp(5rem,14vw,11rem)] leading-[0.85] font-black tracking-[-0.06em] transition-colors duration-500 [-webkit-text-fill-color:transparent] [-webkit-text-stroke:2px_currentColor] group-hover:text-[var(--studio-accent)] group-hover:[-webkit-text-fill-color:var(--studio-accent)]') #{stat.value}
+`
   }
 ]

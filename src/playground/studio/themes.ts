@@ -222,7 +222,7 @@ export const INHERIT_THEME: ThemeDocument = {
 }
 
 /**
- * The built-in themes. Each one is only variables, so the same 44 presets render as a different product under each.
+ * The built-in themes. Each one is only variables, so the same presets render as a different product under each.
  */
 export const builtInThemes: ThemeDocument[] = [
   INHERIT_THEME,
