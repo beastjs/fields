@@ -271,6 +271,17 @@ export const builtInThemes: ThemeDocument[] = [
       spacing: { base: '0.3rem' }
     },
     dark: { color: { bg: 'oklch(0.22 0.03 40)', fg: 'oklch(0.95 0.02 70)', accent: 'oklch(0.75 0.16 45)' } }
+  },
+  {
+    themeId: 'wiesn',
+    name: 'Wiesn',
+    description: 'The page is the beer: Märzen gold, dark-malt ink, and foam-cream highlights.',
+    tokens: {
+      color: { bg: 'oklch(0.8 0.15 80)', fg: 'oklch(0.24 0.05 45)', accent: 'oklch(0.97 0.025 95)' },
+      radius: { sm: '0.25rem', md: '0.5rem', lg: '0.75rem', xl: '1rem', '2xl': '1.5rem', '3xl': '2rem' },
+      font: { sans: 'ui-sans-serif, system-ui, sans-serif' },
+      spacing: { base: '0.25rem' }
+    }
   }
 ]
 

@@ -36,5 +36,6 @@ export const builtInRecipes: PresetRecipe[] = pageRecipes.map(recipe => ({
   recipeId: recipe.id,
   title: recipe.title,
   description: recipe.description,
-  presetIds: recipe.templates
+  presetIds: recipe.templates,
+  ...(recipe.themeId ? { themeId: recipe.themeId } : {})
 }))

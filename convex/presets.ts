@@ -38,7 +38,8 @@ const recipeValidator = v.object({
   recipeId: v.string(),
   title: v.string(),
   description: v.string(),
-  presetIds: v.array(v.string())
+  presetIds: v.array(v.string()),
+  themeId: v.optional(v.string())
 })
 const themeValidator = v.object({
   themeId: v.string(),
@@ -157,7 +158,7 @@ export const recipes = query({
     const all = [...(await read(undefined)), ...(team ? await read(team) : [])]
     return all
       .filter(recipe => recipe.status === 'published')
-      .map(recipe => ({ recipeId: recipe.recipeId, title: recipe.title, description: recipe.description, presetIds: recipe.presetIds }))
+      .map(recipe => ({ recipeId: recipe.recipeId, title: recipe.title, description: recipe.description, presetIds: recipe.presetIds, ...(recipe.themeId ? { themeId: recipe.themeId } : {}) }))
   }
 })
 
@@ -288,15 +289,16 @@ export const seedBuiltIns = internalMutation({
 })
 
 export const seedRecipes = internalMutation({
-  args: { recipes: v.array(v.object({ recipeId: v.string(), title: v.string(), description: v.string(), presetIds: v.array(v.string()) })) },
+  args: { recipes: v.array(recipeValidator) },
   returns: v.object({ inserted: v.number(), updated: v.number() }),
   handler: async (ctx, args) => {
     const now = Date.now()
     let inserted = 0
     let updated = 0
     for (const [index, recipe] of args.recipes.entries()) {
-      // The catalog lists recipes by `updatedAt`, so offsetting each one keeps the authored order.
-      const fields = { ...recipe, status: 'published' as const, updatedAt: now + index }
+      // The catalog lists recipes by `updatedAt`, so offsetting each one keeps the authored order. A recipe that drops
+      // its theme patches `themeId` to undefined, which clears it.
+      const fields = { themeId: undefined, ...recipe, status: 'published' as const, updatedAt: now + index }
       const existing = await ctx.db.query('pageRecipes').withIndex('by_recipeId', q => q.eq('recipeId', recipe.recipeId)).unique()
       if (existing) { await ctx.db.patch(existing._id, fields); updated++ }
       else { await ctx.db.insert('pageRecipes', { ...fields, createdAt: now }); inserted++ }

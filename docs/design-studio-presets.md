@@ -111,10 +111,13 @@ yet.
 The catalog includes 52 page recipes, authored in `src/playground/studio/recipes.ts`.
 They cover compact launches, product tours, software platforms, studios and services,
 company stories, storefronts, resources, and communities, led by twelve art-directed pages —
-brutalist, kinetic type, gallery, Swiss poster, orbital, magazine, blueprint, festival,
+brutalist, kinetic type, gallery, Swiss poster, orbital, magazine, blueprint, Oktoberfest,
 zine, generative, Bauhaus, and slow reading. Recipes compose the existing theme-aware
 sections; their sample copy remains editable after installation. The seed stamps each
 recipe's `updatedAt` in authored order, which is the order the catalog lists them in.
+A recipe may name a built-in `themeId` it is art-directed in (Oktoberfest ships with
+**Wiesn**: gold ground, dark-malt ink, foam-cream accent); choosing it switches the page to
+that theme, and the seed refuses a recipe whose theme does not exist.
 
 The art-directed sections still follow the monotone rule, and they are what uses
 `--studio-accent`: outlines, glows, and highlights take the theme's accent. Since the

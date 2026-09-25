@@ -100,5 +100,30 @@ section(data-section='testimonials' className='px-4 py-20 sm:py-24')
         span(className='block font-medium') Marguerite Ashdown
         span(className='block text-sm text-current/60') Creative director, Hollow & Hue
 `
+  },
+  {
+    id: 'testimonials-coasters',
+    kind: 'testimonials',
+    title: 'Beer mats',
+    description: 'Quotes printed on round, tilted beer mats with a double rim, which straighten when you pick one up.',
+    wireframe: ['^ head', 'avatar avatar avatar avatar'],
+    source: `setup
+  const quotes = [
+    { text: 'I came for one Maß. That was 2019.', who: 'Jonas, Munich', tilt: '-rotate-12' },
+    { text: 'A stranger taught me to yodel. I have not stopped.', who: 'Priya, London', tilt: 'rotate-6' },
+    { text: 'The pretzel was the size of my torso and I regret nothing.', who: 'Mateo, Buenos Aires', tilt: '-rotate-3' },
+    { text: 'Ten thousand people sang my name. It was not my name.', who: 'Aoife, Galway', tilt: 'rotate-12' }
+  ];
+
+section(data-section='testimonials' className='px-4 py-24 sm:px-8')
+  div(className='mx-auto max-w-7xl')
+    h2(className='mb-16 text-center font-serif text-5xl font-black italic sm:text-6xl') Overheard in the Festzelt
+    div(className='grid place-items-center gap-10 sm:grid-cols-2 lg:grid-cols-4')
+      each quote in quotes key quote.who
+        figure(className={'relative flex aspect-square w-full max-w-64 flex-col items-center justify-center gap-3 rounded-full border-[6px] border-double border-current bg-current/5 p-9 text-center shadow-xl transition-transform duration-300 hover:scale-105 hover:rotate-0 ' + quote.tilt})
+          span(aria-hidden='true' className='pointer-events-none absolute inset-3 rounded-full border-2 border-dashed border-current/30')
+          blockquote(className='font-serif text-lg leading-snug font-bold italic') “#{quote.text}”
+          figcaption(className='font-mono text-[10px] font-bold tracking-widest uppercase opacity-70') #{quote.who}
+`
   }
 ]

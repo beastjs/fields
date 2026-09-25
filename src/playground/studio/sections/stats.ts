@@ -71,5 +71,32 @@ section(data-section='stats' className='overflow-hidden px-4 py-20 sm:px-8')
         dt(className='font-mono text-xs tracking-widest text-current/60 uppercase') #{stat.label}
         dd(className='text-[clamp(5rem,14vw,11rem)] leading-[0.85] font-black tracking-[-0.06em] transition-colors duration-500 [-webkit-text-fill-color:transparent] [-webkit-text-stroke:2px_currentColor] group-hover:text-[var(--studio-accent)] group-hover:[-webkit-text-fill-color:var(--studio-accent)]') #{stat.value}
 `
+  },
+  {
+    id: 'stats-beer',
+    kind: 'stats',
+    title: 'By the Maß',
+    description: 'Four steins that fill up to their number when the page loads, each crowned with foam.',
+    wireframe: ['^ huge', 'tall tall tall tall', 'num num num num'],
+    source: `setup
+  const stats = [
+    { value: '7M', label: 'Maß poured last year', fill: 90 },
+    { value: '16', label: 'days of Gemütlichkeit', fill: 62 },
+    { value: '6M', label: 'visitors from everywhere', fill: 78 },
+    { value: '0', label: 'tables stood on (benches only!)', fill: 20 }
+  ];
+
+section(data-section='stats' className='px-4 py-24 sm:px-8')
+  div(className='mx-auto max-w-6xl')
+    h2(className='mb-14 text-center origin-bottom scale-y-125 text-5xl font-black tracking-[-0.05em] uppercase sm:text-7xl') By the Maß
+    dl(className='grid grid-cols-2 gap-x-6 gap-y-12 lg:grid-cols-4')
+      each stat in stats key stat.label
+        div(className='group flex flex-col items-center gap-5 text-center')
+          div(aria-hidden='true' className='relative mt-4 h-52 w-32 overflow-hidden rounded-t-md rounded-b-3xl border-[6px] border-current')
+            div(className='absolute inset-x-0 bottom-0 animate-[studio-fill_1.8s_cubic-bezier(.2,.8,.2,1)_both] bg-current/25 motion-reduce:animate-none' style={{ height: stat.fill + '%' }})
+              span(className='absolute inset-x-0 -top-3 h-6 rounded-full bg-[var(--studio-accent)]')
+          dd(className='order-first origin-bottom scale-y-125 text-7xl leading-none font-black tracking-[-0.06em] transition-transform group-hover:scale-y-150') #{stat.value}
+          dt(className='max-w-40 font-mono text-xs font-bold uppercase') #{stat.label}
+`
   }
 ]

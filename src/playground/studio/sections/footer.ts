@@ -179,5 +179,28 @@ section(data-section='footer' className='px-4 py-16 sm:px-8')
         a(role='link' aria-disabled='true' className='transition-colors hover:text-[var(--studio-accent)] hover:italic') #{link}
   p(className='mx-auto mt-12 max-w-6xl text-center font-mono text-[10px] tracking-[0.3em] text-current/40 uppercase') ❦ Printed on light, 2026 ❦
 `
+  },
+  {
+    id: 'footer-lozenge',
+    kind: 'footer',
+    title: 'Lozenge sign-off',
+    description: 'A Bavarian lozenge band, a giant italic year mark, opening hours, quick links, and a responsible-drinking line.',
+    wireframe: ['line line line line line line line line', 'huge gap line', 'text gap line', 'xs gap xs'],
+    source: `setup
+  const links = ['Getting there', 'Lost & found', 'Accessibility', 'Press', 'Contact'];
+
+section(data-section='footer' className='overflow-hidden')
+  div(aria-hidden='true' className='h-14 border-y-4 border-current bg-[repeating-conic-gradient(from_45deg,var(--studio-accent)_0_25%,transparent_0_50%)] bg-[size:40px_24px]')
+  div(className='mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-8 md:grid-cols-[2fr_1fr]')
+    div
+      p(className='font-serif text-[clamp(4rem,14vw,10rem)] leading-[0.8] font-black tracking-tight italic') Wiesn ’26
+      p(className='mt-6 max-w-md text-lg') See you under the Bavaria statue. Tents open at 10:00 on weekdays and 09:00 at weekends; last orders at 22:30.
+    nav(aria-label='Footer' className='grid content-start gap-2 text-xl font-black uppercase')
+      each link in links key link
+        a(role='link' aria-disabled='true' className='inline-block transition-transform hover:translate-x-2 hover:-rotate-2') #{link} →
+  div(className='flex flex-wrap justify-between gap-2 border-t-4 border-double border-current px-4 py-4 font-mono text-[11px] font-bold uppercase sm:px-8')
+    span Drink water between every Maß · 18+ for beer · Take the U-Bahn home
+    span Brewed with Gemütlichkeit
+`
   }
 ]

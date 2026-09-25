@@ -9,6 +9,6 @@ setup
   const [open, setOpen] = useState(false);
 
 button(className='text-foreground/60 hover:text-foreground' type='button' aria-label='Publish project' title='Publish project' onClick={() => setOpen(true)})
-  Icon(name='globe' className='size-4')
+  Icon(name='publish' className='size-5 text-accent')
 if open
   PublishDialog(session={session} projectId={projectId} projectName={projectName} onClose={() => setOpen(false)})

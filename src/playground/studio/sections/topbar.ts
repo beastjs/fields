@@ -224,5 +224,32 @@ section(data-section='topbar' className='sticky top-0 z-20 flex justify-center p
     each link, index in links key link
       a(role='link' aria-disabled='true' className={'rounded-full px-3 py-1.5 transition-colors ' + (index === links.length - 1 ? 'bg-current/15 font-medium hover:bg-current/20' : 'hidden text-current/70 hover:bg-current/10 hover:text-current sm:block')}) #{link}
 `
+  },
+  {
+    id: 'topbar-beer-hall',
+    kind: 'topbar',
+    title: 'Beer hall',
+    description: 'A lozenge-pattern band over a double-ruled bar: a stein mark, shouty links, and a tapping-time chip.',
+    wireframe: ['line line line line line line line line', 'logo title gap xs xs xs xs pill'],
+    source: `setup
+  const links = ['Tents', 'Beers', 'Timetable', 'Tickets'];
+
+section(data-section='topbar')
+  div(aria-hidden='true' className='h-3 bg-[repeating-conic-gradient(from_45deg,var(--studio-accent)_0_25%,transparent_0_50%)] bg-[size:24px_12px]')
+  nav(aria-label='Main' className='flex items-center justify-between gap-4 border-b-4 border-double border-current px-4 py-3 sm:px-8')
+    a(role='link' aria-disabled='true' className='group flex items-end gap-2')
+      span(aria-hidden='true' className='relative mb-1 h-6 w-5 rounded-b-md border-[3px] border-current transition-transform group-hover:-rotate-12')
+        span(className='absolute -top-2 -right-1 -left-1 h-2.5 rounded-full bg-[var(--studio-accent)]')
+        span(className='absolute top-1 -right-2.5 h-3 w-2 rounded-r-full border-[3px] border-l-0 border-current')
+      span(className='font-serif text-2xl leading-none font-black tracking-tight italic') Wiesn
+      span(className='font-mono text-xs font-bold') ’26
+    ul(className='hidden gap-7 text-sm font-black tracking-wider uppercase md:flex')
+      each link in links key link
+        li
+          a(role='link' aria-disabled='true' className='inline-block transition-transform hover:-rotate-3 hover:scale-110 hover:underline hover:decoration-4 hover:underline-offset-4') #{link}
+    span(className='flex items-center gap-2 rounded-full border-2 border-current px-3 py-1 text-xs font-black tracking-wide uppercase')
+      span(className='size-2 animate-ping rounded-full bg-current')
+      span O’zapft is · 12:00
+`
   }
 ]

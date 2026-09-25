@@ -254,6 +254,8 @@ export const pageRecipeValidator = v.object({
   title: v.string(),
   description: v.string(),
   presetIds: v.array(v.string()),
+  /** The theme the recipe is designed in; the studio switches to it when the recipe is chosen. */
+  themeId: v.optional(v.string()),
   status: presetStatusValidator,
   teamId: v.optional(v.id('teams')),
   createdAt: v.number(),

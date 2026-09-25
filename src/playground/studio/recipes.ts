@@ -45,10 +45,12 @@ export const pageRecipes: PageRecipe[] = [
     templates: ['topbar-gallery', 'hero-blueprint', 'stats-giant', 'features-editorial', 'cta-stamp', 'footer-colophon']
   },
   {
+    // The id predates the rename; it stays so the seeded catalog row is updated rather than duplicated.
     id: 'festival-poster',
-    title: 'Festival poster',
-    description: 'A turning sunburst, a billed lineup in three sizes, a tabbed running order, and a shouting ticket band.',
-    templates: ['topbar-floating', 'hero-lineup', 'guides-timetable', 'stats-giant', 'cta-shout', 'footer-wordmark']
+    title: 'Oktoberfest',
+    description: 'Screaming beer: a dripping foam head, rising bubbles, clinking steins, a drainable Bierkarte, and a Prost button.',
+    templates: ['topbar-beer-hall', 'hero-oktoberfest', 'products-beer-menu', 'features-tents', 'stats-beer', 'testimonials-coasters', 'cta-prost', 'footer-lozenge'],
+    themeId: 'wiesn'
   },
   {
     id: 'cut-and-paste-zine',

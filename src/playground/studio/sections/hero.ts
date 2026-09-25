@@ -507,5 +507,54 @@ section(data-section='hero' className='px-6 py-28 sm:py-40')
         a(role='link' aria-disabled='true' className='font-serif text-lg italic transition-colors hover:text-[var(--studio-accent)]') Begin reading
     p(aria-hidden='true' className='hidden font-serif text-[9rem] leading-none text-current/10 [writing-mode:vertical-rl] sm:block') 余白
 `
+  },
+  {
+    id: 'hero-oktoberfest',
+    kind: 'hero',
+    title: 'Oktoberfest',
+    description: 'A foam head dripping over the page, bubbles rising through it, a towering stretched headline, and two steins clinking.',
+    wireframe: ['media', 'huge gap tall tall', 'huge gap tall tall', 'long gap tall tall', 'btn ghost gap'],
+    source: `setup
+  const foam = Array.from({ length: 18 }, (_, index) => ({ index, size: 64 + ((index * 29) % 72) }));
+  const drips = [{ left: '9%', height: 'h-20' }, { left: '31%', height: 'h-12' }, { left: '58%', height: 'h-28' }, { left: '84%', height: 'h-16' }];
+  const bubbles = Array.from({ length: 30 }, (_, index) => ({ index, left: (index * 37) % 100, size: 6 + ((index * 7) % 18), delay: -((index * 530) % 9000), duration: 7000 + ((index * 811) % 6000) }));
+  const steins = ['left', 'right'];
+  const dimples = Array.from({ length: 12 }, (_, index) => index);
+
+section(data-section='hero' className='relative overflow-hidden pb-24')
+  div(aria-hidden='true' className='pointer-events-none absolute inset-0')
+    each bubble in bubbles key bubble.index
+      span(className='absolute -bottom-10 animate-[studio-rise_9s_linear_infinite] rounded-full border-2 border-[var(--studio-accent)] bg-[var(--studio-accent)]/25 motion-reduce:hidden' style={{ left: bubble.left + '%', width: bubble.size + 'px', height: bubble.size + 'px', animationDelay: bubble.delay + 'ms', animationDuration: bubble.duration + 'ms' }})
+  div(aria-hidden='true' className='relative z-10 h-12 bg-[var(--studio-accent)]')
+    div(className='absolute inset-x-0 top-full flex justify-center')
+      each blob in foam key blob.index
+        span(className='-mx-3 shrink-0 -translate-y-1/2 rounded-full bg-[var(--studio-accent)]' style={{ width: blob.size + 'px', height: blob.size + 'px' }})
+    each drip in drips key drip.left
+      span(className={'absolute top-full w-5 rounded-b-full bg-[var(--studio-accent)] ' + drip.height} style={{ left: drip.left }})
+  div(className='relative z-10 mx-auto mt-24 grid max-w-7xl items-center gap-12 px-4 sm:px-8 lg:grid-cols-[1.25fr_1fr]')
+    div(className='flex flex-col items-start gap-7')
+      p(className='-rotate-2 border-[3px] border-current px-3 py-1 font-mono text-xs font-bold tracking-widest uppercase') Theresienwiese · 19 Sep — 4 Oct 2026
+      h1(className='text-[clamp(4.5rem,14vw,11rem)] leading-[0.8] font-black tracking-[-0.06em] uppercase')
+        span(className='block origin-bottom scale-y-[1.3] pt-[0.2em]') O’zapft
+        span(className='block origin-bottom scale-y-[1.3] pt-[0.3em] text-[var(--studio-accent)] [paint-order:stroke_fill] [-webkit-text-stroke:0.07em_var(--studio-fg,currentColor)] [text-shadow:0.06em_0.07em_0_var(--studio-fg,currentColor)]') is!
+      p(className='max-w-lg text-xl leading-snug font-medium text-pretty') Sixteen days. Fourteen tents. Seven million Maß. The loudest beer garden on earth has tapped its first keg — grab a bench and raise a stein.
+      div(className='flex flex-wrap items-center gap-5')
+        a(role='link' aria-disabled='true' className='-rotate-1 border-4 border-current bg-[var(--studio-accent)]/40 px-7 py-4 text-lg font-black tracking-tight uppercase shadow-[6px_6px_0_currentColor] transition-all hover:translate-x-1 hover:translate-y-1 hover:rotate-0 hover:shadow-[2px_2px_0_currentColor]') Reserve a table
+        a(role='link' aria-disabled='true' className='font-black uppercase underline decoration-4 underline-offset-8 hover:decoration-wavy') Meet the beers ↓
+    div(aria-hidden='true' className='relative flex h-[26rem] scale-75 items-end justify-center gap-3 sm:scale-100')
+      div(className='absolute -top-2 right-0 z-10 grid size-28 animate-[studio-spin_14s_linear_infinite] place-items-center rounded-full border-4 border-dashed border-current bg-[var(--studio-accent)]/50 text-center text-sm leading-none font-black uppercase motion-reduce:animate-none') Prost! ✱ Prost!
+      each side in steins key side
+        div(className={'relative origin-bottom animate-[studio-sway_2.6s_ease-in-out_infinite] motion-reduce:animate-none ' + (side === 'left' ? '-scale-x-100' : '')})
+          div(className='relative h-64 w-40 overflow-hidden rounded-t-lg rounded-b-3xl border-[7px] border-current bg-current/5 sm:h-72 sm:w-44')
+            div(className='absolute inset-x-0 bottom-0 h-[84%] bg-current/25')
+            div(className='absolute inset-3 grid grid-cols-3 gap-2')
+              each dimple in dimples key dimple
+                span(className='rounded-full border-2 border-current/25')
+          div(className='absolute -top-8 -right-4 -left-4 flex')
+            each blob in [56, 72, 64, 80, 60] key blob
+              span(className='-mx-2 aspect-square rounded-full bg-[var(--studio-accent)] ring-4 ring-current/10' style={{ width: blob + 'px' }})
+          span(className='absolute top-10 left-6 h-16 w-4 rounded-b-full bg-[var(--studio-accent)]')
+          span(className='absolute top-14 -right-14 h-36 w-16 rounded-r-[2.5rem] border-[7px] border-l-0 border-current')
+`
   }
 ]

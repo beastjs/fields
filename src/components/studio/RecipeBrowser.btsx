@@ -7,10 +7,11 @@ module
   interface Props {
     recipes: PresetRecipe[]
     onRecipe: (recipe: PresetRecipe) => void
+    active?: string
     compact?: boolean
   }
 
-props { recipes, onRecipe, compact = false }: Props
+props { recipes, onRecipe, active, compact = false }: Props
 setup
   const form = useForm({ defaultValues: { search: '' } });
   const search = useField({ form, name: 'search' });
@@ -23,6 +24,6 @@ section(className={cn('flex min-h-0 w-full flex-col gap-3 text-left bg-panel', c
     span(className='shrink-0 font-code text-[10px] text-dim' role='status' aria-live='polite') #{matches.length} / #{recipes.length}
   div(className={cn('grid min-h-0 content-start gap-2 overflow-y-auto overscroll-contain pr-1', !compact && 'sm:grid-cols-2')})
     each recipe in matches key recipe.recipeId
-      RecipeCard(recipe={recipe} onRecipe={onRecipe} compact={compact})
+      RecipeCard(recipe={recipe} onRecipe={onRecipe} selected={recipe.recipeId === active} compact={compact})
     empty
       p(className='col-span-full py-6 text-center text-[12px] text-dim') No matching recipes. Try “product”, “studio”, or “minimal”.

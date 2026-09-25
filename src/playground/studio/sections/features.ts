@@ -213,5 +213,42 @@ section(data-section='features' className='px-4 py-20')
           h3(className='mt-2 text-2xl leading-tight font-black uppercase') #{note.title}
           p(className='mt-3 text-sm text-current/70') #{note.body}
 `
+  },
+  {
+    id: 'features-tents',
+    kind: 'features',
+    title: 'Beer tents',
+    description: 'Tent cards under lozenge-patterned roofs and swinging bunting; each roof lifts when you walk in.',
+    wireframe: ['^ huge', 'feature feature feature', 'feature feature feature'],
+    source: `setup
+  const tents = [
+    { name: 'Schottenhamel', seats: '~10,000', vibe: 'Where the mayor taps the first keg at noon on opening day.' },
+    { name: 'Hofbräu Festzelt', seats: '~10,000', vibe: 'A global crowd, standing room, and the loudest choruses on the field.' },
+    { name: 'Augustiner', seats: '~6,000', vibe: 'Beer poured from wooden barrels. The locals know.' },
+    { name: 'Hacker-Pschorr', seats: '~9,000', vibe: 'A painted Bavarian sky on the ceiling — the Himmel der Bayern.' },
+    { name: 'Käfer Wiesn-Schänke', seats: '~3,000', vibe: 'Tiny, fancy, and open latest. Good luck getting in.' },
+    { name: 'Fischer-Vroni', seats: '~3,000', vibe: 'Mackerel grilled on sticks over an open fire. Trust us.' }
+  ];
+  const flags = Array.from({ length: 9 }, (_, index) => index);
+
+section(data-section='features' className='px-4 py-24 sm:px-8')
+  div(className='mx-auto max-w-7xl')
+    div(className='mb-14 text-center')
+      p(className='font-mono text-xs font-bold tracking-[0.3em] uppercase') 14 big tents · 21 small ones · 1 decision
+      h2(className='mt-4 origin-bottom scale-y-125 text-5xl font-black tracking-[-0.05em] uppercase sm:text-7xl') Pick your tent
+    div(className='grid gap-8 sm:grid-cols-2 lg:grid-cols-3')
+      each tent, index in tents key tent.name
+        article(className='group relative border-4 border-current bg-current/5 transition-transform duration-300 hover:-rotate-1')
+          div(aria-hidden='true' className='-mx-1 -mt-1 h-24 bg-[repeating-conic-gradient(from_45deg,var(--studio-accent)_0_25%,transparent_0_50%)] bg-[size:28px_20px] transition-transform duration-500 [clip-path:polygon(0_100%,50%_0,100%_100%)] group-hover:-translate-y-3')
+          div(aria-hidden='true' className='flex justify-between border-y-4 border-current px-1')
+            each flag in flags key flag
+              span(className={'size-4 origin-top animate-[studio-sway_2s_ease-in-out_infinite] [clip-path:polygon(0_0,100%_0,50%_100%)] motion-reduce:animate-none ' + (flag % 2 ? 'bg-[var(--studio-accent)]' : 'bg-current')} style={{ animationDelay: flag * 120 + 'ms' }})
+          div(className='flex flex-col gap-3 p-6')
+            div(className='flex items-baseline justify-between gap-3 font-mono text-xs font-bold')
+              span Zelt no. #{index + 1}
+              span #{tent.seats} seats
+            h3(className='text-3xl leading-none font-black tracking-tight uppercase') #{tent.name}
+            p(className='leading-snug opacity-80') #{tent.vibe}
+`
   }
 ]

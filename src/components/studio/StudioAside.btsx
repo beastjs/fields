@@ -23,11 +23,13 @@ module
     onReorder: (blocks: PageBlock[]) => void
     onRemove: (name: string) => void
     onRecipe: (recipe: PresetRecipe) => void
+    /** The recipe the page still matches, if any. */
+    activeRecipe?: string
     theme: ThemeDocument
     onPreviewTheme: (theme: ThemeDocument) => void
   }
 
-props { className, blocks, presets, recipes, selected, onSelect, onReorder, onRemove, onRecipe, theme, onPreviewTheme }: AsideProps
+props { className, blocks, presets, recipes, selected, onSelect, onReorder, onRemove, onRecipe, activeRecipe, theme, onPreviewTheme }: AsideProps
 setup
   const [panel, setPanel] = useState<'outline' | 'theme' | 'recipes'>('outline');
 
@@ -43,6 +45,6 @@ aside(className={cn('flex min-h-0 min-w-0 flex-col bg-panel', className)} aria-l
   else
     if panel === 'recipes'
       div(className='flex min-h-0 flex-1 flex-col p-2')
-        RecipeBrowser(recipes={recipes} onRecipe={onRecipe} compact={true})
+        RecipeBrowser(recipes={recipes} onRecipe={onRecipe} active={activeRecipe} compact={true})
     else
       PageOutline(blocks={blocks} presets={presets} selected={selected} onSelect={onSelect} onReorder={onReorder} onRemove={onRemove})

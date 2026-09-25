@@ -88,7 +88,7 @@ function run(name: string, args: unknown) {
 }
 
 const presets = build()
-const recipes = pageRecipes.map(recipe => ({ recipeId: recipe.id, title: recipe.title, description: recipe.description, presetIds: recipe.templates }))
+const recipes = pageRecipes.map(recipe => ({ recipeId: recipe.id, title: recipe.title, description: recipe.description, presetIds: recipe.templates, ...(recipe.themeId ? { themeId: recipe.themeId } : {}) }))
 
 // `Inherit` is the absence of a theme, so it is offered by the client rather than stored.
 const themes = builtInThemes.filter(theme => theme.themeId !== 'inherit')
@@ -97,6 +97,7 @@ const known = new Set(presets.map(preset => preset.presetId))
 for (const recipe of recipes) {
   const missing = recipe.presetIds.filter(id => !known.has(id))
   if (missing.length) throw new Error(`Recipe "${recipe.recipeId}" refers to unknown presets: ${missing.join(', ')}.`)
+  if (recipe.themeId && !themes.some(theme => theme.themeId === recipe.themeId)) throw new Error(`Recipe "${recipe.recipeId}" refers to unknown theme "${recipe.themeId}".`)
 }
 
 const bytes = JSON.stringify(presets).length

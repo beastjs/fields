@@ -171,5 +171,42 @@ section(data-section='products' className='px-4 py-20 sm:px-8')
             span(className='text-current/60') #{work.price}
             span(className='text-xs text-current/50') #{work.artist + ', ' + work.year}
 `
+  },
+  {
+    id: 'products-beer-menu',
+    kind: 'products',
+    title: 'Beer menu',
+    description: 'A Bierkarte of steins, each tinted to its beer; hover a glass and it drains before your eyes.',
+    wireframe: ['huge gap line', 'card text card text', 'card text card text'],
+    source: `setup
+  const beers = [
+    { name: 'Märzen', style: 'Festbier · amber, bready, dangerously smooth', abv: '6.0%', price: '€15.80', body: 'bg-current/30' },
+    { name: 'Helles', style: 'Lager · golden, crisp, the everyday hero', abv: '5.2%', price: '€15.20', body: 'bg-current/10' },
+    { name: 'Dunkel', style: 'Dark lager · toffee, bread crust, cocoa', abv: '5.5%', price: '€15.40', body: 'bg-current/70' },
+    { name: 'Weißbier', style: 'Wheat · banana, clove, cloudy as a Munich morning', abv: '5.4%', price: '€14.90', body: 'bg-current/15' },
+    { name: 'Radler', style: 'Half beer, half lemonade · for the long afternoon', abv: '2.5%', price: '€14.50', body: 'bg-current/5' },
+    { name: 'Doppelbock', style: 'Liquid bread · strong enough to pray with', abv: '7.5%', price: '€16.20', body: 'bg-current/50' }
+  ];
+
+section(data-section='products' className='px-4 py-24 sm:px-8')
+  div(className='mx-auto max-w-7xl')
+    div(className='mb-16 flex flex-wrap items-end justify-between gap-6')
+      h2(className='origin-bottom scale-y-125 text-6xl font-black tracking-[-0.05em] uppercase sm:text-8xl') Die Bierkarte
+      p(className='max-w-xs -rotate-2 border-2 border-dashed border-current px-3 py-2 font-mono text-xs font-bold uppercase') Hover a glass. Go on. Take a sip.
+    div(className='grid gap-x-10 gap-y-14 sm:grid-cols-2 lg:grid-cols-3')
+      each beer in beers key beer.name
+        article(className='group grid cursor-default grid-cols-[auto_minmax(0,1fr)] items-end gap-8')
+          div(aria-hidden='true' className='relative mt-4 mr-4')
+            div(className='relative h-40 w-24 overflow-hidden rounded-t-md rounded-b-2xl border-[5px] border-current')
+              div(className={'absolute inset-x-0 bottom-0 h-[86%] transition-[height] duration-[1.4s] ease-in-out group-hover:h-[10%] ' + beer.body})
+                span(className='absolute inset-x-0 -top-2.5 h-5 rounded-full bg-[var(--studio-accent)]')
+            span(className='absolute top-6 -right-7 h-20 w-8 rounded-r-2xl border-[5px] border-l-0 border-current')
+          div(className='flex flex-col gap-2 border-b-4 border-dotted border-current/40 pb-4')
+            div(className='flex flex-wrap items-baseline justify-between gap-x-3')
+              h3(className='text-2xl font-black tracking-tight uppercase xl:text-3xl') #{beer.name}
+              span(className='font-mono text-sm font-bold') #{beer.price}
+            p(className='text-sm leading-snug opacity-75') #{beer.style}
+            span(className='self-start rounded-full border-2 border-current px-2 py-0.5 font-mono text-[10px] font-bold') #{beer.abv} ABV · 1 Maß
+`
   }
 ]

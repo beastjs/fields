@@ -50,6 +50,9 @@ const STUDIO_STYLES = `${STYLES_MARKER}: element defaults and motion. */
 }
 @keyframes studio-marquee { to { transform: translateX(-50%); } }
 @keyframes studio-spin { to { transform: rotate(360deg); } }
+@keyframes studio-rise { from { transform: translateY(0) scale(0.6); opacity: 0; } 12% { opacity: 1; } to { transform: translateY(-110vh) scale(1.15); opacity: 0; } }
+@keyframes studio-sway { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(7deg); } }
+@keyframes studio-fill { from { height: 0; } }
 ${THEME_BASE}`
 /** Tailwind's `dark:` variant follows the preview's data-theme instead of the OS setting. */
 const DARK_VARIANT = '@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));'

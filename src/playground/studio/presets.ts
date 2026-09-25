@@ -85,6 +85,8 @@ export interface PresetRecipe {
   title: string
   description: string
   presetIds: string[]
+  /** The theme the recipe is designed in, applied when it is chosen. */
+  themeId?: string
 }
 
 /** Rebuilds the trees Convex returns in their flat form. */

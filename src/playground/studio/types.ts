@@ -49,4 +49,6 @@ export interface PageRecipe {
   title: string
   description: string
   templates: string[]
+  /** A built-in theme the recipe is art-directed in; choosing the recipe switches the page to it. */
+  themeId?: string
 }

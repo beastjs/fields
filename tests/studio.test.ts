@@ -6,6 +6,7 @@ import { pageRecipes, searchTemplates, sectionKinds, sectionTemplate, sectionTem
 import { addSection, composePage, pagePreviewProject, planPageInstall, readPage, recipeBlocks, sectionFile, swapPreset } from '../src/playground/studio/page';
 import { parsePreset } from '../src/playground/studio/ir/parse';
 import { presetsFor } from '../src/playground/studio/presets';
+import { builtInThemes } from '../src/playground/studio/themes';
 import { builtInPresets, builtInRecipes } from './built-in-presets';
 
 const presets = builtInPresets;
@@ -29,6 +30,7 @@ test('the catalog registers every kind with unique, well-formed templates', () =
     expect({ id: template.id, roots }).toEqual({ id: template.id, roots: [expect.stringContaining(`(data-section='${template.kind}'`)] });
   }
   for (const recipe of pageRecipes) expect(recipe.templates.filter(id => !sectionTemplate(id))).toEqual([]);
+  for (const recipe of pageRecipes) if (recipe.themeId) expect(builtInThemes.map(theme => theme.themeId)).toContain(recipe.themeId);
 });
 
 test('section templates are monotone and self-contained so they fit any theme and preview', () => {

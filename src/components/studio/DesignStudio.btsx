@@ -388,10 +388,14 @@ setup
     else setDesigning(true);
   };
 
+  // A recipe reads as selected while the page is still exactly its sections, so it survives undo and a reload.
+  const activeRecipe = recipes.find(recipe => recipe.presetIds.length === blocks.length && recipe.presetIds.every((id, index) => blocks[index].presetId === id))?.recipeId;
   const startRecipe = (recipe: PresetRecipe) => {
     const next = recipeBlocks(recipe.presetIds, presets);
     change(next, next[0]?.name);
     setOpenKind(next[0]?.kind);
+    // An art-directed recipe brings its palette; one without a theme leaves the current choice alone.
+    if (recipe.themeId && recipe.themeId !== themeId && themes.some(theme => theme.themeId === recipe.themeId)) chooseTheme(recipe.themeId);
   };
   const discard = () => {
     settleThemePreview();
@@ -686,6 +690,7 @@ dialog(className={cn(dialogPanel, 'backdrop:backdrop-blur-none h-[min(920px,calc
         ~ onReorder={next => setBlocks(next)}
         ~ onRemove={remove}
         ~ onRecipe={startRecipe}
+        ~ activeRecipe={activeRecipe}
         ~ theme={pageTheme}
         ~ onPreviewTheme={previewGenerated}
         ~ )
@@ -746,6 +751,7 @@ dialog(className={cn(dialogPanel, 'backdrop:backdrop-blur-none h-[min(920px,calc
             ~ onReorder={next => setBlocks(next)}
             ~ onRemove={remove}
             ~ onRecipe={startRecipe}
+            ~ activeRecipe={activeRecipe}
             ~ theme={pageTheme}
             ~ onPreviewTheme={previewGenerated}
             ~ )

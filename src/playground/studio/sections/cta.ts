@@ -92,5 +92,36 @@ section(data-section='cta' className='overflow-hidden border-y-2 border-current'
       h2(className='font-serif text-5xl leading-[0.95] italic sm:text-6xl') Got a half-finished idea?
       p(className='max-w-md text-lg text-current/70') Bring it here. We are at our best in the part where nobody knows what it is yet.
 `
+  },
+  {
+    id: 'cta-prost',
+    kind: 'cta',
+    title: 'Ein Prosit',
+    description: 'Toasts in ten languages drift behind a giant stretched headline and a Prost button that clinks two steins and counts.',
+    wireframe: ['huge huge huge', '^ huge', '^ btn', '^ line'],
+    source: `import { useState } from 'octane'
+
+setup
+  const [prosts, setProsts] = useState(0);
+  const toasts = ['Prost', 'Cheers', 'Salute', 'Skål', 'Kanpai', 'Sláinte', 'Santé', 'Na zdrowie', 'Saúde', 'Gānbēi'];
+  const replies = ['The band approves.', 'Your neighbour is now your best friend.', 'Somebody order a Brezn.', 'Pace yourself.', 'One more Prosit!'];
+  const tilt = prosts % 2 ? 16 : -10;
+
+section(data-section='cta' className='relative overflow-hidden border-y-8 border-double border-current py-24')
+  div(aria-hidden='true' className='pointer-events-none absolute inset-0 flex flex-col justify-center gap-4 opacity-20 select-none')
+    each row in [0, 1, 2] key row
+      div(className={'flex w-max motion-reduce:animate-none ' + (row % 2 ? 'animate-[studio-marquee_40s_linear_infinite_reverse]' : 'animate-[studio-marquee_32s_linear_infinite]')})
+        each toast, index in [...toasts, ...toasts] key index
+          span(className='px-6 text-7xl font-black tracking-tighter whitespace-nowrap uppercase italic') #{toast}!
+  div(className='relative mx-auto flex max-w-3xl flex-col items-center gap-8 px-4 text-center')
+    h2(className='origin-bottom scale-y-[1.35] text-[clamp(4rem,13vw,9rem)] leading-[0.85] font-black tracking-[-0.06em] uppercase') Ein Prosit!
+    p(className='max-w-md text-xl font-medium') Every twenty minutes the band plays the toast, and ten thousand steins go up at once. Practise here.
+    button(type='button' onClick={() => setProsts(count => count + 1)} className='group flex items-center gap-4 rounded-full border-4 border-current bg-[var(--studio-accent)]/40 py-3 pr-8 pl-4 text-2xl font-black uppercase shadow-[0_8px_0_currentColor] transition-all hover:-translate-y-1 active:translate-y-2 active:shadow-none')
+      span(aria-hidden='true' className='flex items-end gap-0.5')
+        span(className='h-8 w-6 origin-bottom rounded-b-md border-[3px] border-current bg-current/20 transition-transform duration-200' style={{ transform: 'rotate(' + tilt + 'deg)' }})
+        span(className='h-8 w-6 origin-bottom rounded-b-md border-[3px] border-current bg-current/20 transition-transform duration-200' style={{ transform: 'rotate(' + -tilt + 'deg)' }})
+      span Prost!
+    p(role='status' aria-live='polite' className='min-h-7 font-mono text-sm font-bold uppercase') #{prosts === 0 ? 'Nobody has clinked yet.' : prosts + (prosts === 1 ? ' Prost' : ' Prosts') + ' — ' + replies[(prosts - 1) % replies.length]}
+`
   }
 ]
