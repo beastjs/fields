@@ -1,0 +1,107 @@
+import { useEffect, useRef, useState } from 'octane'
+import type { CompilationProject } from '../../playground/contracts'
+import { TemplatePreview, type TemplatePreviewStatus } from '../../playground/template-preview'
+import type { SessionProps } from '../types'
+import { primaryButton, secondaryButton } from '../ui/styles'
+
+props { session, onInstalled }: SessionProps & { onInstalled: () => void }
+setup
+  const dialog = useRef<HTMLDialogElement | null>(null);
+  const frame = useRef<HTMLIFrameElement | null>(null);
+  const preview = useRef<TemplatePreview | null>(null);
+  const [project, setProject] = useState<CompilationProject | null>(null);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<TemplatePreviewStatus>({ state: 'compiling' });
+  const [error, setError] = useState('');
+  const [mobile, setMobile] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const show = async () => {
+    setLoading(true); setError(''); setConfirming(false);
+    try {
+      const { createStoreProject } = await import('../../playground/fullstack/project');
+      const token = crypto.randomUUID().replaceAll('-', '') + crypto.randomUUID().replaceAll('-', '');
+      setProject(createStoreProject(import.meta.env.PUBLIC_CONVEX_URL ?? '', token));
+      dialog.current?.showModal(); setOpen(true);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not open the example.'); }
+    finally { setLoading(false); }
+  };
+  const close = () => { dialog.current?.close(); setOpen(false); setConfirming(false); };
+  const install = () => {
+    if (!project) return;
+    session.resetProject(project);
+    close(); onInstalled();
+  };
+  useEffect(() => {
+    if (!open || !project || !frame.current) return;
+    const instance = new TemplatePreview([frame.current], 'light', () => new Worker(new URL('../../playground/compiler.worker.ts', import.meta.url), { type: 'module' }), setStatus, 'Form Supply fullstack preview');
+    preview.current = instance;
+    instance.show(project);
+    return () => { instance.dispose(); preview.current = null; };
+  }, [open, project]);
+  useEffect(() => {
+    const element = dialog.current;
+    if (!element) return;
+    const closed = () => { setOpen(false); setConfirming(false); };
+    element.addEventListener('close', closed);
+    return () => { element.removeEventListener('close', closed); element.close(); };
+  }, []);
+
+section(className='flex min-h-0 flex-1 flex-col gap-4 overflow-auto p-3' aria-label='Fullstack apps')
+  div
+    p(className='font-code text-[9px] uppercase tracking-widest text-brand') Beyond the page
+    h3(className='mt-2 text-lg tracking-tight text-fg') Fullstack
+    p(className='mt-2 text-[11px] leading-relaxed text-dim') Complete apps with working data, interactions, and editable frontend and backend source.
+  article(className='overflow-hidden rounded-xl border border-edge')
+    div(className='relative overflow-hidden bg-[#e7e8dc] p-5 text-[#163e37]')
+      p(className='text-[9px] font-semibold tracking-widest') FORM SUPPLY
+      p(className='mt-5 text-3xl font-bold leading-[.95] tracking-tight') A little more
+        br
+        em(className='font-serif font-normal text-[#498a86]') possible.
+      svg(viewBox='0 0 240 140' fill='none' stroke='#183c3a' strokeWidth='2' className='mt-1 w-full' aria-hidden='true')
+        path(d='M70 110 L130 94 L185 116 L122 132 Z' fill='#92a7a0')
+        path(d='M108 106 L108 78 L135 71 L151 102 L125 114 Z' fill='#4b9390')
+        path(d='M115 83 L74 44 L86 27 L139 67 Z' fill='#eeede6')
+        circle(cx='83' cy='39' r='17' fill='#4b9390')
+        path(d='M83 22 L149 11 L157 32 L99 51 Z' fill='#eeede6')
+        circle(cx='154' cy='21' r='12' fill='#4b9390')
+        path(d='M161 25 L183 42 L178 64 L164 52 L168 41 L153 33' fill='#92a7a0')
+    div(className='p-3')
+      h4(className='text-sm font-medium text-fg') Form Supply
+      p(className='mt-2 text-[11px] leading-relaxed text-dim') A robotics and workshop store inspired by Mind Robotics. Original illustrations, warm surfaces, and a catalog made for exploring.
+      ul(className='my-4 grid gap-2 text-[10px] text-fg-secondary')
+        li 36 products · 6 collections
+        li Search, filters & product details
+        li Persistent guest bags
+        li Server-calculated demo checkout
+        li Beast frontend + Convex backend
+      button(className={primaryButton + ' w-full'} type='button' disabled={loading} onClick={() => void show()}) #{loading ? 'Opening…' : 'Explore Form Supply ↗'}
+  p(className='text-[10px] leading-relaxed text-dim') Try the whole app before loading its source. Checkout is a demo; no payments or personal information.
+  if error
+    p(className='text-xs text-warning' role='alert') #{error}
+dialog(ref={dialog} className='m-auto h-[min(940px,94dvh)] w-[min(1400px,96vw)] max-w-none overflow-hidden rounded-xl border border-edge-strong bg-panel p-0 text-fg shadow-elevation backdrop:bg-[#111b] backdrop:backdrop-blur-sm' aria-label='Fullstack app preview')
+  div(className='flex h-full flex-col')
+    div(className='flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-edge px-4 py-3')
+      div
+        p(className='font-code text-[9px] uppercase tracking-widest text-brand') Fullstack / 01
+        h2(className='text-base font-medium') Form Supply
+      div(className='flex items-center gap-2')
+        button(className={secondaryButton} type='button' aria-pressed={mobile} onClick={() => setMobile(value => !value)}) #{mobile ? 'Desktop preview' : 'Mobile preview'}
+        button(className={primaryButton} type='button' disabled={status.state !== 'ready'} onClick={() => setConfirming(true)}) Use this app
+        button(className='px-2 text-xl text-dim' type='button' aria-label='Close fullstack preview' onClick={close}) ×
+    div(className='relative flex min-h-0 flex-1 justify-center overflow-hidden bg-inset')
+      iframe(ref={frame} className='h-full min-w-0 border-0 bg-[#eeede6]' style={{ width: mobile ? '390px' : '100%', maxWidth: '100%' }})
+      if status.state !== 'ready'
+        div(className='absolute inset-0 grid place-items-center bg-panel p-8 text-center text-sm' role='status')
+          div
+            p #{status.state === 'error' ? status.message : 'Building your store preview…'}
+            if status.state === 'error'
+              button(className={secondaryButton + ' mt-4'} type='button' onClick={() => project && preview.current?.show(project)}) Retry preview
+    if confirming
+      div(className='flex shrink-0 flex-wrap items-center justify-between gap-4 border-t border-edge bg-panel px-4 py-4' role='region' aria-label='Load fullstack app')
+        p(className='max-w-xl text-xs leading-relaxed text-dim') Loading this app replaces the current project files. Save or share any work you want to keep first. The Recipes catalog stays available.
+        div(className='flex gap-2')
+          button(className={secondaryButton} type='button' onClick={() => setConfirming(false)}) Keep browsing
+          button(className={primaryButton} type='button' onClick={install}) Replace project with Form Supply
+    else
+      p(className='shrink-0 border-t border-edge px-4 py-2 text-[10px] text-dim') Working Convex demo · All prices in USD · No real payments · Source includes the frontend and backend

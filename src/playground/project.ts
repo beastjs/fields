@@ -25,7 +25,7 @@ export class PlaygroundProject {
     const name = input.trim().replaceAll('\\', '/');
     if (!name) throw new Error('A file path is required.');
     const path = normalizePath(name.startsWith('/') ? name : `/${name.startsWith('src/') ? '' : 'src/'}${name}`);
-    if (!/\.(btsx|tsrx|ts|js|json|css)$/.test(path)) throw new Error('Use .btsx, .tsrx, .ts, .js, .json, or .css.');
+    if (!/\.(btsx|tsrx|ts|js|json|css|html|md)$/.test(path)) throw new Error('Use .btsx, .tsrx, .ts, .js, .json, .css, .html, or .md.');
     if (this.fs.exists(path)) throw new Error('That file already exists.');
     return path;
   }

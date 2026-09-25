@@ -1,0 +1,81 @@
+props { shape = 0, color = '#4d8c88', variant = 0, hero = false }: { shape?: number; color?: string; variant?: number; hero?: boolean }
+
+svg(viewBox='0 0 600 520' fill='none' xmlns='http://www.w3.org/2000/svg' aria-hidden='true' className={hero ? 'product-art hero-art' : 'product-art'} style={{ '--object-color': color }})
+  ellipse(cx='300' cy='455' rx='185' ry='24' fill='#122f2e' opacity='.08')
+  g(stroke='#183c3a' strokeWidth='2.5' strokeLinejoin='round')
+    if shape === 0
+      g(className={hero ? 'arm-assembly' : ''})
+        path(d='M 181 414 L 321 395 L 429 428 L 289 462 Z' fill='#92a7a0')
+        path(d='M 181 414 L 181 437 L 289 483 L 429 448 L 429 428 L 289 462 Z' fill='#d7d9cf')
+        path(d='M 246 389 L 246 312 Q 244 289 275 283 L 321 285 Q 347 290 347 314 L 347 395 Q 307 426 246 389 Z' fill='var(--object-color)')
+        ellipse(cx='297' cy='309' rx='51' ry='25' fill='#d4dfd6')
+        path(d='M 265 302 L 180 198 Q 163 169 190 146 Q 215 125 241 151 L 328 254 Z' fill='#e9e6dd')
+        path(d='M 291 293 L 215 180 L 241 151 L 328 254 Z' fill='#cecfc5')
+        circle(cx='213' cy='174' r='43' fill='var(--object-color)')
+        circle(cx='213' cy='174' r='21' fill='#dce1d7')
+        circle(cx='213' cy='174' r='9' fill='#244d49')
+        path(d='M 205 134 L 346 83 Q 374 76 386 104 L 398 133 L 244 187 Z' fill='#e9e6dd')
+        path(d='M 240 169 L 393 117 L 398 133 L 244 187 Z' fill='#c8ccc2')
+        ellipse(cx='373' cy='110' rx='29' ry='37' transform='rotate(-21 373 110)' fill='var(--object-color)')
+        path(d='M 388 112 L 436 131 L 451 165 L 423 180 L 399 151 L 374 141 Z' fill='#dce1d7')
+        path(d='M 423 162 L 440 201 L 465 200 L 453 161 M 403 166 L 403 210 L 429 222 L 433 205 L 421 198 L 422 176' fill='#244d49')
+        path(d='M 259 349 Q 133 302 164 201 M 247 122 Q 331 24 376 69' stroke='#355752' strokeWidth='5')
+        circle(cx='290' cy='365' r='6' fill='#dcb663' stroke='none')
+        path(d='M 281 437 L 308 431 M 379 437 L 397 432' strokeWidth='4')
+    elseif shape === 1
+      g
+        path(d='M 199 261 L 290 222 L 395 266 L 302 310 Z' fill='#e6e5dc')
+        path(d='M 199 261 L 199 356 L 302 401 L 302 310 Z' fill='var(--object-color)')
+        path(d='M 302 310 L 395 266 L 395 361 L 302 401 Z' fill='#82a8a0')
+        path(d='M 217 247 L 190 180 L 204 113 L 239 111 L 229 181 L 257 229 Z' fill='#dce0d6')
+        path(d='M 327 237 L 351 179 L 343 111 L 377 105 L 392 179 L 369 254 Z' fill='#dce0d6')
+        path(d='M 204 113 L 240 114 L 244 154 L 224 162 L 229 181 L 204 171 Z M 343 111 L 377 105 L 385 152 L 356 160 Z' fill='var(--object-color)')
+        circle(cx='251' cy='326' r='13' fill='#1c403d')
+        path(d='M 316 365 L 373 339 M 316 350 L 373 324' opacity='.4')
+    elseif shape === 2
+      g
+        path(d='M 157 198 L 345 155 L 443 202 L 259 253 Z' fill='#e5e7dc')
+        path(d='M 157 198 L 157 322 L 259 371 L 259 253 Z' fill='var(--object-color)')
+        path(d='M 259 253 L 443 202 L 443 327 L 259 371 Z' fill='#9ab4aa')
+        ellipse(cx='325' cy='284' rx='41' ry='53' transform='rotate(16 325 284)' fill='#183c3a')
+        ellipse(cx='325' cy='284' rx='27' ry='36' transform='rotate(16 325 284)' fill='#477c7a')
+        ellipse(cx='320' cy='277' rx='11' ry='15' fill='#bdd7cf')
+        circle(cx='406' cy='258' r='8' fill='#e3bf6f')
+        path(d='M 282 365 L 282 429 L 337 444 L 357 431 L 321 419 L 321 354' fill='#d9dcd2')
+        path(d='M 230 443 L 307 421 L 384 447 L 304 470 Z' fill='#65877c')
+        path(d='M 178 228 L 178 300 M 191 235 L 191 307 M 204 241 L 204 312' opacity='.45')
+    elseif shape === 3
+      g
+        path(d='M 150 191 L 342 144 L 454 201 L 258 251 Z' fill='#dbe2d7')
+        path(d='M 150 191 L 150 350 L 258 408 L 258 251 Z' fill='var(--object-color)')
+        path(d='M 258 251 L 454 201 L 454 358 L 258 408 Z' fill='#a4b9ac')
+        path(d='M 287 272 L 413 240 L 413 306 L 287 338 Z' fill='#183c3a')
+        path(d='M 302 292 L 326 286 M 302 306 L 382 285' stroke='#b9d8c9' strokeWidth='5')
+        circle(cx='404' cy='346' r='12' fill='#e9c26e')
+        path(d='M 178 237 L 220 259 M 178 251 L 220 273 M 178 265 L 220 287 M 178 279 L 220 301 M 178 293 L 220 315' strokeWidth='4' opacity='.5')
+        path(d='M 300 371 L 347 359' stroke='#e6e5dc' strokeWidth='6')
+    elseif shape === 4
+      g
+        path(d='M 111 278 L 327 176 L 486 261 L 277 374 Z' fill='var(--object-color)')
+        path(d='M 111 278 L 111 311 L 277 410 L 486 295 L 486 261 L 277 374 Z' fill='#d4dccf')
+        each row in [0, 1, 2, 3, 4] key row
+          g
+            each col in [0, 1, 2, 3, 4, 5] key col
+              ellipse(cx={154 + col * 34 + row * 23} cy={279 - col * 16 + row * 13} rx='4' ry='2.5' fill='#183c3a' stroke='none')
+        path(d='M 147 332 L 147 408 L 176 425 L 176 349 M 422 330 L 422 408 L 449 394 L 449 315 M 262 401 L 262 463 L 290 450 L 290 403' fill='#65877c')
+        path(d='M 213 250 L 270 224 L 307 244 L 250 272 Z M 213 250 L 213 275 L 250 297 L 307 268 L 307 244 M 250 272 L 250 297' fill='#e4bd6c')
+    else
+      g
+        path(d='M 151 183 L 315 141 L 441 205 L 269 253 Z' fill='#e5e2d6')
+        path(d='M 151 183 L 151 363 L 269 425 L 269 253 Z' fill='var(--object-color)')
+        path(d='M 269 253 L 441 205 L 441 370 L 269 425 Z' fill='#a9b7a3')
+        path(d='M 191 171 L 300 228 L 351 215 L 243 158' fill='#e9c785')
+        path(d='M 300 228 L 300 288 L 351 274 L 351 215' fill='#e9c785')
+        path(d='M 295 325 L 403 297 L 403 347 L 295 377 Z' fill='#e9e6db')
+        path(d='M 310 339 L 381 320 M 310 350 L 356 338' strokeWidth='3')
+        circle(cx='213' cy='306' r='19' stroke='#e9e6db' strokeWidth='4')
+  if hero
+    g(className='hero-annotations' stroke='#3b716b' strokeWidth='1' opacity='.65')
+      path(d='M 60 142 H 110 M 85 117 V 167 M 467 355 H 517 M 492 330 V 380 M 149 494 H 467' strokeDasharray='4 5')
+      circle(cx='474' cy='88' r='32' strokeDasharray='3 5')
+      path(d='M 465 88 L 474 97 L 486 79' strokeWidth='2')

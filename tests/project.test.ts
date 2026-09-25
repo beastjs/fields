@@ -19,7 +19,7 @@ test('new files normalize nested paths and reject aliases of existing files', ()
 test('invalid file names leave the project and active selection unchanged', () => {
   const project = create();
   const before = project.snapshot();
-  for (const path of ['', '  ', '../../outside.ts', 'no-extension', 'notes.md', 'file.ts?query', '/']) {
+  for (const path of ['', '  ', '../../outside.ts', 'no-extension', 'notes.exe', 'file.ts?query', '/']) {
     expect(() => project.add(path)).toThrow();
   }
   expect(project.snapshot()).toEqual(before);

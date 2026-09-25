@@ -37,7 +37,9 @@ export const fileLanguageValidator = v.union(
   v.literal('typescript'),
   v.literal('javascript'),
   v.literal('json'),
-  v.literal('css')
+  v.literal('css'),
+  v.literal('html'),
+  v.literal('markdown')
 )
 
 export const workspaceValidator = v.object({

@@ -20,6 +20,9 @@ describe('Convex workspace validation', () => {
     expect(validateWorkspace(workspace)).toEqual(workspace)
     expect(languageForPath('/src/App.btsx')).toBe('btsx')
     expect(languageForPath('/src/main.ts')).toBe('typescript')
+    expect(languageForPath('/index.html')).toBe('html')
+    expect(languageForPath('/README.md')).toBe('markdown')
+    expect(normalizeProjectPath('/README.md')).toBe('/README.md')
   })
 
   test('rejects missing entry files and normalized duplicates', () => {

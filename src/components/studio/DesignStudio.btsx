@@ -681,6 +681,8 @@ dialog(className={cn(dialogPanel, 'backdrop:backdrop-blur-none h-[min(920px,calc
             ~ onEdit={applyEdit}
             ~ )
       StudioAside(
+        ~ session={session}
+        ~ onFullstackInstalled={closeFromButton}
         ~ className={cn('order-1 max-h-[45dvh] shrink-0 border-b border-edge', !panels.aside && 'hidden')}
         ~ blocks={blocks}
         ~ presets={presets}
@@ -742,6 +744,8 @@ dialog(className={cn(dialogPanel, 'backdrop:backdrop-blur-none h-[min(920px,calc
         Separator(className={panelSeparator} aria-label='Resize the outline and theme panel')
         Panel(id='aside' panelRef={asidePanel} defaultSize={PANEL_SIZES.aside.initial + 'px'} minSize={PANEL_SIZES.aside.min + 'px'} maxSize='40%' collapsible={true} collapsedSize={0} className='min-w-0 overflow-hidden')
           StudioAside(
+            ~ session={session}
+            ~ onFullstackInstalled={closeFromButton}
             ~ className='h-full'
             ~ blocks={blocks}
             ~ presets={presets}

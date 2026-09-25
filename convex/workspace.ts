@@ -6,7 +6,7 @@ import type { previewWidthValidator, workspaceValidator } from './validators'
 export const MAX_PROJECT_FILES = 200
 export const MAX_PROJECT_CHARACTERS = 2_000_000
 const MAX_FILE_BYTES = 900_000
-const SUPPORTED_EXTENSION = /\.(btsx|tsrx|ts|js|json|css)$/
+const SUPPORTED_EXTENSION = /\.(btsx|tsrx|ts|js|json|css|html|md)$/
 
 export type Workspace = typeof workspaceValidator.type
 export type PreviewWidth = typeof previewWidthValidator.type
@@ -37,7 +37,7 @@ export function normalizeProjectPath(input: string) {
   if (path.length > 1024 || !SUPPORTED_EXTENSION.test(path)) {
     throw new ConvexError({
       code: 'INVALID_PATH',
-      message: 'Files must use .btsx, .tsrx, .ts, .js, .json, or .css and paths must be at most 1,024 characters.'
+      message: 'Files must use .btsx, .tsrx, .ts, .js, .json, .css, .html, or .md and paths must be at most 1,024 characters.'
     })
   }
   return path
@@ -49,6 +49,8 @@ export function languageForPath(path: string): Doc<'projectFiles'>['language'] {
   if (path.endsWith('.ts')) return 'typescript'
   if (path.endsWith('.js')) return 'javascript'
   if (path.endsWith('.json')) return 'json'
+  if (path.endsWith('.html')) return 'html'
+  if (path.endsWith('.md')) return 'markdown'
   return 'css'
 }
 

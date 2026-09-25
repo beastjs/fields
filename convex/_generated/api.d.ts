@@ -23,6 +23,8 @@ import type * as publishing from "../publishing.js";
 import type * as rateLimits from "../rateLimits.js";
 import type * as siteSlugs from "../siteSlugs.js";
 import type * as sites from "../sites.js";
+import type * as storeDemo from "../storeDemo.js";
+import type * as storeDemoValidators from "../storeDemoValidators.js";
 import type * as teams from "../teams.js";
 import type * as users_m from "../users/m.js";
 import type * as users_q from "../users/q.js";
@@ -53,6 +55,8 @@ declare const fullApi: ApiFromModules<{
   rateLimits: typeof rateLimits;
   siteSlugs: typeof siteSlugs;
   sites: typeof sites;
+  storeDemo: typeof storeDemo;
+  storeDemoValidators: typeof storeDemoValidators;
   teams: typeof teams;
   "users/m": typeof users_m;
   "users/q": typeof users_q;

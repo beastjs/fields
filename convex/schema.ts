@@ -1,3 +1,5 @@
+import { storeProductValidator, storeCartItemValidator, storeOrderValidator } from './storeDemoValidators'
+import { v } from 'convex/values'
 import { defineSchema, defineTable } from 'convex/server'
 import { userValidator } from './users/v'
 import {
@@ -17,6 +19,11 @@ import {
 } from './validators'
 
 export default defineSchema({
+  storeDemoProducts: defineTable(storeProductValidator).index('by_sku', ['sku']),
+  storeDemoCarts: defineTable({ token: v.string(), items: v.array(storeCartItemValidator), updatedAt: v.number() }).index('by_token', ['token']),
+  storeDemoOrders: defineTable({ ...storeOrderValidator.fields, token: v.string(), requestId: v.string() })
+    .index('by_token', ['token']).index('by_token_and_requestId', ['token', 'requestId']),
+
   users: defineTable(userValidator)
     .index('by_tokenIdentifier', ['tokenIdentifier'])
     .index('by_firebaseUid', ['firebaseUid'])

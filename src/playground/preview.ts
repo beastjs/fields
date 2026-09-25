@@ -157,7 +157,7 @@ export class Preview {
         this.iframe.src = this.hostedURL;
       } else {
         this.iframe.removeAttribute('src');
-        this.iframe.srcdoc = previewDocument(this.channel, this.build, this.theme);
+        this.iframe.srcdoc = previewDocument(this.channel, this.build, this.theme, import.meta.env?.PUBLIC_CONVEX_URL ?? '');
       }
     }
     this.timeout = setTimeout(() => {

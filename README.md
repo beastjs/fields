@@ -60,6 +60,19 @@ Nothing changes until **Add page to project**, which writes each section to
 the surrounding theme. Reopen the studio to update the page; sections you edited
 by hand are kept, and the studio warns before replacing edits.
 
+Open **Design Studio → Fullstack → Form Supply** for a complete store example.
+Explore 36 illustrated products across six collections, search and filter, inspect
+product details, and try the persistent guest bag and server-calculated demo checkout.
+**Use this app** loads editable Beast frontend and Convex backend files after a
+replacement confirmation. Recipes remain a separate catalog. Checkout records only
+a simulated order; it takes no payment or personal details.
+
+The example uses `PUBLIC_CONVEX_URL`. Seed its deployment with
+`bunx convex run storeDemo:seed` after deploying the functions. Both the local
+preview and generated `public/preview.html` allow only that deployment's query
+and mutation endpoints. Rebuild the hosted preview when changing deployments.
+The example's included README explains running it with its own backend.
+
 Use **Share** to create and copy a snapshot link. It includes project files, the
 active tab, and preview size; chat, connection credentials, and personal settings
 are excluded. The project travels in a compressed URL fragment without a project
@@ -181,8 +194,7 @@ arbitrary npm dependencies, full TypeScript semantic
 checking, and formatting remain future work.
 Source maps are available to browser tooling and console navigation. Frames with
 missing maps or unsupported stack formats remain raw. Import attributes/phases
-and computed dynamic imports are not supported. Preview code has no network
-access under the initial CSP.
+and computed dynamic imports are not supported. Preview network access is restricted to the configured `PUBLIC_CONVEX_URL` query and mutation endpoints. With no deployment configured, network access is blocked. Remote scripts remain blocked.
 
 Compilation rejects projects exceeding 200 files or 2 million source/path UTF-16
 characters before worker transfer and parsing. Oversized edits retain the last

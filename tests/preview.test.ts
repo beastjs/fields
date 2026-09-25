@@ -80,3 +80,15 @@ test('runtime-error budget suppresses serialization and resets after one second'
   report({ message: 'recovered' });
   expect(messages.at(-1)?.message).toBe('recovered');
 });
+
+test('configured fullstack previews only allow validated Convex data endpoints', () => {
+  const url = 'https://example-123.convex.cloud';
+  for (const html of [previewDocument('store', 1, 'light', url), hostedPreviewDocument(url)]) {
+    expect(html).toContain(`connect-src ${url}/api/query ${url}/api/mutation;`);
+    expect(html).toContain("script-src 'unsafe-inline' blob:;");
+    expect(html).not.toContain('allow-same-origin');
+  }
+  for (const url of ['https://evil.example', 'https://example.convex.cloud/extra', 'https://example.convex.cloud; script-src https:', '\" onload=alert(1)']) {
+    expect(previewDocument('store', 1, 'light', url)).toContain("connect-src 'none';");
+  }
+});

@@ -417,17 +417,20 @@ function bootstrap(channel: string, build: number) {
   send('ready');
 }
 
-export function previewDocument(channel: string, build: number, theme: Theme = 'dark'): string {
+export function previewDocument(channel: string, build: number, theme: Theme = 'dark', backendURL = ''): string {
   // User source is only transferred by postMessage, never interpolated into HTML.
   const script = `(${bootstrap.toString()})(${JSON.stringify(channel)},${build});`;
-  return documentWithScript(script, theme);
+  return documentWithScript(script, theme, backendURL);
 }
 
 /** The document defaults every project renders on, in the preview and once published. */
 export const BASE_DOCUMENT_STYLE = 'html{color:#deded8;background:#303030;color-scheme:dark}html[data-theme="light"]{color:#111113;background:#ffffff;color-scheme:light}body{margin:0;font-family:system-ui,sans-serif;color:inherit}*{box-sizing:border-box}';
 
-function documentWithScript(script: string, theme: Theme): string {
-  return `<!doctype html><html data-theme="${theme}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="${theme}"><meta name="referrer" content="no-referrer"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' blob:; style-src 'unsafe-inline'; img-src https: data: blob:; font-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'"><style>${BASE_DOCUMENT_STYLE}</style></head><body><div id="app"></div><script>${script.replaceAll('</script', '<\\/script')}</script></body></html>`;
+function documentWithScript(script: string, theme: Theme, backendURL = ''): string {
+  // Only the host-configured Convex data endpoints; no arbitrary network or remote scripts.
+  const connections = /^https:\/\/[a-z0-9-]+\.convex\.cloud$/.test(backendURL)
+    ? `${backendURL}/api/query ${backendURL}/api/mutation` : "'none'";
+  return `<!doctype html><html data-theme="${theme}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="${theme}"><meta name="referrer" content="no-referrer"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' blob:; style-src 'unsafe-inline'; img-src https: data: blob:; font-src data:; connect-src ${connections}; base-uri 'none'; form-action 'none'"><style>${BASE_DOCUMENT_STYLE}</style></head><body><div id="app"></div><script>${script.replaceAll('</script', '<\\/script')}</script></body></html>`;
 }
 
 
@@ -448,6 +451,6 @@ function hostedBootstrap(start: typeof bootstrap) {
   addEventListener('message', connect);
 }
 
-export function hostedPreviewDocument(): string {
-  return documentWithScript(`(${hostedBootstrap.toString()})(${bootstrap.toString()});`, 'dark');
+export function hostedPreviewDocument(backendURL = ''): string {
+  return documentWithScript(`(${hostedBootstrap.toString()})(${bootstrap.toString()});`, 'dark', backendURL);
 }

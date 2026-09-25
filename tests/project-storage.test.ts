@@ -44,7 +44,7 @@ test('validation rejects corrupt projects, invalid paths, duplicate aliases, and
       { entry: '/a.ts', files: { '/a.ts': 42 } },
       { entry: '/a.ts', files: { '/a.ts': '', '/src/../a.ts': '' } },
       { entry: '/a.ts', files: { '/a.ts': '', '../../escape.ts': '' } },
-      { entry: '/a.ts', files: { '/a.ts': '', '/notes.md': '' } },
+      { entry: '/a.ts', files: { '/a.ts': '', '/notes.exe': '' } },
       { entry: '/a.ts', files: { '/a.ts': '', ['x'.repeat(1021) + '.ts']: '' } },
       { entry: '/a.ts', files: {} },
       { entry: '/0.ts', files: Object.fromEntries(Array.from({ length: MAX_PROJECT_FILES + 1 }, (_, i) => [`/${i}.ts`, ''])) },

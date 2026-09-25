@@ -1,0 +1,319 @@
+import { useEffect, useRef, useState } from 'octane'
+import { useField, useForm } from '@octanejs/tanstack-form'
+import ProductArt from './ProductArt.btsx'
+import { categories, checkout, loadProducts, loadSession, money, setQuantity, type CartItem, type Order, type Product } from './store'
+
+setup
+  const [products, setProducts] = useState<Product[]>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [order, setOrder] = useState<Order | null>(null);
+  const [category, setCategory] = useState('All');
+  const [selected, setSelected] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [motion, setMotion] = useState(true);
+  const [checkoutKey, setCheckoutKey] = useState(() => crypto.randomUUID());
+  const details = useRef<HTMLDialogElement | null>(null);
+  const bag = useRef<HTMLDialogElement | null>(null);
+  const form = useForm({ defaultValues: { search: '', sort: 'featured', budget: 3500, delivery: 'standard' } });
+  const search = useField({ form, name: 'search' });
+  const sort = useField({ form, name: 'sort' });
+  const budget = useField({ form, name: 'budget' });
+  const delivery = useField({ form, name: 'delivery' });
+  const query = search.state.value.trim().toLowerCase();
+  const visible = products.filter(product => (category === 'All' || product.category === category) && product.price <= budget.state.value * 100 && (product.name + ' ' + product.description + ' ' + product.category + ' ' + product.sku).toLowerCase().includes(query)).sort((a, b) => sort.state.value === 'price-low' ? a.price - b.price : sort.state.value === 'price-high' ? b.price - a.price : sort.state.value === 'name' ? a.name.localeCompare(b.name) : Number(Boolean(b.badge)) - Number(Boolean(a.badge)) || a.sku.localeCompare(b.sku));
+  const lines = cart.flatMap(item => { const product = products.find(product => product.sku === item.sku); return product ? [{ ...item, product }] : []; });
+  const count = cart.reduce((total, item) => total + item.quantity, 0);
+  const subtotal = lines.reduce((total, item) => total + item.product.price * item.quantity, 0);
+  const shipping = delivery.state.value === 'express' ? 2500 : subtotal >= 15000 ? 0 : 900;
+  const load = async (signal?: AbortSignal) => {
+    try {
+      const [catalog, session] = await Promise.all([loadProducts(signal), loadSession(signal)]);
+      if (signal?.aborted) return;
+      setProducts(catalog); setCart(session.items); setOrder(session.order); setError(''); setLoading(false);
+    } catch (reason) {
+      if (!signal?.aborted) { setError(reason instanceof Error ? reason.message : 'Unable to open the store.'); setLoading(false); }
+    }
+  };
+  useEffect(() => {
+    const abort = new AbortController();
+    void load(abort.signal);
+    return () => { abort.abort(); details.current?.close(); bag.current?.close(); };
+  }, []);
+  const changeQuantity = async (product: Product, quantity: number) => {
+    if (pending) return;
+    setPending(true); setError('');
+    try {
+      const items = await setQuantity(product.sku, quantity);
+      setCart(items); setNotice(quantity ? product.name + ' is in your bag.' : product.name + ' removed.');
+      setCheckoutKey(crypto.randomUUID());
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not update your bag.'); }
+    finally { setPending(false); }
+  };
+  const add = (product: Product) => void changeQuantity(product, (cart.find(item => item.sku === product.sku)?.quantity ?? 0) + 1);
+  const openProduct = (product: Product) => { setSelected(product); details.current?.showModal(); };
+  const openBag = () => { details.current?.close(); bag.current?.showModal(); };
+  const placeOrder = async () => {
+    if (pending || !cart.length) return;
+    setPending(true); setError('');
+    try {
+      const receipt = await checkout(checkoutKey, delivery.state.value === 'express' ? 'express' : 'standard');
+      setOrder(receipt); setCart([]); setNotice('Demo order ' + receipt.reference + ' is confirmed. No payment was taken.');
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Checkout failed. Your bag is still here.'); }
+    finally { setPending(false); }
+  };
+  const resetFilters = () => { setCategory('All'); search.handleChange(''); sort.handleChange('featured'); budget.handleChange(3500); };
+
+main.store(data-motion={motion})
+  div.announcement
+    span Good tools for great what-ifs.
+    span Free demo shipping over $150 ↗
+  header.site-header
+    a.wordmark(href='#home' aria-label='Form Supply home')
+      span.brand-mark(aria-hidden='true')
+        i
+        i
+        i
+      span FORM SUPPLY
+    nav(aria-label='Main navigation')
+      a(href='#collection') The collection
+      a(href='#philosophy') Our thinking
+      button.bag-button(type='button' onClick={openBag} aria-label={'Open bag, ' + count + ' items'}) Bag (#{count}) ↗
+  section.hero#home
+    div.hero-topline
+      span Tools for the world you want to make.
+      span Independent minds. Capable machines.
+    div.hero-layout
+      div.hero-copy
+        p.eyebrow HARDWARE / HUMAN POSSIBILITY
+        h1
+          span A little
+          span more
+          em possible.
+        p.hero-description Thoughtfully made robotics, tools, and useful little things. For the hands-on, the what-if, and the next great idea.
+        a.pill.primary(href='#collection') Explore the collection
+          span(aria-hidden='true') ↗
+      div.hero-object
+        span.object-label THE ARC / STUDY NO. 001
+        ProductArt(shape={0} color='#4b9390' hero={true})
+        div.object-caption
+          span Six axes. A thousand starting points.
+          button.motion-button(type='button' aria-pressed={!motion} onClick={() => setMotion(value => !value)}) #{motion ? 'Pause motion Ⅱ' : 'Play motion ▷'}
+    div.hero-bottom
+      span DESIGNED FOR CURIOUS PEOPLE
+      span Scroll to find your next thing ↓
+      span COLLECTION 001 / 36 OBJECTS
+  section.intro-strip(aria-label='Store benefits')
+    div
+      span 01
+      p Open to possibility
+      small Documented. Adaptable. Yours to explore.
+    div
+      span 02
+      p Made to work together
+      small Considered systems, not isolated objects.
+    div
+      span 03
+      p Start small. Build something.
+      small From your first sketch to a working prototype.
+  section.collection#collection
+    div.section-heading
+      div
+        p.eyebrow THE GOOD STUFF
+        h2 Your next what-if.
+      p A whole collection of starting points.
+        br
+        | Find the piece that gets you moving.
+    div.category-list(role='group' aria-label='Product categories')
+      each option in categories key option
+        button.category(type='button' aria-pressed={category === option} onClick={() => setCategory(option)}) #{option}
+          span #{option === 'All' ? products.length : products.filter(product => product.category === option).length}
+    div.catalog-tools
+      label.search
+        span(aria-hidden='true') ⌕
+        input(type='search' aria-label='Search products' placeholder='Find something useful…' value={search.state.value} onInput={event => search.handleChange(event.currentTarget.value)} onBlur={() => search.handleBlur()})
+      label.budget
+        span Under #{money(budget.state.value * 100)}
+        input(type='range' aria-label='Maximum price' min='20' max='3500' step='10' value={budget.state.value} onInput={event => budget.handleChange(Number(event.currentTarget.value))})
+      label.sort
+        span.sr-only Sort products
+        select(aria-label='Sort products' value={sort.state.value} onChange={event => sort.handleChange(event.currentTarget.value)})
+          option(value='featured') Featured first
+          option(value='price-low') Price: low to high
+          option(value='price-high') Price: high to low
+          option(value='name') Name: A–Z
+    div.results-line
+      p(role='status') #{loading ? 'Opening the collection…' : visible.length + ' objects to get you thinking'}
+      if category !== 'All' || query || budget.state.value < 3500
+        button.text-button(type='button' onClick={resetFilters}) Clear filters ↺
+    if error && !products.length
+      div.empty-state(role='alert')
+        h3 A little interruption.
+        p #{error}
+        button.pill(type='button' onClick={() => { setLoading(true); void load(); }}) Try again
+    elseif !loading && !visible.length
+      div.empty-state
+        h3 Nothing here. Plenty of possibilities elsewhere.
+        p Try another category, a higher budget, or a different search.
+        button.pill(type='button' onClick={resetFilters}) See the whole collection ↗
+    else
+      div.product-grid
+        each product in visible key product.sku
+          article.product-card
+            button.product-visual(type='button' aria-label={'View ' + product.name} onClick={() => openProduct(product)} style={{ '--object-color': product.color }})
+              span.product-code #{product.sku}
+              if product.badge
+                span.product-badge #{product.badge}
+              ProductArt(shape={product.shape} color={product.color})
+              span.product-explore(aria-hidden='true') ↗
+            div.product-info
+              div.product-title
+                button(type='button' onClick={() => openProduct(product)}) #{product.name}
+                span #{money(product.price)}
+              p #{product.description}
+              div.product-bottom
+                span #{product.stock ? product.category : 'Next batch coming soon'}
+                button.add-button(type='button' disabled={loading || pending || !product.stock || (cart.find(item => item.sku === product.sku)?.quantity ?? 0) >= Math.min(10, product.stock)} aria-label={'Add ' + product.name + ' to bag'} onClick={() => add(product)}) #{product.stock ? 'Add to bag +' : 'Sold out'}
+  section.feature-story#philosophy
+    div.story-art
+      div.story-grid(aria-hidden='true')
+      ProductArt(shape={2} color='#dea57b')
+      span.story-stamp GOOD TOOLS / OPEN MINDS / GOOD TOOLS / OPEN MINDS
+    div.story-copy
+      p.eyebrow A DIFFERENT KIND OF HARDWARE STORE
+      h2 The future is
+        br
+        em hands-on.
+      p We believe the best way to understand something is to make it. To hold a part, connect a wire, try something that might not work. And then try it another way.
+      p So we bring together tools that make those moments easier. Considered objects. Open possibilities. A little help turning “what if” into “look at that.”
+      a.pill(href='#collection') Find your starting point ↗
+  section.starter-band
+    div
+      p.eyebrow NOT SURE WHERE TO START?
+      h2 A good bench.
+        br
+        | A better beginning.
+      p Everything you need to give an idea somewhere to happen.
+      button.pill.primary(type='button' onClick={() => { const starter = products.find(product => product.sku === 'WRK-04'); if (starter) openProduct(starter); }} disabled={!products.length}) Meet the bench starter system ↗
+    div
+      ProductArt(shape={4} color='#658b77')
+  section.questions
+    p.eyebrow BEFORE YOU GET YOUR HANDS ON IT
+    h2 A few useful things.
+    div.question-grid
+      details
+        summary What kind of store is this?
+        p This is a working example store. Products, prices, and orders are demonstrations. You can browse, build a persistent bag, and place a demo order. Nothing is charged or shipped.
+      details
+        summary Will these parts work together?
+        p These example products are organized into a modular desktop ecosystem. Open a product to explore its illustrative specifications. In a real build, always verify electrical and mechanical compatibility.
+      details
+        summary How does delivery work?
+        p Demo standard delivery is $9, or free on orders of $150 or more. Demo express delivery is $25. Your total is calculated again by the server at checkout.
+      details
+        summary Will my bag be here when I return?
+        p Yes. Your guest bag is saved to the database. This browser remembers its guest session; clearing browser storage starts a new one. The editor preview keeps a session for this installed example.
+  footer.site-footer
+    div.footer-top
+      p Tools for tomorrow.
+        br
+        em Start today.
+      a.pill(href='#collection') Back to the collection ↑
+    div.footer-wordmark(aria-hidden='true') FORM SUPPLY
+    div.footer-bottom
+      span An independent store for curious minds.
+      span USD / Demo store · No real payments
+      a(href='#home') Back to top ↑
+  div.toast(role='status' aria-live='polite' hidden={!notice})
+    span #{notice}
+    button(type='button' aria-label='Dismiss notification' onClick={() => setNotice('')}) ×
+  if error && products.length > 0
+    div.error-toast(role='alert')
+      span #{error}
+      button(type='button' onClick={() => setError('')} aria-label='Dismiss error') ×
+  dialog.product-dialog(ref={details} aria-label='Product details')
+    button.dialog-close(type='button' aria-label='Close product details' onClick={() => details.current?.close()}) ×
+    if selected
+      div.detail-layout
+        div.detail-art
+          ProductArt(shape={selected.shape} color={selected.color})
+          span.product-code #{selected.sku} / FORM SUPPLY
+        div.detail-copy
+          p.eyebrow #{selected.category}
+          h2 #{selected.name}
+          p.detail-price #{money(selected.price)}
+          p #{selected.detail}
+          ul.specs
+            each spec in selected.specs key spec
+              li #{spec}
+          p.stock #{selected.stock ? selected.stock + ' available in the demo catalog' : 'Sold out · Next batch coming soon'}
+          button.pill.primary(type='button' disabled={pending || !selected.stock || (cart.find(item => item.sku === selected.sku)?.quantity ?? 0) >= Math.min(10, selected.stock)} onClick={() => add(selected!)}) #{pending ? 'Updating bag…' : selected.stock ? 'Add to bag +' : 'Sold out'}
+          button.text-button(type='button' onClick={openBag}) View bag (#{count}) ↗
+          if error
+            p.inline-error(role='alert') #{error}
+          if notice
+            p.inline-status(role='status') #{notice}
+          p.detail-footnote Designed for possibilities. Shown as an illustrative demo product.
+  dialog.bag-dialog(ref={bag} aria-labelledby='bag-title')
+    div.bag-header
+      div
+        p.eyebrow YOUR NEXT POSSIBILITIES
+        h2#bag-title Your bag (#{count})
+      button.dialog-close(type='button' aria-label='Close bag' onClick={() => bag.current?.close()}) ×
+    if error
+      p.inline-error(role='alert') #{error}
+    if lines.length
+      div.bag-content
+        ul.bag-lines
+          each line in lines key line.sku
+            li.bag-line
+              div.bag-art
+                ProductArt(shape={line.product.shape} color={line.product.color})
+              div.bag-item-info
+                h3 #{line.product.name}
+                p #{money(line.product.price)} each
+                div.quantity-control
+                  button(type='button' aria-label={'Decrease ' + line.product.name} disabled={pending} onClick={() => void changeQuantity(line.product, line.quantity - 1)}) −
+                  span(aria-label={'Quantity of ' + line.product.name}) #{line.quantity}
+                  button(type='button' aria-label={'Increase ' + line.product.name} disabled={pending || line.quantity >= Math.min(10, line.product.stock)} onClick={() => void changeQuantity(line.product, line.quantity + 1)}) +
+                  button.remove-button(type='button' disabled={pending} onClick={() => void changeQuantity(line.product, 0)}) Remove
+              strong #{money(line.product.price * line.quantity)}
+        div.bag-summary
+          label.delivery-choice
+            span Delivery
+            select(aria-label='Delivery method' disabled={pending} value={delivery.state.value} onChange={event => delivery.handleChange(event.currentTarget.value)})
+              option(value='standard') Standard · 5–7 working days
+              option(value='express') Express · 2–3 working days
+          div.total-line
+            span Subtotal
+            span #{money(subtotal)}
+          div.total-line
+            span Demo delivery
+            span #{shipping ? money(shipping) : 'On us'}
+          div.total-line.grand-total
+            strong Total (USD)
+            strong #{money(subtotal + shipping)}
+          p.demo-note This is a demo checkout. No payment, address, or personal information is needed. Nothing will be shipped.
+          button.pill.primary.checkout-button(type='button' disabled={pending || loading} onClick={() => void placeOrder()}) #{pending ? 'Working on it…' : 'Place demo order ↗'}
+    elseif order
+      div.order-confirmation
+        span.confirmation-mark(aria-hidden='true') ✓
+        p.eyebrow A GOOD PLACE TO START
+        h3 Possibility, confirmed.
+        p Demo order #{order.reference}
+        p Nothing charged. Nothing shipped. Just a working idea, saved to the database.
+        ul.receipt-lines
+          each item in order.items key item.sku
+            li
+              span #{item.quantity} × #{item.name}
+              span #{money(item.unitPrice * item.quantity)}
+        p.receipt-total Total: #{money(order.total)}
+        button.pill(type='button' onClick={() => bag.current?.close()}) Keep exploring ↗
+    else
+      div.empty-bag
+        ProductArt(shape={5} color='#8fa591')
+        h3 Room for something good.
+        p Your bag is empty. Find a new starting point in the collection.
+        button.pill(type='button' onClick={() => bag.current?.close()}) Keep exploring ↗

@@ -35,7 +35,7 @@ export function decodeWorkspace(raw: string): SavedWorkspace {
   if (!isProject(project)) throw new Error('Invalid project files.');
   const paths = Object.keys(project.files);
   if (!paths.length || paths.length > MAX_PROJECT_FILES || paths.some(path =>
-    path.length > 1024 || !/\.(btsx|tsrx|ts|js|json|css)$/.test(path))) throw new Error('Invalid project paths.');
+    path.length > 1024 || !/\.(btsx|tsrx|ts|js|json|css|html|md)$/.test(path))) throw new Error('Invalid project paths.');
   const fs = new VirtualFileSystem(project.files);
   if (fs.list().some(path => path.length > 1024)) throw new Error('Project path is too long.');
   const entry = normalizePath(project.entry);
