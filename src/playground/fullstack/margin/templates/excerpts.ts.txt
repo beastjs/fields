@@ -1,0 +1,31 @@
+/** Original sample passages for the fictional demo catalog. */
+const openings = [
+  'The first thing I noticed was the silence. Not the absence of sound, but the space it left for everything else: the light across the table, the book waiting at its edge, the small possibility of beginning again.',
+  'The house had kept our heights on the kitchen door. Mine stopped at fourteen. My sister’s continued another inch in a different pencil, although she swore she had never come back.',
+  'At the last station before the border, a woman boarded with an empty birdcage. She put it on the seat beside me and asked whether I minded the singing.',
+  'The theatre would close on Sunday. On Monday, someone would paint over the green room, including the small constellation I had made with luminous paint in 1987.',
+  'Rain was easy. Everyone on the island could predict rain. What made them nervous was the morning I predicted that the postman would finally forgive his brother.',
+  'At four in the morning, the city belonged to us: the bakers, the cleaners, the people who unlocked the doors for people who never thought about locks.',
+  'I began counting the things I owned on a Tuesday. By Wednesday, I had stopped. The more interesting inventory was of the things I actually noticed.',
+  'The path was closed. This was the first good thing that happened that day, though I spent the next twenty minutes believing otherwise.',
+  'There is a crack in the pavement outside my window. I have passed it for nine years. Today, for reasons I cannot explain, I saw a small fern growing inside it.',
+  'A question can be a door or a wall. For years I mistook the second for the first, and wondered why every conversation left me in the same room.',
+  'We measure a day in hours, which tells us very little about its shape. Some mornings are narrow corridors. Others are fields, open in every direction.',
+  'The clock above the desk had stopped at eleven. I worked for an hour without noticing. It was the most useful hour I had spent that week.',
+  'Place an ordinary spoon beside a stone. Wait until they stop being a spoon and a stone. Now look at the shapes they leave between them.',
+  'The best object on the table was the one that did not quite work. A cardboard hinge had failed, revealing a possibility the finished model concealed.',
+  'At eight, the window is a rectangle. By ten, it is a long pale road across the floor. At noon, it disappears. A room contains more than one room.',
+  'A crease is a small decision with a long memory. Open the paper again and the decision remains, waiting to become something else.',
+  'The first colour was not in the paint box. It was on the underside of a leaf I had stepped over on my way to buy paint.',
+  'The chair had been repaired three times. Each repair used a different wood. Its owner called this damage. I called it a collaboration.',
+  'Between the last word / and the closing door, / a whole afternoon / waits to be understood.',
+  'At dusk, the field / stops being a place / and becomes the colour / of something remembered.',
+  'The sea returns / a blue glass marble. / Of all the things I asked for, / it chooses this.',
+  'A is for arrival: / rain at the window, / carrying the names / of places it has been.',
+  'Let the edge be soft. / Let the cup be chipped. / Let the morning find us / unfinished, and here.',
+  'Every open window / is a small agreement / with the world: / come in, begin again.'
+];
+export function excerptFor(sku: string) {
+  const index = Number(sku.slice(3)) - 1;
+  return openings[index] ?? openings[0];
+}

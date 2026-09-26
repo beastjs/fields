@@ -24,6 +24,12 @@ export default defineSchema({
   storeDemoOrders: defineTable({ ...storeOrderValidator.fields, token: v.string(), requestId: v.string() })
     .index('by_token', ['token']).index('by_token_and_requestId', ['token', 'requestId']),
 
+  marginDemoProducts: defineTable(storeProductValidator).index('by_sku', ['sku']),
+  marginDemoCarts: defineTable({ token: v.string(), items: v.array(storeCartItemValidator), updatedAt: v.number() }).index('by_token', ['token']),
+  marginDemoOrders: defineTable({ ...storeOrderValidator.fields, token: v.string(), requestId: v.string() })
+    .index('by_token', ['token']).index('by_token_and_requestId', ['token', 'requestId']),
+  marginDemoShelves: defineTable({ token: v.string(), skus: v.array(v.string()) }).index('by_token', ['token']),
+
   users: defineTable(userValidator)
     .index('by_tokenIdentifier', ['tokenIdentifier'])
     .index('by_firebaseUid', ['firebaseUid'])

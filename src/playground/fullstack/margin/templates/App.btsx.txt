@@ -1,0 +1,330 @@
+import { useEffect, useRef, useState } from 'octane'
+import { useField, useForm } from '@octanejs/tanstack-form'
+import BookCover from './BookCover.btsx'
+import { excerptFor } from './excerpts'
+import { categories, setSaved, checkout, loadProducts, loadSession, money, setQuantity, type CartItem, type Order, type Product } from './store'
+
+setup
+  const [products, setProducts] = useState<Product[]>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [order, setOrder] = useState<Order | null>(null);
+  const [shelf, setShelf] = useState<string[]>([]);
+  const [onlySaved, setOnlySaved] = useState(false);
+  const [sample, setSample] = useState(false);
+  const [category, setCategory] = useState('All');
+  const [selected, setSelected] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [motion, setMotion] = useState(true);
+  const [checkoutKey, setCheckoutKey] = useState(() => crypto.randomUUID());
+  const details = useRef<HTMLDialogElement | null>(null);
+  const bag = useRef<HTMLDialogElement | null>(null);
+  const form = useForm({ defaultValues: { search: '', sort: 'featured', budget: 60, delivery: 'standard' } });
+  const search = useField({ form, name: 'search' });
+  const sort = useField({ form, name: 'sort' });
+  const budget = useField({ form, name: 'budget' });
+  const delivery = useField({ form, name: 'delivery' });
+  const query = search.state.value.trim().toLowerCase();
+  const visible = products.filter(product => (!onlySaved || shelf.includes(product.sku)) && (category === 'All' || product.category === category) && product.price <= budget.state.value * 100 && (product.name + ' ' + product.description + ' ' + product.category + ' ' + product.sku).toLowerCase().includes(query)).sort((a, b) => sort.state.value === 'price-low' ? a.price - b.price : sort.state.value === 'price-high' ? b.price - a.price : sort.state.value === 'name' ? a.name.localeCompare(b.name) : Number(Boolean(b.badge)) - Number(Boolean(a.badge)) || a.sku.localeCompare(b.sku));
+  const lines = cart.flatMap(item => { const product = products.find(product => product.sku === item.sku); return product ? [{ ...item, product }] : []; });
+  const count = cart.reduce((total, item) => total + item.quantity, 0);
+  const subtotal = lines.reduce((total, item) => total + item.product.price * item.quantity, 0);
+  const shipping = delivery.state.value === 'express' ? 1200 : subtotal >= 7500 ? 0 : 500;
+  const load = async (signal?: AbortSignal) => {
+    try {
+      const [catalog, session] = await Promise.all([loadProducts(signal), loadSession(signal)]);
+      if (signal?.aborted) return;
+      setShelf(session.shelf); setProducts(catalog); setCart(session.items); setOrder(session.order); setError(''); setLoading(false);
+    } catch (reason) {
+      if (!signal?.aborted) { setError(reason instanceof Error ? reason.message : 'Unable to open the store.'); setLoading(false); }
+    }
+  };
+  useEffect(() => {
+    const abort = new AbortController();
+    void load(abort.signal);
+    return () => { abort.abort(); details.current?.close(); bag.current?.close(); };
+  }, []);
+  const changeQuantity = async (product: Product, quantity: number) => {
+    if (pending) return;
+    setPending(true); setError('');
+    try {
+      const items = await setQuantity(product.sku, quantity);
+      setCart(items); setNotice(quantity ? product.name + ' is in your bag.' : product.name + ' removed.');
+      setCheckoutKey(crypto.randomUUID());
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not update your bag.'); }
+    finally { setPending(false); }
+  };
+  const add = (product: Product) => void changeQuantity(product, (cart.find(item => item.sku === product.sku)?.quantity ?? 0) + 1);
+  const openProduct = (product: Product) => { setSample(false); setSelected(product); details.current?.showModal(); };
+  const openBag = () => { details.current?.close(); bag.current?.showModal(); };
+  const placeOrder = async () => {
+    if (pending || !cart.length) return;
+    setPending(true); setError('');
+    try {
+      const receipt = await checkout(checkoutKey, delivery.state.value === 'express' ? 'express' : 'standard');
+      setOrder(receipt); setCart([]); setNotice('Demo order ' + receipt.reference + ' is confirmed. No payment was taken.');
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Checkout failed. Your bag is still here.'); }
+    finally { setPending(false); }
+  };
+  const resetFilters = () => { setOnlySaved(false); setCategory('All'); search.handleChange(''); sort.handleChange('featured'); budget.handleChange(60); };
+
+  const saveBook = async (product: Product) => {
+    if (pending) return;
+    setPending(true); setError('');
+    try { const skus = await setSaved(product.sku, !shelf.includes(product.sku)); setShelf(skus); setNotice(skus.includes(product.sku) ? 'A place on your shelf, saved.' : 'Removed from your reading shelf.'); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not save this book.'); }
+    finally { setPending(false); }
+  };
+  const showShelf = () => { setOnlySaved(true); setCategory('All'); search.handleChange(''); budget.handleChange(60); document.querySelector('#collection')?.scrollIntoView({ behavior: 'smooth' }); };
+
+main.margin-store(data-motion={motion})
+  header.masthead
+    a.brand(href='#home') Margin Notes.
+      em Independent editions
+    nav(aria-label='Main navigation')
+      a(href='#collection') The books
+      a(href='#manifesto') Our point of view
+      button(type='button' onClick={showShelf}) Reading shelf (#{shelf.length})
+    button.basket-link(type='button' onClick={openBag} aria-label={'Open bag, ' + count + ' items'}) Your bag (#{count}) ↗
+  section.editorial-hero#home
+    p.hero-kicker A good book changes the way you look.
+    h1
+      span BETWEEN
+      span THE LINES
+    div.hero-book
+      BookCover(title='The Quiet Move' author='Elias Voss' color='#641f34' shape={0})
+    span.scribble.note-one begin here ↘
+    span.scribble.note-two one more chapter…
+    span.scribble.note-three a different perspective
+    svg.hero-orbit(viewBox='0 0 250 250' fill='none' aria-hidden='true')
+      circle(cx='125' cy='125' r='115' stroke='currentColor' strokeDasharray='1 9')
+      path(d='M35 160Q140 200 220 66M202 68L220 66L219 86' stroke='currentColor')
+    p.hero-caption Stories to get lost in. Ideas to take with you.
+    div.hero-actions
+      a.underlined(href='#collection') Find your next chapter ↓
+      button.motion-toggle(type='button' aria-pressed={!motion} onClick={() => setMotion(value => !value)}) #{motion ? 'Pause movement' : 'Resume movement'}
+  section.manifesto#manifesto
+    div.margin-label
+      span (01 — A NOTE FROM US)
+      p Books for a life
+        br
+        em well considered.
+    div.manifesto-copy
+      h2 Some books fill a shelf.
+        br
+        em Others open a door.
+      p We’re here for the second kind. The stories that stay with you on the walk home. The sentence you underline twice. The idea that quietly rearranges everything.
+      p A small, independent collection, chosen with care. Take your time. Follow your curiosity. There’s something here with your name in the margin.
+      span.handwritten Yours, Margin Notes
+  section.collection#collection
+    div.collection-heading
+      span.margin-label (02 — THE COLLECTION)
+      h2 A world between covers.
+      p 24 original editions. Many ways in.
+    div.catalog-toolbar
+      div.category-list(role='group' aria-label='Book categories')
+        each option in categories key option
+          button(type='button' aria-pressed={category === option && !onlySaved} onClick={() => { setCategory(option); setOnlySaved(false); }}) #{option}
+        button.shelf-filter(type='button' aria-pressed={onlySaved} onClick={() => setOnlySaved(value => !value)}) Saved (#{shelf.length}) ♡
+      div.catalog-fields
+        input(type='search' aria-label='Search books' placeholder='Title, author, or a little curiosity…' value={search.state.value} onInput={event => search.handleChange(event.currentTarget.value)} onBlur={() => search.handleBlur()})
+        select(aria-label='Sort books' value={sort.state.value} onChange={event => sort.handleChange(event.currentTarget.value)})
+          option(value='featured') Our selection
+          option(value='price-low') Price: low to high
+          option(value='price-high') Price: high to low
+          option(value='name') Title: A–Z
+        label.price-filter
+          span Under #{money(budget.state.value * 100)}
+          input(type='range' aria-label='Maximum price' min='16' max='60' step='2' value={budget.state.value} onInput={event => budget.handleChange(Number(event.currentTarget.value))})
+    div.result-count(role='status') #{loading ? 'Opening the bookshop…' : visible.length + (visible.length === 1 ? ' book' : ' books') + (onlySaved ? ' on your reading shelf' : ' to spend some time with')}
+    if error && !products.length
+      div.empty-state(role='alert')
+        h3 The bookshop is taking a moment.
+        p #{error}
+        button.underlined(type='button' onClick={() => { setLoading(true); void load(); }}) Try again ↗
+    elseif !loading && !visible.length
+      div.empty-state
+        h3 #{onlySaved ? 'Leave a little room for curiosity.' : 'A different word, perhaps?'}
+        p #{onlySaved ? 'Save a book with the heart beside its cover. It will be waiting here when you return.' : 'No books match these filters. There are more stories waiting on the shelf.'}
+        button.underlined(type='button' onClick={resetFilters}) Browse all books ↗
+    else
+      div.book-grid
+        each product, index in visible key product.sku
+          article.book-card
+            div.book-stage
+              span.catalog-number #{product.sku.replace('MN-', '')} / #{product.category}
+              button.book-open(type='button' aria-label={'View ' + product.name} onClick={() => openProduct(product)})
+                BookCover(title={product.name} author={product.description} color={product.color} shape={product.shape})
+              button.save-book(type='button' disabled={pending} aria-label={(shelf.includes(product.sku) ? 'Unsave ' : 'Save ') + product.name} aria-pressed={shelf.includes(product.sku)} onClick={() => void saveBook(product)}) #{shelf.includes(product.sku) ? '♥' : '♡'}
+              if product.badge
+                span.editor-pick #{product.badge}
+            div.book-caption
+              p.book-author #{product.description}
+              h3
+                button(type='button' onClick={() => openProduct(product)}) #{product.name}
+              div.book-meta
+                span #{product.specs[0]}
+                span #{money(product.price)}
+              button.add-book(type='button' disabled={pending || !product.stock || (cart.find(item => item.sku === product.sku)?.quantity ?? 0) >= Math.min(10, product.stock)} aria-label={'Add ' + product.name + ' to bag'} onClick={() => add(product)}) #{product.stock ? 'Add to bag ↗' : 'Next printing soon'}
+  section.editors-letter
+    div.letter-art
+      div.letter-ring READ / THINK / REPEAT
+      div.letter-book
+        BookCover(title='The Art of Enough' author='Nora Field' color='#8b642c' shape={1})
+      span.scribble a little room to think
+    div.letter-copy
+      p.margin-label (03 — THE EDITOR’S DESK)
+      h2 Less noise.
+        br
+        em More meaning.
+      p This month, we’re making room. For quieter stories, slower mornings, and the radical idea that enough might already be within reach.
+      p Our featured essay collection asks a simple question: what happens when we stop adding, and start noticing?
+      button.underlined(type='button' disabled={!products.length} onClick={() => { const book = products.find(item => item.sku === 'MN-07'); if (book) openProduct(book); }}) Open The Art of Enough ↗
+  section.reading-ritual
+    span.margin-label (04 — AN INVITATION)
+    h2 Turn a page.
+      br
+      em Change your perspective.
+    div.ritual-steps
+      div
+        span 01.
+        h3 Follow a feeling.
+        p Browse by curiosity. There is no right place to start.
+      div
+        span 02.
+        h3 Make a little room.
+        p Save a reading shelf for your future self. We’ll keep your place.
+      div
+        span 03.
+        h3 Stay for a chapter.
+        p Open any book for a small, original reading sample.
+  section.faq
+    p.margin-label (05 — THE SMALL PRINT)
+    div
+      details
+        summary Is this a real bookshop?
+        p This is a complete demonstration. The books, authors, and excerpts are fictional; the saved shelf, basket, and demo orders use a real Convex backend. No payments are taken and nothing is shipped.
+      details
+        summary Will my reading shelf be here tomorrow?
+        p Yes. It is stored with your anonymous guest session. Keep the same browser, or the same installed preview project. Clearing browser storage starts a new session.
+      details
+        summary What about delivery?
+        p Demo standard delivery is $5, or free on orders of $75 or more. Express delivery is $12. All prices are in USD. No tax is calculated in this example.
+  footer.book-footer
+    div.footer-top
+      a.brand(href='#home') Margin Notes.
+      p Independent minds.
+        br
+        em Well-read lives.
+      a.underlined(href='#collection') Back to the books ↑
+    p.footer-wordmark Read into it.
+    div.footer-bottom
+      span © 2026 Margin Notes — A fictional independent bookshop
+      span Made for the endlessly curious.
+  if notice
+    div.toast(role='status')
+      span #{notice}
+      button(type='button' aria-label='Dismiss notification' onClick={() => setNotice('')}) ×
+  if error && products.length
+    div.toast.error(role='alert')
+      span #{error}
+      button(type='button' aria-label='Dismiss error' onClick={() => setError('')}) ×
+  dialog.product-dialog(ref={details} aria-label='Product details')
+    button.dialog-close(type='button' aria-label='Close product details' onClick={() => details.current?.close()}) ×
+    if selected
+      div.detail-layout
+        div.detail-art
+          BookCover(title={selected.name} author={selected.description} color={selected.color} shape={selected.shape})
+          span.product-code #{selected.sku} / MARGIN NOTES
+        div.detail-copy
+          p.eyebrow #{selected.category}
+          h2 #{selected.name}
+          p.detail-price #{money(selected.price)}
+          p #{selected.detail}
+          p.detail-author By #{selected.description}
+          div.detail-actions
+            button.underlined(type='button' aria-pressed={sample} onClick={() => setSample(value => !value)}) #{sample ? 'Close sample ↑' : 'Read a sample ↓'}
+            button.underlined(type='button' disabled={pending} aria-pressed={shelf.includes(selected.sku)} onClick={() => void saveBook(selected!)}) #{shelf.includes(selected.sku) ? 'Saved to your shelf ♥' : 'Save to your shelf ♡'}
+          if sample
+            section.reading-sample(aria-label='Reading sample')
+              p.margin-label FROM THE OPENING PAGES
+              h3 #{selected.name}
+              p #{excerptFor(selected.sku)}
+              if selected.sku === 'MN-01'
+                p I had come looking for an answer. Instead, I found a better question. What, exactly, had I been too busy to see?
+              p.sample-end ∗ ∗ ∗
+              small Original demonstration excerpt · Fictional book
+          ul.specs
+            each spec in selected.specs key spec
+              li #{spec}
+          p.stock #{selected.stock ? selected.stock + ' available in the demo catalog' : 'Sold out · Next batch coming soon'}
+          button.pill.primary(type='button' disabled={pending || !selected.stock || (cart.find(item => item.sku === selected.sku)?.quantity ?? 0) >= Math.min(10, selected.stock)} onClick={() => add(selected!)}) #{pending ? 'Updating bag…' : selected.stock ? 'Add to bag +' : 'Sold out'}
+          button.text-button(type='button' onClick={openBag}) View bag (#{count}) ↗
+          if error
+            p.inline-error(role='alert') #{error}
+          if notice
+            p.inline-status(role='status') #{notice}
+          p.detail-footnote An original fictional edition, created for this fullstack example.
+  dialog.bag-dialog(ref={bag} aria-labelledby='bag-title')
+    div.bag-header
+      div
+        p.eyebrow YOUR NEXT CHAPTER
+        h2#bag-title Your bag (#{count})
+      button.dialog-close(type='button' aria-label='Close bag' onClick={() => bag.current?.close()}) ×
+    if error
+      p.inline-error(role='alert') #{error}
+    if lines.length
+      div.bag-content
+        ul.bag-lines
+          each line in lines key line.sku
+            li.bag-line
+              div.bag-art
+                BookCover(title={line.product.name} author={line.product.description} color={line.product.color} shape={line.product.shape})
+              div.bag-item-info
+                h3 #{line.product.name}
+                p #{money(line.product.price)} each
+                div.quantity-control
+                  button(type='button' aria-label={'Decrease ' + line.product.name} disabled={pending} onClick={() => void changeQuantity(line.product, line.quantity - 1)}) −
+                  span(aria-label={'Quantity of ' + line.product.name}) #{line.quantity}
+                  button(type='button' aria-label={'Increase ' + line.product.name} disabled={pending || line.quantity >= Math.min(10, line.product.stock)} onClick={() => void changeQuantity(line.product, line.quantity + 1)}) +
+                  button.remove-button(type='button' disabled={pending} onClick={() => void changeQuantity(line.product, 0)}) Remove
+              strong #{money(line.product.price * line.quantity)}
+        div.bag-summary
+          label.delivery-choice
+            span Delivery
+            select(aria-label='Delivery method' disabled={pending} value={delivery.state.value} onChange={event => delivery.handleChange(event.currentTarget.value)})
+              option(value='standard') Standard · 5–7 working days
+              option(value='express') Express · 2–3 working days
+          div.total-line
+            span Subtotal
+            span #{money(subtotal)}
+          div.total-line
+            span Demo delivery
+            span #{shipping ? money(shipping) : 'On us'}
+          div.total-line.grand-total
+            strong Total (USD)
+            strong #{money(subtotal + shipping)}
+          p.demo-note This is a demo checkout. No payment, address, or personal information is needed. Nothing will be shipped.
+          button.pill.primary.checkout-button(type='button' disabled={pending || loading} onClick={() => void placeOrder()}) #{pending ? 'Working on it…' : 'Place demo order ↗'}
+    elseif order
+      div.order-confirmation
+        span.confirmation-mark(aria-hidden='true') ✓
+        p.eyebrow A GOOD PLACE TO START
+        h3 A new chapter, confirmed.
+        p Demo order #{order.reference}
+        p Nothing charged. Nothing shipped. Just a working idea, saved to the database.
+        ul.receipt-lines
+          each item in order.items key item.sku
+            li
+              span #{item.quantity} × #{item.name}
+              span #{money(item.unitPrice * item.quantity)}
+        p.receipt-total Total: #{money(order.total)}
+        button.pill(type='button' onClick={() => bag.current?.close()}) Keep exploring ↗
+    else
+      div.empty-bag
+        span.empty-ornament(aria-hidden='true') ❦
+        h3 Room for something good.
+        p Your bag is empty. Find a new starting point in the collection.
+        button.pill(type='button' onClick={() => bag.current?.close()}) Keep exploring ↗

@@ -1,0 +1,32 @@
+props { title, author, color = '#641f34', shape = 0 }: { title: string; author: string; color?: string; shape?: number }
+
+div.book-object(style={{ '--cover': color }} aria-hidden='true')
+  div.book-pages
+  div.book-face
+    div.cover-top M / N
+      span INDEPENDENT EDITIONS
+    h3.cover-title #{title}
+    svg.cover-drawing(viewBox='0 0 240 240' fill='none' stroke='currentColor' strokeWidth='1.2')
+      if shape === 0
+        g
+          circle(cx='120' cy='120' r='100' strokeDasharray='2 5')
+          path(d='M64 204H178L170 184H73Z M82 177H161L156 159H92Z M97 154C99 128 75 127 78 109L99 76L103 49L118 61L146 51L143 76L174 107L163 127L142 120L133 111C124 128 160 126 151 155Z' fill='currentColor' stroke='none')
+          path(d='M108 53L121 70M89 113L118 82M109 139L130 114' stroke='var(--cover)' strokeWidth='2')
+          circle(cx='137' cy='85' r='2' fill='var(--cover)')
+      elseif shape === 1
+        g
+          each radius in [24, 42, 60, 78, 96] key radius
+            circle(cx='120' cy='120' r={radius})
+          path(d='M20 200L220 40M20 40L220 200M120 10V230M10 120H230')
+      elseif shape === 2
+        g
+          each offset in [0, 20, 40, 60, 80, 100] key offset
+            path(d={'M30 ' + (70 + offset) + 'L90 ' + (25 + offset) + 'L150 ' + (70 + offset) + 'L210 ' + (25 + offset)})
+      else
+        g
+          path(d='M120 210V40M120 160C20 155 35 85 120 145M120 125C205 120 208 55 120 105M120 80C45 80 68 20 120 58')
+          circle(cx='120' cy='120' r='105' strokeDasharray='1 5')
+    p.cover-author #{author}
+    div.cover-bottom
+      span MARGIN NOTES
+      span #{shape === 0 ? 'A NOVEL' : 'A NEW PERSPECTIVE'}

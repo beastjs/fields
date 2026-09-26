@@ -16,6 +16,7 @@ import type * as colorhunt from "../colorhunt.js";
 import type * as crons from "../crons.js";
 import type * as deploymentRetention from "../deploymentRetention.js";
 import type * as logs from "../logs.js";
+import type * as marginDemo from "../marginDemo.js";
 import type * as presets from "../presets.js";
 import type * as projectFiles from "../projectFiles.js";
 import type * as projects from "../projects.js";
@@ -48,6 +49,7 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   deploymentRetention: typeof deploymentRetention;
   logs: typeof logs;
+  marginDemo: typeof marginDemo;
   presets: typeof presets;
   projectFiles: typeof projectFiles;
   projects: typeof projects;

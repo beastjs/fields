@@ -67,6 +67,13 @@ product details, and try the persistent guest bag and server-calculated demo che
 replacement confirmation. Recipes remain a separate catalog. Checkout records only
 a simulated order; it takes no payment or personal details.
 
+**Design Studio → Fullstack → Margin Notes** adds an independent bookshop inspired
+by Money in Check: 24 fictional books, original covers and reading samples, search,
+category/price filters, a persistent reading shelf, and a guest bag with demo checkout.
+Its backend and tables are separate from Form Supply. After deploying the backend,
+run `bunx convex run marginDemo:seed` on the intended deployment to populate it.
+The exported project includes its own backend and setup README.
+
 The example uses `PUBLIC_CONVEX_URL`. Seed its deployment with
 `bunx convex run storeDemo:seed` after deploying the functions. Both the local
 preview and generated `public/preview.html` allow only that deployment's query

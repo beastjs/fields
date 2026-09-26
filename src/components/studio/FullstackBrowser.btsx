@@ -16,12 +16,17 @@ setup
   const [error, setError] = useState('');
   const [mobile, setMobile] = useState(false);
   const [confirming, setConfirming] = useState(false);
-  const show = async () => {
+  const [example, setExample] = useState<'form' | 'margin'>('form');
+  const title = example === 'form' ? 'Form Supply' : 'Margin Notes';
+  const show = async (choice: 'form' | 'margin' = 'form') => {
+    setExample(choice); setMobile(false);
     setLoading(true); setError(''); setConfirming(false);
     try {
       const { createStoreProject } = await import('../../playground/fullstack/project');
       const token = crypto.randomUUID().replaceAll('-', '') + crypto.randomUUID().replaceAll('-', '');
-      setProject(createStoreProject(import.meta.env.PUBLIC_CONVEX_URL ?? '', token));
+      const url = import.meta.env.PUBLIC_CONVEX_URL ?? '';
+      const next = choice === 'form' ? createStoreProject(url, token) : (await import('../../playground/fullstack/margin/project')).createMarginProject(url, token);
+      setProject(next);
       dialog.current?.showModal(); setOpen(true);
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not open the example.'); }
     finally { setLoading(false); }
@@ -34,7 +39,7 @@ setup
   };
   useEffect(() => {
     if (!open || !project || !frame.current) return;
-    const instance = new TemplatePreview([frame.current], 'light', () => new Worker(new URL('../../playground/compiler.worker.ts', import.meta.url), { type: 'module' }), setStatus, 'Form Supply fullstack preview');
+    const instance = new TemplatePreview([frame.current], 'light', () => new Worker(new URL('../../playground/compiler.worker.ts', import.meta.url), { type: 'module' }), setStatus, title + ' fullstack preview');
     preview.current = instance;
     instance.show(project);
     return () => { instance.dispose(); preview.current = null; };
@@ -52,8 +57,8 @@ section(className='flex min-h-0 flex-1 flex-col gap-4 overflow-auto p-3' aria-la
     p(className='font-code text-[9px] uppercase tracking-widest text-brand') Beyond the page
     h3(className='mt-2 text-lg tracking-tight text-fg') Fullstack
     p(className='mt-2 text-[11px] leading-relaxed text-dim') Complete apps with working data, interactions, and editable frontend and backend source.
-  article(className='overflow-hidden rounded-xl border border-edge')
-    div(className='relative overflow-hidden bg-[#e7e8dc] p-5 text-[#163e37]')
+  article(className='shrink-0 overflow-hidden rounded-xl border border-edge')
+    button(className='relative block w-full overflow-hidden bg-[#e7e8dc] p-5 text-left text-[#163e37] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand' type='button' aria-label='Preview Form Supply' disabled={loading} onClick={() => void show('form')})
       p(className='text-[9px] font-semibold tracking-widest') FORM SUPPLY
       p(className='mt-5 text-3xl font-bold leading-[.95] tracking-tight') A little more
         br
@@ -76,6 +81,25 @@ section(className='flex min-h-0 flex-1 flex-col gap-4 overflow-auto p-3' aria-la
         li Server-calculated demo checkout
         li Beast frontend + Convex backend
       button(className={primaryButton + ' w-full'} type='button' disabled={loading} onClick={() => void show()}) #{loading ? 'Opening…' : 'Explore Form Supply ↗'}
+  article(className='shrink-0 overflow-hidden rounded-xl border border-edge')
+    button(type='button' aria-label='Preview Margin Notes' disabled={loading} onClick={() => void show('margin')} className='relative block w-full overflow-hidden bg-[#f3ede1] px-4 py-8 text-center text-[#70283e] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand' style={{ backgroundImage: 'linear-gradient(#a7823c28 1px,transparent 1px),linear-gradient(90deg,#a7823c28 1px,transparent 1px)', backgroundSize: '35px 35px' }})
+      p(className='font-serif text-[9px] italic') Margin Notes · Independent editions
+      p(className='mt-4 font-serif text-4xl leading-[.95] tracking-tighter') BETWEEN
+        br
+        | THE LINES
+      span(className='mt-4 inline-block rotate-[-9deg] border border-[#c6a35c88] bg-[#641f34] px-6 py-8 font-serif text-lg leading-tight text-[#eed69d] shadow-lg') The Quiet
+        br
+        | Move
+    div(className='p-3')
+      h4(className='text-sm font-medium text-fg') Margin Notes
+      p(className='mt-2 text-[11px] leading-relaxed text-dim') An independent bookshop inspired by Money in Check. Oversized serif type, layered covers, and a little room for curiosity.
+      ul(className='my-4 grid gap-2 text-[10px] text-fg-secondary')
+        li 24 books · 4 collections
+        li Search, price filters & reading samples
+        li Persistent reading shelf & bag
+        li Server-calculated demo checkout
+        li Editable Beast + Convex source
+      button(className={primaryButton + ' w-full'} type='button' disabled={loading} onClick={() => void show('margin')}) #{loading && example === 'margin' ? 'Opening…' : 'Explore Margin Notes ↗'}
   p(className='text-[10px] leading-relaxed text-dim') Try the whole app before loading its source. Checkout is a demo; no payments or personal information.
   if error
     p(className='text-xs text-warning' role='alert') #{error}
@@ -83,8 +107,8 @@ dialog(ref={dialog} className='m-auto h-[min(940px,94dvh)] w-[min(1400px,96vw)] 
   div(className='flex h-full flex-col')
     div(className='flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-edge px-4 py-3')
       div
-        p(className='font-code text-[9px] uppercase tracking-widest text-brand') Fullstack / 01
-        h2(className='text-base font-medium') Form Supply
+        p(className='font-code text-[9px] uppercase tracking-widest text-brand') Fullstack / #{example === 'form' ? '01' : '02'}
+        h2(className='text-base font-medium') #{title}
       div(className='flex items-center gap-2')
         button(className={secondaryButton} type='button' aria-pressed={mobile} onClick={() => setMobile(value => !value)}) #{mobile ? 'Desktop preview' : 'Mobile preview'}
         button(className={primaryButton} type='button' disabled={status.state !== 'ready'} onClick={() => setConfirming(true)}) Use this app
@@ -102,6 +126,6 @@ dialog(ref={dialog} className='m-auto h-[min(940px,94dvh)] w-[min(1400px,96vw)] 
         p(className='max-w-xl text-xs leading-relaxed text-dim') Loading this app replaces the current project files. Save or share any work you want to keep first. The Recipes catalog stays available.
         div(className='flex gap-2')
           button(className={secondaryButton} type='button' onClick={() => setConfirming(false)}) Keep browsing
-          button(className={primaryButton} type='button' onClick={install}) Replace project with Form Supply
+          button(className={primaryButton} type='button' onClick={install}) Replace project with #{title}
     else
       p(className='shrink-0 border-t border-edge px-4 py-2 text-[10px] text-dim') Working Convex demo · All prices in USD · No real payments · Source includes the frontend and backend

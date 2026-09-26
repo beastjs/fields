@@ -1,0 +1,48 @@
+import { backendUrl, previewSession } from './config';
+
+export interface Product {
+  sku: string; name: string; category: string; price: number; description: string; detail: string;
+  specs: string[]; color: string; badge: string; stock: number; shape: number;
+}
+export interface CartItem { sku: string; quantity: number }
+export interface Order {
+  reference: string; items: { sku: string; name: string; quantity: number; unitPrice: number }[];
+  subtotal: number; shipping: number; total: number; delivery: 'standard' | 'express';
+}
+export const money = (cents: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: cents % 100 ? 2 : 0 }).format(cents / 100);
+export const categories = ['All', 'Fiction', 'Essays', 'Design', 'Poetry'];
+
+// Published pages keep their own guest session. The sandboxed editor uses a token unique to this installed example.
+function guestSession() {
+  try {
+    const key = 'margin-notes:session:' + backendUrl;
+    let token = localStorage.getItem(key);
+    if (!token || !/^[a-f0-9]{64}$/.test(token)) {
+      token = crypto.randomUUID().replaceAll('-', '') + crypto.randomUUID().replaceAll('-', '');
+      localStorage.setItem(key, token);
+    }
+    return token;
+  } catch { return previewSession; }
+}
+const token = guestSession();
+
+async function request<T>(kind: 'query' | 'mutation', name: string, args: Record<string, unknown>, signal?: AbortSignal): Promise<T> {
+  if (!backendUrl) throw new Error('Connect a Convex deployment in config.ts to open the store.');
+  const response = await fetch(backendUrl + '/api/' + kind, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path: 'marginDemo:' + name, format: 'convex_encoded_json', args: [args] }),
+    signal: signal ?? AbortSignal.timeout(15000)
+  });
+  const result = await response.json();
+  if (!response.ok || result.status !== 'success') {
+    const detail = typeof result.errorData === 'string' ? result.errorData : 'The store could not complete that request. Please try again.';
+    throw new Error(detail);
+  }
+  return result.value as T;
+}
+export const loadProducts = (signal?: AbortSignal) => request<Product[]>('query', 'products', {}, signal);
+export const loadSession = (signal?: AbortSignal) => request<{ items: CartItem[]; order: Order | null; shelf: string[] }>('query', 'session', { token }, signal);
+export const setQuantity = (sku: string, quantity: number) => request<CartItem[]>('mutation', 'setQuantity', { token, sku, quantity });
+export const checkout = (requestId: string, delivery: 'standard' | 'express') => request<Order>('mutation', 'checkout', { token, requestId, delivery });
+
+export const setSaved = (sku: string, saved: boolean) => request<string[]>('mutation', 'setSaved', { token, sku, saved });
