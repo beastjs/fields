@@ -22,7 +22,7 @@ test('Cohere defaults use the real compatibility endpoint and unprefixed native 
   expect(payload.messages.at(-1).content).toEndWith('Current request:\n' + input.messages[0].content);
   expect(payload.messages[1].content).toContain('h1 Hello');
   expect(payload.messages[0].content).toContain('Apply & verify');
-  expect(options!.redirect).toBe('error');
+  expect(options!.redirect).toBe('manual');
   expect(response.headers.get('Cache-Control')).toBe('no-store');
 });
 

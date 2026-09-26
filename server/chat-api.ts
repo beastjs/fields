@@ -243,7 +243,9 @@ ${locations.length ? 'Text search located these candidate lines. Copy from the e
   try {
     const upstream = await fetchUpstream(`${baseURL}/chat/completions`, {
       method: 'POST',
-      redirect: 'error',
+      // Workers reject redirect: 'error'. Manual keeps credentials at this endpoint;
+      // the !upstream.ok check below rejects redirect responses without following them.
+      redirect: 'manual',
       signal,
       headers: {
         'Content-Type': 'application/json',

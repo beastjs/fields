@@ -114,9 +114,9 @@ setup
 div
   header(className='grid min-h-[54px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center justify-between gap-6 px-3 border-b border-seam bg-seam max-[1200px]:grid-cols-[minmax(0,1fr)_auto] max-[1200px]:gap-x-1 max-[1200px]:gap-y-0 max-[1200px]:pt-2 max-[760px]:gap-x-1.5 max-[760px]:px-2.5')
     div(className='flex min-w-0 items-center gap-1')
-      a(id='brand' className='flex shrink-0 items-center text-inherit no-underline' href='/' aria-label='logo')
+      a(id='brand' className='flex shrink-0 items-center text-inherit no-underline hidden md:inline' href='/' aria-label='logo')
         Icon(name='beast' className='opacity-75 size-5')
-      Icon(name='chevron-down-tiny' className='size-3 opacity-60 -rotate-45')
+      Icon(name='chevron-down-tiny' className='size-3 opacity-60 -rotate-45 hidden md:inline')
       Switcher(
         ~  items={teamItems}
         ~  title={auth.isAuthenticated ? 'Teams' : 'Account'}
@@ -141,7 +141,7 @@ div
         ~ )
 
     ViewToolbar(session={session} layout={layout} toggleArrangement={toggleArrangement})
-    div(className='flex shrink-0 items-center justify-self-end gap-4 max-[760px]:gap-0.5')
+    div(className='flex shrink-0 items-center justify-self-end gap-6 md:gap-5')
       DesignStudio(session={session})
       if auth.isAuthenticated && cloudState.activeProjectId
         ProjectPublishing(session={session} projectId={cloudState.activeProjectId} projectName={activeProject?.name ?? cloudState.activeProjectName ?? 'Project'})

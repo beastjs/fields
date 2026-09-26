@@ -32,11 +32,11 @@ footer(className='statusbar flex items-center justify-between px-4 font-code tex
         else
           button(onClick={() => runAuth(signInWithGoogle)} disabled={isPending} title={authError ?? undefined})
             span(className='font-mono font-medium text-brand!') #{isPending ? 'Signing in…' : 'Sign in'}
-      span(className='flex items-center space-x-1')
+      span(className='flex items-center space-x-1 hidden md:inline')
         span(className={cn('text-accent/80 text-[8px] light:text-brand')}) ❱❱
         span#build-status(aria-live='polite') #{state.buildStatus}
-  div#stage-timings(className='flex gap-5 text-faint max-[760px]:gap-[7px] max-[760px]:text-[7px]')
+  div#stage-timings(className='flex gap-5 text-faint hidden md:inline max-[760px]:gap-[7px] max-[760px]:text-[7px]')
     span Beast #{state.lastResult ? state.lastResult.metadata.timings.beast.toFixed(1) + 'ms' : '—'}
     span Octane #{state.lastResult ? state.lastResult.metadata.timings.octane.toFixed(1) + 'ms' : '—'}
     span Web #{state.lastResult ? state.lastResult.metadata.timings.web.toFixed(1) + 'ms' : '—'}
-  span(className='text-faint max-[1050px]:hidden') Beast 0.2.60 · Octane 0.2.6
+  span(className='text-faint hidden md:inline') Beast 0.2.60 · Octane 0.2.6

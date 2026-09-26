@@ -150,7 +150,8 @@ const attempt = <Q extends Questions>(config: JevConfig, request: Ask<Q>) =>
         try: (interrupt) =>
           send(config.endpoint ?? ENDPOINT, {
             method: 'POST',
-            redirect: 'error',
+            // Supported by Workers; the !response.ok branch rejects redirects.
+            redirect: 'manual',
             signal: AbortSignal.any([connection.signal, interrupt, ...(request.signal ? [request.signal] : [])]),
             headers: {
               'Content-Type': 'application/json',

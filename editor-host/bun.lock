@@ -5,6 +5,8 @@
     "": {
       "name": "play-editor-host",
       "devDependencies": {
+        "esbuild": "0.28.1",
+        "miniflare": "5.20260921.1-alpha",
         "typescript": "^5.9.3",
         "wrangler": "^4.137.0",
       },
