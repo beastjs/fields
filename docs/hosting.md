@@ -86,7 +86,7 @@ cd editor-host && bun run deploy   # builds against production Convex, then depl
 bun run seed:presets --prod        # a fresh production deployment: Design Studio sections, recipes, themes
 ```
 
-Its chat routes use the Worker secrets `COHERE_API_KEY` and `TYPESAFE_API_KEY`. They only
+Its chat routes use the Worker secrets `META_API_KEY`/`META_BASE_URL` (Meta chat default), `COHERE_API_KEY`, and `TYPESAFE_API_KEY`. They only
 refuse browsers on other origins, so anyone who can reach the editor, or script it, spends
 those keys; remove the secrets to make visitors bring their own. Sign-in needs
 `bigticket.ph` in Firebase Auth's authorized domains.

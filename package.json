@@ -17,8 +17,10 @@
     "seed:presets": "bun run scripts/seed-presets.ts"
   },
   "dependencies": {
+    "@ai-sdk/openai-compatible": "3.0.14",
     "@ai-sdk/provider": "^4.0.14",
     "@ai-sdk/provider-utils": "^5.0.40",
+    "@beastjs/devtools": "^0.1.13",
     "@beastjs/metal-fx": "^2.0.0",
     "@beastjs/thinking-orbs": "^1.0.0",
     "@codemirror/commands": "6.11.0",

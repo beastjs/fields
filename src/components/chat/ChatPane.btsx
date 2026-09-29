@@ -107,9 +107,9 @@ PaneSurface(layout={layout} pane='chat' label='AI chat' className='flex flex-col
       div(className='chat-welcome mt-2.5 mb-3')
         SmartBuilder(isActive={jevActive})
 
-        h2(className='mt-[9px] mb-[11px] text-[18px] font-medium leading-[1.3] tracking-[-0.5px] text-fg') Fast Builder
+        h2(className='mt-[9px] mb-[11px] text-[18px] font-medium leading-[1.3] tracking-[-0.5px] text-fg dark:text-[#efefef]') Fast Builder
         each idea in ['Explore an idea', 'untangle an error', 'or find the next step'] key idea
-          p(className='space-x-1 text-[11px] leading-[1.85] text-dim')
+          p(className='space-x-1 text-[11px] leading-[1.85] text-dim dark:text-[#efefef]')
             span(className='size-2 aspect-square rounded-full bg-background')
             span #{idea}
         button(className='border-0 bg-none p-0 text-[10px] text-[#efa571] light:text-brand' type='button' hidden={connected} onClick={() => setSettingsOpen(true)}) Set up your connection ↗

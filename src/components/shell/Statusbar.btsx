@@ -28,7 +28,7 @@ footer(className='statusbar flex items-center justify-between px-4 font-code tex
         if user
           button(className='flex items-center gap-1' onClick={() => runAuth(signOutUser)} disabled={isPending} title={authError ?? user.email ?? undefined})
             span(className='font-mono font-light text-accent/60 uppercase light:text-dim') #{user.displayName?.split(' ').shift() ?? user.email?.split('@').shift() ?? 'Signed in'}
-            Icon(name='signout' className='size-3')
+            Icon(name='signout' className='size-3 hidden sm:inline')
         else
           button(onClick={() => runAuth(signInWithGoogle)} disabled={isPending} title={authError ?? undefined})
             span(className='font-mono font-medium text-brand!') #{isPending ? 'Signing in…' : 'Sign in'}

@@ -96,7 +96,7 @@ storage or restore failure. **Reset project** asks before replacing files and th
 saved copy with Hello World. It clears editor history and the running preview,
 while retaining the Vim preference, panel layout, and chat settings.
 
-**AI chat** supports Cohere, OpenRouter, and a custom compatible endpoint, with
+**AI chat** supports Meta (the default), Cohere, OpenRouter, and a custom compatible endpoint, with
 optional active-file context and stop/retry controls. Provider/model settings
 are remembered; keys and conversations are not saved in browser storage.
 

@@ -141,13 +141,13 @@ div
         ~ )
 
     ViewToolbar(session={session} layout={layout} toggleArrangement={toggleArrangement})
-    div(className='flex shrink-0 items-center justify-self-end gap-6 md:gap-5')
+    div(className='flex shrink-0 items-center justify-self-end gap-4 md:gap-5')
       DesignStudio(session={session})
       if auth.isAuthenticated && cloudState.activeProjectId
         ProjectPublishing(session={session} projectId={cloudState.activeProjectId} projectName={activeProject?.name ?? cloudState.activeProjectName ?? 'Project'})
-      ProjectSharing(session={session})
+      // ProjectSharing(session={session})
       button(className='text-foreground/60 hover:text-accent light:hover:text-brand' type='button' aria-label='Light mode' aria-pressed={theme === 'light'} title={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'} onClick={toggleTheme})
         Icon(name='theme' className='size-4')
-      button#run-build(className='text-foreground/60 hover:text-foreground' type='button' aria-label='Run project' onClick={session.run} title='Run project (⌘/Ctrl + Enter)')
+      button#run-build(className='text-foreground/60 hover:text-foreground hidden md:inline' type='button' aria-label='Run project' onClick={session.run} title='Run project (⌘/Ctrl + Enter)')
         Icon(name='play' className='size-4')
   p#save-notice(className='m-0 px-[22px] py-[9px] text-[11px] leading-[1.5] text-warning bg-[#30291e] border-b border-[#605031] [overflow-wrap:anywhere] light:bg-notice-surface light:text-notice light:border-notice-edge' role='status' hidden={!state.saveStatus.issue && !cloudState.error && !authError}) #{authError || cloudState.error || state.saveStatus.issue}

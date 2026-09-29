@@ -1,15 +1,20 @@
 'use node'
 
 import { Agent } from '@convex-dev/agent'
-import { convexGateway } from '@convex-dev/ai-sdk-provider'
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
 import { ConvexError, v } from 'convex/values'
-import { internal } from './_generated/api'
-import { components } from './_generated/api'
+import { components, internal } from './_generated/api'
 import { action } from './_generated/server'
+
+const meta = createOpenAICompatible({
+  name: 'meta',
+  baseURL: process.env.META_BASE_URL ?? process.env.META_URL ?? 'https://api.meta.ai/v1',
+  apiKey: process.env.META_API_KEY ?? ''
+})
 
 const assistant = new Agent(components.agent, {
   name: 'Beast Playground',
-  languageModel: convexGateway('anthropic/claude-sonnet-4.5'),
+  languageModel: meta(process.env.META_MODEL ?? 'muse-spark-1.5-contributor'),
   instructions:
     'You are the coding assistant inside the Beast to Octane web playground. Give concise, practical help. ' +
     'When recommending a complete file replacement, use a fenced code block whose info string contains the exact project path.'
