@@ -116,7 +116,6 @@ div
     div(className='flex min-w-0 items-center gap-1')
       a(id='brand' className='flex shrink-0 items-center text-inherit no-underline hidden md:inline' href='/' aria-label='logo')
         Icon(name='beast' className='opacity-75 size-5')
-      Icon(name='chevron-down-tiny' className='size-3 opacity-60 -rotate-45 hidden md:inline')
       Switcher(
         ~  items={teamItems}
         ~  title={auth.isAuthenticated ? 'Teams' : 'Account'}
@@ -128,7 +127,8 @@ div
         ~  onSelect={chooseTeam}
         ~  onCreate={auth.isAuthenticated ? createTeam : signIn}
         ~ )
-      Icon(name='slice' className='size-3 opacity-70 -rotate-6')
+      Icon(name='chevron-down-tiny' className='size-3 opacity-60 -rotate-45 hidden md:flex')
+      // Icon(name='slice' className='size-3 opacity-70 -rotate-6')
       Switcher(
         ~ items={projectItems}
         ~  title='Projects'

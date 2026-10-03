@@ -3,7 +3,7 @@ import { storeFiles } from '../../generated/fullstack'
 
 export const fullstackExample = {
   id: 'form-supply', title: 'Form Supply',
-  description: 'A considered store for curious people. 36 illustrated robotics and workshop products, a searchable catalog, persistent guest bags, and demo checkout.',
+  description: 'An electric-blue hardware showroom for wild ideas. Three interactive studies, 36 illustrated objects, project starting points, persistent guest bags, and demo checkout.',
   features: ['36 products · 6 collections', 'Search, filter & sort', 'Product detail dialogs', 'Persistent guest cart', 'Server-calculated checkout', 'Editable frontend + Convex backend']
 }
 
@@ -28,7 +28,7 @@ export default defineSchema({
     '/index.html': '<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Form Supply</title></head><body><div id="app"></div></body></html>\n',
     '/README.md': `# Form Supply — Fullstack example
 
-A complete example store inspired by the warm palette, oversized typography, and illustrated hardware of https://www.mindrobotics.com/. Branding, drawings, products, and copy are original.
+A complete hardware showroom with electric-blue surfaces, lime accents, engineering diagrams, and original illustrated objects. Switch between Motion, Vision, and Making studies, or follow a project starting point into the catalog. Branding, drawings, products, and copy are original.
 
 ## Try it in the playground
 

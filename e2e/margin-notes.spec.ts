@@ -13,6 +13,14 @@ test('Margin Notes saves a reading shelf, restores its bag, and places a demo or
   const dialog = page.getByRole('dialog', { name: 'Fullstack app preview', exact: true });
   const shop = dialog.frameLocator('iframe');
   await expect(shop.locator('.book-card')).toHaveCount(24, { timeout: 30000 });
+  await page.screenshot({ path: '/tmp/margin-hero-desktop.png' });
+  await shop.getByRole('button', { name: 'Discover Ways of Seeing Slowly', exact: true }).click();
+  await expect(shop.getByRole('dialog', { name: 'Product details' })).toContainText('Ways of Seeing Slowly');
+  await shop.getByRole('button', { name: 'Close product details' }).click();
+  await shop.getByRole('button', { name: 'See with fresh eyes' }).click();
+  await expect(shop.locator('.book-card')).toHaveCount(6);
+  await expect(shop.getByRole('button', { name: 'Design', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await shop.getByRole('button', { name: 'All', exact: true }).click();
   await page.screenshot({ path: '/tmp/margin-desktop.png' });
   await shop.getByRole('button', { name: 'Poetry', exact: true }).click();
   await expect(shop.locator('.book-card')).toHaveCount(6);
@@ -30,6 +38,8 @@ test('Margin Notes saves a reading shelf, restores its bag, and places a demo or
   await details.getByRole('button', { name: 'Close product details' }).click();
   await dialog.getByRole('button', { name: 'Mobile preview' }).click();
   await expect.poll(() => shop.locator('body').evaluate(element => element.scrollWidth <= window.innerWidth)).toBe(true);
+  await shop.locator('html').evaluate(element => { element.style.scrollBehavior = 'auto'; window.scrollTo({ top: 0, behavior: 'instant' }); });
+  await expect.poll(() => shop.locator('html').evaluate(() => window.scrollY)).toBe(0);
   await page.screenshot({ path: '/tmp/margin-mobile.png' });
   await dialog.getByRole('button', { name: 'Use this app' }).click();
   await dialog.getByRole('button', { name: 'Replace project with Margin Notes' }).click();

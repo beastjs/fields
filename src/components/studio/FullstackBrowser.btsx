@@ -3,12 +3,19 @@ import type { CompilationProject } from '../../playground/contracts'
 import { TemplatePreview, type TemplatePreviewStatus } from '../../playground/template-preview'
 import type { SessionProps } from '../types'
 import { primaryButton, secondaryButton } from '../ui/styles'
+import { fullstackApps, type FullstackAppId } from '../../playground/fullstack/catalog'
+import FullstackMachine from '../../playground/fullstack/ProductArt.btsx'
+import FullstackBook from '../../playground/fullstack/margin/BookCover.btsx'
 
-props { session, onInstalled }: SessionProps & { onInstalled: () => void }
+props { session, onInstalled, onBack, onClose }: SessionProps & { onInstalled: () => void; onBack: () => void; onClose: () => void }
 setup
+  const backButton = useRef<HTMLButtonElement | null>(null);
   const dialog = useRef<HTMLDialogElement | null>(null);
   const frame = useRef<HTMLIFrameElement | null>(null);
   const preview = useRef<TemplatePreview | null>(null);
+  useEffect(() => {
+    backButton.current?.focus();
+  }, []);
   const [project, setProject] = useState<CompilationProject | null>(null);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -16,9 +23,12 @@ setup
   const [error, setError] = useState('');
   const [mobile, setMobile] = useState(false);
   const [confirming, setConfirming] = useState(false);
-  const [example, setExample] = useState<'form' | 'margin'>('form');
-  const title = example === 'form' ? 'Form Supply' : 'Margin Notes';
-  const show = async (choice: 'form' | 'margin' = 'form') => {
+  const [example, setExample] = useState<FullstackAppId>('form');
+  const selectedApp = fullstackApps.find(app => app.id === example)!;
+  const title = selectedApp.title;
+  const show = async (choice: FullstackAppId = 'form') => {
+    if (loading) return;
+    setStatus({ state: 'compiling' });
     setExample(choice); setMobile(false);
     setLoading(true); setError(''); setConfirming(false);
     try {
@@ -52,57 +62,81 @@ setup
     return () => { element.removeEventListener('close', closed); element.close(); };
   }, []);
 
-section(className='flex min-h-0 flex-1 flex-col gap-4 overflow-auto p-3' aria-label='Fullstack apps')
-  div
-    p(className='font-code text-[9px] uppercase tracking-widest text-brand') Beyond the page
-    h3(className='mt-2 text-lg tracking-tight text-fg') Fullstack
-    p(className='mt-2 text-[11px] leading-relaxed text-dim') Complete apps with working data, interactions, and editable frontend and backend source.
-  article(className='shrink-0 overflow-hidden rounded-xl border border-edge')
-    button(className='relative block w-full overflow-hidden bg-[#e7e8dc] p-5 text-left text-[#163e37] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand' type='button' aria-label='Preview Form Supply' disabled={loading} onClick={() => void show('form')})
-      p(className='text-[9px] font-semibold tracking-widest') FORM SUPPLY
-      p(className='mt-5 text-3xl font-bold leading-[.95] tracking-tight') A little more
-        br
-        em(className='font-serif font-normal text-[#498a86]') possible.
-      svg(viewBox='0 0 240 140' fill='none' stroke='#183c3a' strokeWidth='2' className='mt-1 w-full' aria-hidden='true')
-        path(d='M70 110 L130 94 L185 116 L122 132 Z' fill='#92a7a0')
-        path(d='M108 106 L108 78 L135 71 L151 102 L125 114 Z' fill='#4b9390')
-        path(d='M115 83 L74 44 L86 27 L139 67 Z' fill='#eeede6')
-        circle(cx='83' cy='39' r='17' fill='#4b9390')
-        path(d='M83 22 L149 11 L157 32 L99 51 Z' fill='#eeede6')
-        circle(cx='154' cy='21' r='12' fill='#4b9390')
-        path(d='M161 25 L183 42 L178 64 L164 52 L168 41 L153 33' fill='#92a7a0')
-    div(className='p-3')
-      h4(className='text-sm font-medium text-fg') Form Supply
-      p(className='mt-2 text-[11px] leading-relaxed text-dim') A robotics and workshop store inspired by Mind Robotics. Original illustrations, warm surfaces, and a catalog made for exploring.
-      ul(className='my-4 grid gap-2 text-[10px] text-fg-secondary')
-        li 36 products · 6 collections
-        li Search, filters & product details
-        li Persistent guest bags
-        li Server-calculated demo checkout
-        li Beast frontend + Convex backend
-      button(className={primaryButton + ' w-full'} type='button' disabled={loading} onClick={() => void show()}) #{loading ? 'Opening…' : 'Explore Form Supply ↗'}
-  article(className='shrink-0 overflow-hidden rounded-xl border border-edge')
-    button(type='button' aria-label='Preview Margin Notes' disabled={loading} onClick={() => void show('margin')} className='relative block w-full overflow-hidden bg-[#f3ede1] px-4 py-8 text-center text-[#70283e] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand' style={{ backgroundImage: 'linear-gradient(#a7823c28 1px,transparent 1px),linear-gradient(90deg,#a7823c28 1px,transparent 1px)', backgroundSize: '35px 35px' }})
-      p(className='font-serif text-[9px] italic') Margin Notes · Independent editions
-      p(className='mt-4 font-serif text-4xl leading-[.95] tracking-tighter') BETWEEN
-        br
-        | THE LINES
-      span(className='mt-4 inline-block rotate-[-9deg] border border-[#c6a35c88] bg-[#641f34] px-6 py-8 font-serif text-lg leading-tight text-[#eed69d] shadow-lg') The Quiet
-        br
-        | Move
-    div(className='p-3')
-      h4(className='text-sm font-medium text-fg') Margin Notes
-      p(className='mt-2 text-[11px] leading-relaxed text-dim') An independent bookshop inspired by Money in Check. Oversized serif type, layered covers, and a little room for curiosity.
-      ul(className='my-4 grid gap-2 text-[10px] text-fg-secondary')
-        li 24 books · 4 collections
-        li Search, price filters & reading samples
-        li Persistent reading shelf & bag
-        li Server-calculated demo checkout
-        li Editable Beast + Convex source
-      button(className={primaryButton + ' w-full'} type='button' disabled={loading} onClick={() => void show('margin')}) #{loading && example === 'margin' ? 'Opening…' : 'Explore Margin Notes ↗'}
-  p(className='text-[10px] leading-relaxed text-dim') Try the whole app before loading its source. Checkout is a demo; no payments or personal information.
-  if error
-    p(className='text-xs text-warning' role='alert') #{error}
+section.app-gallery(aria-label='Fullstack apps')
+  header.gallery-bar
+    button.gallery-back(ref={backButton} type='button' onClick={onBack}) ← Page designer
+    p Design Studio / Fullstack
+    button.gallery-close(type='button' aria-label='Close Design Studio' onClick={onClose}) ×
+  div.gallery-scroll
+    div.gallery-intro
+      div
+        p.gallery-eyebrow SMALL STARTS. BIG POSSIBILITIES.
+        h2 Start with a spark.
+          br
+          em Make it your own.
+      div.gallery-intro-note
+        span.gallery-asterisk(aria-hidden='true') ✳︎
+        p Complete apps with a point of view.
+          br
+          | Explore the interactions, open the source, and take the idea somewhere new.
+        span.gallery-count 02 APPS / ENDLESS DIRECTIONS
+    div.gallery-grid
+      each app in fullstackApps key app.id
+        article.app-card(data-app={app.id})
+          button.app-art(type='button' aria-label={'Preview ' + app.title} disabled={loading} onClick={() => void show(app.id)})
+            div.art-topline
+              span #{app.category}
+              span #{app.number} / 02
+            if app.id === 'form'
+              fragment
+                div.machine-headline
+                  span GOOD TOOLS.
+                  span GREAT
+                  em WHAT-IFS.
+                div.machine-halo(aria-hidden='true')
+                div.machine-illustration
+                  FullstackMachine(shape={0} color='#2439ed')
+                span.art-sticker Make something move. ↗
+                div.art-bottomline
+                  span FORM SUPPLY®
+                  span THE POSSIBILITY DEPT.
+            else
+              fragment
+                div.book-headline
+                  span BETWEEN
+                  em the lines.
+                div.gallery-book.book-left
+                  FullstackBook(title='Ways of Seeing Slowly' author='Eva North' color='#cb6446' shape={2})
+                div.gallery-book.book-right
+                  FullstackBook(title='The Space Between Lines' author='Cleo Ash' color='#455844' shape={3})
+                div.gallery-book.book-center
+                  FullstackBook(title='The Quiet Move' author='Elias Voss' color='#641f34' shape={0})
+                span.art-sticker A different perspective. ↗
+                div.art-bottomline
+                  span MARGIN NOTES.
+                  span INDEPENDENT EDITIONS
+            span.art-open(aria-hidden='true') ↗
+          div.app-card-copy
+            div.app-title-line
+              h3 #{app.title}
+              div.app-palette(aria-label={app.title + ' color palette'})
+                each color in app.palette key color
+                  span(style={{ background: color }})
+            p.app-description #{app.description}
+            ul.app-tags
+              each tag in app.tags key tag
+                li #{tag}
+            div.app-remix
+              span ↳ REMIX THIS
+              p #{app.brief}
+            button.app-explore(type='button' disabled={loading} onClick={() => void show(app.id)})
+              span #{loading && example === app.id ? 'Opening…' : 'Explore ' + app.title}
+              span(aria-hidden='true') ↗
+    div.gallery-footnote
+      p Each app includes editable Beast frontend + Convex backend source.
+      span Working demo checkout / No real payments
+    if error
+      p.gallery-error(role='alert') #{error}
 dialog(ref={dialog} className='m-auto h-[min(940px,94dvh)] w-[min(1400px,96vw)] max-w-none overflow-hidden rounded-xl border border-edge-strong bg-panel p-0 text-fg shadow-elevation backdrop:bg-[#111b] backdrop:backdrop-blur-sm' aria-label='Fullstack app preview')
   div(className='flex h-full flex-col')
     div(className='flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-edge px-4 py-3')
@@ -114,11 +148,11 @@ dialog(ref={dialog} className='m-auto h-[min(940px,94dvh)] w-[min(1400px,96vw)] 
         button(className={primaryButton} type='button' disabled={status.state !== 'ready'} onClick={() => setConfirming(true)}) Use this app
         button(className='px-2 text-xl text-dim' type='button' aria-label='Close fullstack preview' onClick={close}) ×
     div(className='relative flex min-h-0 flex-1 justify-center overflow-hidden bg-inset')
-      iframe(ref={frame} className='h-full min-w-0 border-0 bg-[#eeede6]' style={{ width: mobile ? '390px' : '100%', maxWidth: '100%' }})
+      iframe(ref={frame} title={title + ' interactive app'} className='h-full min-w-0 border-0 bg-[#eeede6]' style={{ width: mobile ? '390px' : '100%', maxWidth: '100%' }})
       if status.state !== 'ready'
         div(className='absolute inset-0 grid place-items-center bg-panel p-8 text-center text-sm' role='status')
           div
-            p #{status.state === 'error' ? status.message : 'Building your store preview…'}
+            p #{status.state === 'error' ? status.message : 'Building ' + title + '…'}
             if status.state === 'error'
               button(className={secondaryButton + ' mt-4'} type='button' onClick={() => project && preview.current?.show(project)}) Retry preview
     if confirming
@@ -128,4 +162,87 @@ dialog(ref={dialog} className='m-auto h-[min(940px,94dvh)] w-[min(1400px,96vw)] 
           button(className={secondaryButton} type='button' onClick={() => setConfirming(false)}) Keep browsing
           button(className={primaryButton} type='button' onClick={install}) Replace project with #{title}
     else
-      p(className='shrink-0 border-t border-edge px-4 py-2 text-[10px] text-dim') Working Convex demo · All prices in USD · No real payments · Source includes the frontend and backend
+      p(className='shrink-0 border-t border-edge px-4 py-2 text-[10px] text-dim') #{selectedApp.interaction} · Demo checkout / USD
+
+style
+  .app-gallery { position: absolute; inset: 0; z-index: 30; display: flex; flex-direction: column; min-width: 0; background: var(--panel); color: var(--text); }
+  .gallery-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 28px; border-bottom: 1px solid var(--edge); }
+  .gallery-bar p, .gallery-back { font-size: 11px; }
+  .gallery-bar p { opacity: .5; }
+  .gallery-back:hover { color: var(--brand); }
+  .gallery-close { font-size: 26px; line-height: 1; padding: 2px 8px; }
+  .gallery-scroll { overflow: auto; padding: 48px clamp(20px, 5vw, 80px) 28px; }
+  .gallery-intro { display: flex; justify-content: space-between; align-items: end; gap: 40px; max-width: 1320px; margin: 0 auto 42px; }
+  .gallery-eyebrow, .gallery-count { font: 9px 'IBM Plex Mono', monospace; letter-spacing: .12em; opacity: .6; }
+  .gallery-intro h2 { font-size: clamp(36px, 4.2vw, 64px); font-weight: 500; letter-spacing: -.065em; line-height: 1.02; margin-top: 20px; }
+  .gallery-intro h2 em { font-family: Georgia, serif; font-weight: 400; }
+  .gallery-intro-note { max-width: 285px; }
+  .gallery-intro-note p { font-size: 12px; line-height: 1.8; margin: 12px 0 18px; opacity: .7; }
+  .gallery-asterisk { color: var(--brand); font-size: 40px; line-height: 1; }
+  .gallery-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; max-width: 1320px; margin: auto; }
+  .app-card { min-width: 0; border: 1px solid var(--edge); border-radius: 14px; overflow: hidden; }
+  .app-art { position: relative; display: block; width: 100%; height: clamp(320px, 31vw, 480px); overflow: hidden; text-align: left; background: #2439ed; color: #f5f3eb; isolation: isolate; }
+  .app-art:focus-visible, .app-explore:focus-visible, .gallery-back:focus-visible, .gallery-close:focus-visible { outline: 3px solid var(--brand); outline-offset: -4px; }
+  .art-topline, .art-bottomline { position: absolute; left: 6%; right: 6%; display: flex; justify-content: space-between; gap: 10px; font: 8px 'IBM Plex Mono', monospace; letter-spacing: .07em; z-index: 4; }
+  .art-topline { top: 6%; text-transform: uppercase; }
+  .art-bottomline { bottom: 6%; border-top: 1px solid #ffffff50; padding-top: 14px; }
+  .machine-headline { position: absolute; top: 20%; left: 6%; z-index: 2; font-size: clamp(32px, 3.8vw, 62px); font-weight: 800; line-height: .93; letter-spacing: -.055em; }
+  .machine-headline span, .machine-headline em { display: block; }
+  .machine-headline em { color: #dfff79; font-family: Georgia, serif; font-weight: 400; }
+  .machine-halo { position: absolute; width: 66%; aspect-ratio: 1; top: 21%; right: -13%; border-radius: 50%; background: #dfff79; }
+  .machine-illustration { position: absolute; z-index: 3; width: 72%; right: -9%; top: 13%; transform: rotate(-12deg); transition: transform .6s; }
+  .app-art:hover .machine-illustration { transform: rotate(-6deg) translate(-10px, -8px); }
+  .art-sticker { position: absolute; left: 6%; bottom: 21%; padding: 10px 14px; color: #142229; background: #ff825c; border-radius: 2px; font: 10px Georgia, serif; transform: rotate(-5deg); z-index: 4; }
+  .art-open { position: absolute; right: 5%; bottom: 19%; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; border: 1px solid currentColor; z-index: 4; font-size: 20px; }
+  [data-app=margin] .app-art { background-color: #f3ede1; color: #641f34; background-image: linear-gradient(#641f3412 1px, transparent 1px), linear-gradient(90deg, #641f3412 1px, transparent 1px); background-size: 11% 70px; }
+  .book-headline { position: absolute; top: 15%; left: 6%; right: 6%; text-align: center; font: clamp(46px, 5vw, 80px)/.9 Georgia, serif; letter-spacing: -.06em; }
+  .book-headline span, .book-headline em { display: block; }
+  .gallery-book { position: absolute; width: 23%; top: 34%; filter: drop-shadow(8px 15px 10px #35122540); transition: transform .6s; }
+  .book-center { left: 38%; transform: rotate(-8deg); z-index: 3; }
+  .book-left { left: 19%; top: 38%; transform: rotate(-22deg); }
+  .book-right { right: 17%; top: 38%; transform: rotate(17deg); }
+  .app-art:hover .book-left { transform: rotate(-27deg) translateX(-8px); }
+  .app-art:hover .book-right { transform: rotate(22deg) translateX(8px); }
+  .gallery-book :global(.book-object) { position: relative; aspect-ratio: 2/3; }
+  .gallery-book :global(.book-pages) { position: absolute; inset: 4px -3px -4px 4px; background: #e5d7b9; }
+  .gallery-book :global(.book-face) { position: absolute; inset: 0; display: flex; flex-direction: column; padding: 12%; background: var(--cover); color: #eed69d; box-shadow: inset 5px 0 5px #0003; }
+  .gallery-book :global(.cover-top), .gallery-book :global(.cover-bottom) { font: 4px Arial, sans-serif; }
+  .gallery-book :global(.cover-top span), .gallery-book :global(.cover-bottom span:last-child) { display: none; }
+  .gallery-book :global(.cover-title) { font: clamp(11px, 1.2vw, 20px)/1.05 Georgia, serif; margin-top: 12%; }
+  .gallery-book :global(.cover-drawing) { width: 100%; min-height: 0; flex: 1; }
+  .gallery-book :global(.cover-author) { font: italic 6px Georgia, serif; margin-bottom: 8px; }
+  [data-app=margin] .art-sticker { background: #eed69d; bottom: 20%; left: 5%; }
+  [data-app=margin] .art-bottomline { border-color: #641f3440; }
+  .app-card-copy { padding: 26px; }
+  .app-title-line { display: flex; justify-content: space-between; gap: 16px; align-items: center; }
+  .app-title-line h3 { font-size: 22px; font-weight: 500; letter-spacing: -.035em; }
+  .app-palette { display: flex; }
+  .app-palette span { width: 16px; height: 16px; border: 2px solid var(--panel); border-radius: 50%; margin-left: -3px; }
+  .app-description { font-size: 12px; line-height: 1.8; opacity: .65; margin: 14px 0 18px; max-width: 480px; }
+  .app-tags { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; padding: 0; margin: 0; }
+  .app-tags li { border: 1px solid var(--edge); border-radius: 20px; padding: 6px 10px; font-size: 9px; }
+  .app-remix { margin: 22px 0; padding: 16px 0; border-block: 1px dashed var(--edge); }
+  .app-remix span { font: 8px 'IBM Plex Mono', monospace; letter-spacing: .09em; color: var(--brand); }
+  .app-remix p { font: italic 14px/1.6 Georgia, serif; margin-top: 8px; opacity: .8; }
+  .app-explore { display: flex; justify-content: space-between; align-items: center; width: 100%; border: 1px solid var(--edge-strong); border-radius: 7px; padding: 13px 16px; font-size: 12px; transition: background .2s; }
+  .app-explore:hover { background: var(--control); }
+  .app-explore:disabled, .app-art:disabled { cursor: wait; opacity: .6; }
+  .gallery-footnote { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; max-width: 1320px; margin: 28px auto 0; font-size: 10px; opacity: .5; }
+  .gallery-error { margin-top: 20px; color: var(--warning); font-size: 12px; }
+  @media (max-width: 760px) {
+    .gallery-bar { padding: 14px 18px; }
+    .gallery-bar p { display: none; }
+    .gallery-scroll { padding: 28px 18px; }
+    .gallery-intro { display: block; margin-bottom: 28px; }
+    .gallery-intro-note { max-width: none; margin-top: 20px; }
+    .gallery-asterisk { display: none; }
+    .gallery-grid { grid-template-columns: 1fr; gap: 24px; }
+    .app-art { height: 360px; }
+    .machine-headline { top: 17%; font-size: 34px; }
+    .machine-halo { width: 64%; top: 44%; right: -10%; }
+    .machine-illustration { width: 64%; top: 34%; right: -4%; }
+    .book-headline { font-size: 54px; }
+    .gallery-book :global(.cover-title) { font-size: 16px; }
+    .app-card-copy { padding: 22px; }
+  }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }

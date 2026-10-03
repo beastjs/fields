@@ -4,6 +4,14 @@ import BookCover from './BookCover.btsx'
 import { excerptFor } from './excerpts'
 import { categories, setSaved, checkout, loadProducts, loadSession, money, setQuantity, type CartItem, type Order, type Product } from './store'
 
+module
+  const moods = [
+    { name: 'Get wonderfully lost', category: 'Fiction', note: 'Other lives. Unexpected doors.', symbol: '↗' },
+    { name: 'See with fresh eyes', category: 'Design', note: 'A new lens on the everyday.', symbol: '✳︎' },
+    { name: 'Slow everything down', category: 'Poetry', note: 'A little room between the lines.', symbol: '≈' },
+    { name: 'Change your mind', category: 'Essays', note: 'Good questions, left open.', symbol: '↺' },
+  ]
+
 setup
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -77,7 +85,9 @@ setup
     catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not save this book.'); }
     finally { setPending(false); }
   };
-  const showShelf = () => { setOnlySaved(true); setCategory('All'); search.handleChange(''); budget.handleChange(60); document.querySelector('#collection')?.scrollIntoView({ behavior: 'smooth' }); };
+  const followMood = (next: string) => { setOnlySaved(false); setCategory(next); search.handleChange(''); budget.handleChange(60); document.querySelector('#collection')?.scrollIntoView({ block: 'start' }); };
+  const openEdition = (sku: string) => { const book = products.find(product => product.sku === sku); if (book) openProduct(book); };
+  const showShelf = () => { setOnlySaved(true); setCategory('All'); search.handleChange(''); budget.handleChange(60); document.querySelector('#collection')?.scrollIntoView({ block: 'start' }); };
 
 main.margin-store(data-motion={motion})
   header.masthead
@@ -93,8 +103,16 @@ main.margin-store(data-motion={motion})
     h1
       span BETWEEN
       span THE LINES
-    div.hero-book
+    button.hero-side-book.edition-left(type='button' aria-label='Discover Ways of Seeing Slowly' disabled={!products.length} onClick={() => openEdition('MN-13')})
+      BookCover(title='Ways of Seeing Slowly' author='Eva North' color='#b8583e' shape={2})
+    button.hero-side-book.edition-right(type='button' aria-label='Discover The Space Between Lines' disabled={!products.length} onClick={() => openEdition('MN-19')})
+      BookCover(title='The Space Between Lines' author='Cleo Ash' color='#455844' shape={3})
+    button.hero-book(type='button' aria-label='Discover The Quiet Move' disabled={!products.length} onClick={() => openEdition('MN-01')})
       BookCover(title='The Quiet Move' author='Elias Voss' color='#641f34' shape={0})
+    span.edition-stamp(aria-hidden='true') GOOD BOOKS.
+      br
+      | OPEN MINDS.
+      b ✳︎
     span.scribble.note-one begin here ↘
     span.scribble.note-two one more chapter…
     span.scribble.note-three a different perspective
@@ -105,6 +123,17 @@ main.margin-store(data-motion={motion})
     div.hero-actions
       a.underlined(href='#collection') Find your next chapter ↓
       button.motion-toggle(type='button' aria-pressed={!motion} onClick={() => setMotion(value => !value)}) #{motion ? 'Pause movement' : 'Resume movement'}
+  section.mood-finder(aria-label='Find your reading mood')
+    div.mood-heading
+      span.margin-label A LITTLE GUIDANCE / A LOT OF POSSIBILITY
+      h2 What are you in the mood for?
+    div.mood-grid
+      each mood in moods key mood.name
+        button.mood-card(type='button' aria-pressed={category === mood.category && !onlySaved} onClick={() => followMood(mood.category)})
+          span.mood-symbol(aria-hidden='true') #{mood.symbol}
+          h3 #{mood.name}
+          p #{mood.note}
+          small #{mood.category} ↗
   section.manifesto#manifesto
     div.margin-label
       span (01 — A NOTE FROM US)

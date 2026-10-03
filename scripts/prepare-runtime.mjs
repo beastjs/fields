@@ -74,6 +74,7 @@ const storeFiles = {};
 for (const file of (await readdir(storeTemplates)).filter(file => file.endsWith('.txt')).sort()) {
   storeFiles['/src/' + file.slice(0, -4)] = await readFile(join(storeTemplates, file), 'utf8');
 }
+storeFiles['/src/ProductArt.btsx'] = await readFile('src/playground/fullstack/ProductArt.btsx', 'utf8');
 for (const file of ['storeDemo.ts', 'storeDemoValidators.ts']) {
   storeFiles['/convex/' + file] = (await readFile('convex/' + file, 'utf8')).replace("'../src/playground/fullstack/products'", "'./seedData'");
 }
@@ -85,6 +86,7 @@ const marginFiles = {};
 for (const file of (await readdir('src/playground/fullstack/margin/templates')).filter(file => file.endsWith('.txt')).sort()) {
   marginFiles['/src/' + file.slice(0, -4)] = await readFile(join('src/playground/fullstack/margin/templates', file), 'utf8');
 }
+marginFiles['/src/BookCover.btsx'] = await readFile('src/playground/fullstack/margin/BookCover.btsx', 'utf8');
 marginFiles['/convex/marginDemo.ts'] = (await readFile('convex/marginDemo.ts', 'utf8')).replace("'../src/playground/fullstack/margin/books'", "'./seedData'");
 marginFiles['/convex/storeDemoValidators.ts'] = await readFile('convex/storeDemoValidators.ts', 'utf8');
 marginFiles['/convex/seedData.ts'] = await readFile('src/playground/fullstack/margin/books.ts', 'utf8');

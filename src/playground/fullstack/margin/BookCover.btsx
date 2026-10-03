@@ -1,6 +1,6 @@
 props { title, author, color = '#641f34', shape = 0 }: { title: string; author: string; color?: string; shape?: number }
 
-div.book-object(style={{ '--cover': color }} aria-hidden='true')
+div.book-object(style={{ '--cover': color } as Record<string, string>} aria-hidden='true')
   div.book-pages
   div.book-face
     div.cover-top M / N

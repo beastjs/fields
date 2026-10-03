@@ -3,7 +3,16 @@ import { useField, useForm } from '@octanejs/tanstack-form'
 import ProductArt from './ProductArt.btsx'
 import { categories, checkout, loadProducts, loadSession, money, setQuantity, type CartItem, type Order, type Product } from './store'
 
+module
+  const studies = [
+    { name: 'Motion', shape: 0, color: '#2439ed', label: 'THE ARC / STUDY NO. 001', caption: 'Six axes. A thousand starting points.', category: 'Robot arms', idea: 'Make something move.', note: 'Small gestures. Unexpected choreography.' },
+    { name: 'Vision', shape: 2, color: '#ff825c', label: 'THE FOCUS / STUDY NO. 002', caption: 'A different way to see the everyday.', category: 'Vision', idea: 'See things differently.', note: 'Give an ordinary object a new point of view.' },
+    { name: 'Making', shape: 4, color: '#dfff79', label: 'THE BENCH / STUDY NO. 003', caption: 'Give a good idea somewhere to happen.', category: 'Workbench', idea: 'Build your little lab.', note: 'A place to try, fail, rearrange, repeat.' },
+  ]
+
 setup
+  const [studyIndex, setStudyIndex] = useState(0);
+  const study = studies[studyIndex];
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [order, setOrder] = useState<Order | null>(null);
@@ -64,6 +73,7 @@ setup
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Checkout failed. Your bag is still here.'); }
     finally { setPending(false); }
   };
+  const followIdea = (next: string) => { setCategory(next); search.handleChange(''); budget.handleChange(3500); document.querySelector('#collection')?.scrollIntoView({ block: 'start' }); };
   const resetFilters = () => { setCategory('All'); search.handleChange(''); sort.handleChange('featured'); budget.handleChange(3500); };
 
 main.store(data-motion={motion})
@@ -89,35 +99,45 @@ main.store(data-motion={motion})
       div.hero-copy
         p.eyebrow HARDWARE / HUMAN POSSIBILITY
         h1
-          span A little
-          span more
-          em possible.
+          span Serious
+          span tools.
+          em Wild ideas.
         p.hero-description Thoughtfully made robotics, tools, and useful little things. For the hands-on, the what-if, and the next great idea.
         a.pill.primary(href='#collection') Explore the collection
           span(aria-hidden='true') ↗
       div.hero-object
-        span.object-label THE ARC / STUDY NO. 001
-        ProductArt(shape={0} color='#4b9390' hero={true})
+        span.object-label #{study.label}
+        span.showroom-orbit(aria-hidden='true')
+        ProductArt(shape={study.shape} color={study.color} hero={true})
+        span.showroom-sticker(aria-hidden='true') OPEN TO
+          br
+          | POSSIBILITY ✳︎
+        div.study-switcher(role='group' aria-label='Showroom studies')
+          each option, index in studies key option.name
+            button(type='button' aria-pressed={studyIndex === index} onClick={() => setStudyIndex(index)})
+              small 0#{index + 1}
+              span #{option.name}
         div.object-caption
-          span Six axes. A thousand starting points.
+          span #{study.caption}
           button.motion-button(type='button' aria-pressed={!motion} onClick={() => setMotion(value => !value)}) #{motion ? 'Pause motion Ⅱ' : 'Play motion ▷'}
     div.hero-bottom
       span DESIGNED FOR CURIOUS PEOPLE
       span Scroll to find your next thing ↓
       span COLLECTION 001 / 36 OBJECTS
-  section.intro-strip(aria-label='Store benefits')
-    div
-      span 01
-      p Open to possibility
-      small Documented. Adaptable. Yours to explore.
-    div
-      span 02
-      p Made to work together
-      small Considered systems, not isolated objects.
-    div
-      span 03
-      p Start small. Build something.
-      small From your first sketch to a working prototype.
+  section.idea-paths(aria-label='Find a project starting point')
+    div.idea-heading
+      p.eyebrow THE WHAT-IF DEPARTMENT
+      h2 Follow a curiosity.
+      span Three ways to start. No wrong turns.
+    div.idea-grid
+      each idea, index in studies key idea.name
+        button.idea-card(type='button' onClick={() => followIdea(idea.category)})
+          span.idea-number 0#{index + 1} / #{idea.name}
+          div.idea-mini-art
+            ProductArt(shape={idea.shape} color={idea.color})
+          h3 #{idea.idea}
+          p #{idea.note}
+          span.idea-arrow(aria-hidden='true') ↗
   section.collection#collection
     div.section-heading
       div

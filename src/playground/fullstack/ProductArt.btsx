@@ -1,6 +1,6 @@
 props { shape = 0, color = '#4d8c88', variant = 0, hero = false }: { shape?: number; color?: string; variant?: number; hero?: boolean }
 
-svg(viewBox='0 0 600 520' fill='none' xmlns='http://www.w3.org/2000/svg' aria-hidden='true' className={hero ? 'product-art hero-art' : 'product-art'} style={{ '--object-color': color }})
+svg(viewBox='0 0 600 520' fill='none' xmlns='http://www.w3.org/2000/svg' aria-hidden='true' className={hero ? 'product-art hero-art' : 'product-art'} style={{ '--object-color': color } as Record<string, string>})
   ellipse(cx='300' cy='455' rx='185' ry='24' fill='#122f2e' opacity='.08')
   g(stroke='#183c3a' strokeWidth='2.5' strokeLinejoin='round')
     if shape === 0

@@ -12,7 +12,7 @@ export function createMarginProject(backendUrl: string, previewSession: string) 
   project.files['/package.json'] = project.files['/package.json'].replace('form-supply', 'margin-notes').replace('storeDemo:seed', 'marginDemo:seed')
   project.files['/README.md'] = `# Margin Notes — Fullstack bookshop
 
-Inspired by the oversized serif typography, grid, and layered editorial composition at https://moneyincheck.org/. Uses a maroon-and-gold palette. All branding, titles, authors, cover drawings, and sample prose are original and fictional.
+An editorial bookshop with oversized serif typography, layered clickable editions, annotated grids, and a maroon-and-gold palette. Follow one of four reading moods to find a new perspective. All branding, titles, authors, cover drawings, and sample prose are original and fictional.
 
 ## Try the app
 

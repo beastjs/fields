@@ -23,6 +23,7 @@ import { TemplatePreview, type TemplatePreviewStatus } from '../../playground/te
 import { dialogPanel } from '../ui/styles'
 import SectionLibrary from './SectionLibrary.btsx'
 import StudioAside from './StudioAside.btsx'
+import FullstackBrowser from './FullstackBrowser.btsx'
 import StudioFooter from './StudioFooter.btsx'
 import StudioHeader from './StudioHeader.btsx'
 import StudioStage from './StudioStage.btsx'
@@ -98,6 +99,12 @@ setup
   const preview = useRef<TemplatePreview | null>(null);
   const pendingReveal = useRef<{ name: string; highlight: boolean } | undefined>(undefined);
   const [open, setOpen] = useState(false);
+  const [browsingApps, setBrowsingApps, getBrowsingApps] = useState(false);
+  const backToDesigner = () => {
+    setBrowsingApps(false);
+    // The shell becomes interactive in the next commit; focus it after inert has been removed.
+    requestAnimationFrame(() => dialog.current?.querySelector<HTMLButtonElement>('[data-fullstack-trigger]')?.focus());
+  };
   /**
    * The project, and only while the studio is open.
    *
@@ -537,10 +544,11 @@ setup
       event.preventDefault();
       // Esc already reaches the dialog and is discarded. It steps back one mode at a time: Fine Layout first, then
       // the maximised preview. Esc pressed inside the preview frame arrives as a design `exit` event instead.
-      if (designingRef.current) exitDesigning();
+      if (getBrowsingApps()) backToDesigner();
+      else if (designingRef.current) exitDesigning();
       else if (maximizedRef.current) toggleMaximized();
     };
-    const onClose = () => { settleThemePreview(); setOpen(false); session.setStudioThemePreview(undefined); };
+    const onClose = () => { settleThemePreview(); setBrowsingApps(false); setOpen(false); session.setStudioThemePreview(undefined); };
     element.addEventListener('cancel', onCancel);
     element.addEventListener('close', onClose);
     return () => { element.removeEventListener('cancel', onCancel); element.removeEventListener('close', onClose); settleThemePreview(); session.setStudioThemePreview(undefined); element.close(); };
@@ -624,161 +632,162 @@ fragment
   // No backdrop blur: the dialog covers nearly the whole window, and a blur over the live preview behind it is
   // recomputed every frame that preview animates.
   dialog(className={cn(dialogPanel, 'backdrop:backdrop-blur-none h-[min(920px,calc(100dvh-12px))] w-[min(1720px,calc(100vw-12px))] max-h-none overflow-hidden p-0 open:grid grid-rows-[auto_minmax(0,1fr)_auto] light:rounded-2xl')} ref={dialog} aria-labelledby='design-studio-title')
-    StudioHeader(
-      ~ width={width}
-      ~ scale={scale}
-      ~ device={device}
-      ~ onDevice={setDevice}
-      ~ libraryOpen={panels.library}
-      ~ asideOpen={panels.aside}
-      ~ onToggleLibrary={() => togglePanel('library')}
-      ~ onToggleAside={() => togglePanel('aside')}
-      ~ maximized={maximized}
-      ~ onToggleMaximized={toggleMaximized}
-      ~ designing={designing}
-      ~ canDesign={blocks.length > 0 && view !== 'code'}
-      ~ onToggleDesigning={toggleDesigning}
-      ~ onClose={closeFromButton}
-      ~ )
-      if huntError
-        span(className='max-w-44 truncate text-[10px] text-warning' title={huntError}) #{huntError}
-      ThemePicker(
-        ~ themes={themes}
-        ~ themeId={themeId}
-        ~ onChoose={chooseTheme}
-        ~ paint={paint}
-        ~ onPaint={choosePaint}
-        ~ onShuffle={shuffle}
-        ~ shuffling={hunting}
-        ~ shuffleBlocked={convex ? undefined : 'Color Hunt needs a Convex connection.'}
-        ~ container={dialog}
+    div(className='contents' inert={browsingApps} aria-hidden={browsingApps || undefined})
+      StudioHeader(
+        ~ width={width}
+        ~ scale={scale}
+        ~ device={device}
+        ~ onDevice={setDevice}
+        ~ libraryOpen={panels.library}
+        ~ asideOpen={panels.aside}
+        ~ onToggleLibrary={() => togglePanel('library')}
+        ~ onToggleAside={() => togglePanel('aside')}
+        ~ maximized={maximized}
+        ~ onToggleMaximized={toggleMaximized}
+        ~ designing={designing}
+        ~ canDesign={blocks.length > 0 && view !== 'code'}
+        ~ onToggleDesigning={toggleDesigning}
+        ~ onClose={closeFromButton}
         ~ )
+        if huntError
+          span(className='max-w-44 truncate text-[10px] text-warning' title={huntError}) #{huntError}
+        ThemePicker(
+          ~ themes={themes}
+          ~ themeId={themeId}
+          ~ onChoose={chooseTheme}
+          ~ paint={paint}
+          ~ onPaint={choosePaint}
+          ~ onShuffle={shuffle}
+          ~ shuffling={hunting}
+          ~ shuffleBlocked={convex ? undefined : 'Color Hunt needs a Convex connection.'}
+          ~ container={dialog}
+          ~ )
 
-    if narrow
-      div(id='design-studio-body' className='flex min-h-0 flex-col overflow-auto')
-        SectionLibrary(blocks={blocks} presets={presets} targetOf={targetOf} openKind={openKind} onOpenKind={setOpenKind} onUse={chooseDesign} onAdd={addAnother} className={cn('order-2 h-[70dvh] shrink-0 border-b border-edge', !panels.library && 'hidden')})
-        StudioStage(
-          ~ className={mainClass}
-          ~ view={view}
-          ~ onView={setView}
-          ~ focusedName={focused?.name}
-          ~ codeFile={codeFile}
-          ~ onCodeFile={setCodeFile}
-          ~ code={code}
-          ~ codePath={codePath}
-          ~ copied={copied}
-          ~ onCopy={copyCode}
-          ~ status={{ text: statusText, state: blocks.length ? status.state : 'idle' }}
-          ~ empty={!blocks.length}
-          ~ catalogLoading={catalogLoading}
-          ~ recipes={recipes}
-          ~ onRecipe={startRecipe}
-          ~ stage={stage}
-          ~ frame={frame}
-          ~ standby={standby}
-          ~ stageSize={stageSize}
-          ~ width={width}
-          ~ scale={scale}
-          ~ inspector={designing ? { selected: selectedNode, edited: !!targetNode && !!targetBlock?.overrides?.[targetNode.nodeId], onEdit: applyEdit, onEditText: () => selectedNode && preview.current?.editText(selectedNode.nodeId, true), onReset: resetNode, onDismiss: () => setSelectedNode(undefined) } : undefined}
-          ~ )
-          if designing && ready
-            DesignOverlay(
-              ~ selected={selectedNode}
-              ~ hovered={hoveredNode}
-              ~ scale={scale}
-              ~ onEdit={applyEdit}
-              ~ )
-        StudioAside(
-          ~ session={session}
-          ~ onFullstackInstalled={closeFromButton}
-          ~ className={cn('order-1 max-h-[45dvh] shrink-0 border-b border-edge', !panels.aside && 'hidden')}
-          ~ blocks={blocks}
-          ~ presets={presets}
-          ~ recipes={recipes}
-          ~ selected={focused?.name}
-          ~ onSelect={select}
-          ~ onReorder={next => setBlocks(next)}
-          ~ onRemove={remove}
-          ~ onRecipe={startRecipe}
-          ~ activeRecipe={activeRecipe}
-          ~ theme={pageTheme}
-          ~ onPreviewTheme={previewGenerated}
-          ~ )
-    else
-      if laidOut
-        // Dragging a separator across the preview would lose the pointer to its frame, so frames ignore it meanwhile.
-        Group(
-          ~ id='design-studio-body'
-          ~ orientation='horizontal'
-          ~ className='min-h-0 has-[[data-separator=active]]:[&_iframe]:pointer-events-none'
-          ~ defaultLayout={savedLayout.defaultLayout}
-          ~ onLayoutChanged={layoutChanged}
-          ~ )
-          Panel(id='library' panelRef={libraryPanel} defaultSize={PANEL_SIZES.library.initial + 'px'} minSize={PANEL_SIZES.library.min + 'px'} maxSize='45%' collapsible={true} collapsedSize={0} className='min-w-0 overflow-hidden')
-            SectionLibrary(blocks={blocks} presets={presets} targetOf={targetOf} openKind={openKind} onOpenKind={setOpenKind} onUse={chooseDesign} onAdd={addAnother} className='h-full')
-          Separator(className={panelSeparator} aria-label='Resize the section library')
-          Panel(id='stage' minSize='320px' className='min-w-0 overflow-hidden')
-            StudioStage(
-              ~ className={mainClass}
-              ~ view={view}
-              ~ onView={setView}
-              ~ focusedName={focused?.name}
-              ~ codeFile={codeFile}
-              ~ onCodeFile={setCodeFile}
-              ~ code={code}
-              ~ codePath={codePath}
-              ~ copied={copied}
-              ~ onCopy={copyCode}
-              ~ status={{ text: statusText, state: blocks.length ? status.state : 'idle' }}
-              ~ empty={!blocks.length}
-              ~ catalogLoading={catalogLoading}
-              ~ recipes={recipes}
-              ~ onRecipe={startRecipe}
-              ~ stage={stage}
-              ~ frame={frame}
-              ~ standby={standby}
-              ~ stageSize={stageSize}
-              ~ width={width}
-              ~ scale={scale}
-              ~ inspector={designing ? { selected: selectedNode, edited: !!targetNode && !!targetBlock?.overrides?.[targetNode.nodeId], onEdit: applyEdit, onEditText: () => selectedNode && preview.current?.editText(selectedNode.nodeId, true), onReset: resetNode, onDismiss: () => setSelectedNode(undefined) } : undefined}
-              ~ )
-              if designing && ready
-                DesignOverlay(
-                  ~ selected={selectedNode}
-                  ~ hovered={hoveredNode}
-                  ~ scale={scale}
-                  ~ onEdit={applyEdit}
-                  ~ )
-          Separator(className={panelSeparator} aria-label='Resize the outline and theme panel')
-          Panel(id='aside' panelRef={asidePanel} defaultSize={PANEL_SIZES.aside.initial + 'px'} minSize={PANEL_SIZES.aside.min + 'px'} maxSize='40%' collapsible={true} collapsedSize={0} className='min-w-0 overflow-hidden')
-            StudioAside(
-              ~ session={session}
-              ~ onFullstackInstalled={closeFromButton}
-              ~ className='h-full'
-              ~ blocks={blocks}
-              ~ presets={presets}
-              ~ recipes={recipes}
-              ~ selected={focused?.name}
-              ~ onSelect={select}
-              ~ onReorder={next => setBlocks(next)}
-              ~ onRemove={remove}
-              ~ onRecipe={startRecipe}
-              ~ activeRecipe={activeRecipe}
-              ~ theme={pageTheme}
-              ~ onPreviewTheme={previewGenerated}
-              ~ )
+      if narrow
+        div(id='design-studio-body' className='flex min-h-0 flex-col overflow-auto')
+          SectionLibrary(blocks={blocks} presets={presets} targetOf={targetOf} openKind={openKind} onOpenKind={setOpenKind} onUse={chooseDesign} onAdd={addAnother} className={cn('order-2 h-[70dvh] shrink-0 border-b border-edge', !panels.library && 'hidden')})
+          StudioStage(
+            ~ className={mainClass}
+            ~ view={view}
+            ~ onView={setView}
+            ~ focusedName={focused?.name}
+            ~ codeFile={codeFile}
+            ~ onCodeFile={setCodeFile}
+            ~ code={code}
+            ~ codePath={codePath}
+            ~ copied={copied}
+            ~ onCopy={copyCode}
+            ~ status={{ text: statusText, state: blocks.length ? status.state : 'idle' }}
+            ~ empty={!blocks.length}
+            ~ catalogLoading={catalogLoading}
+            ~ recipes={recipes}
+            ~ onRecipe={startRecipe}
+            ~ stage={stage}
+            ~ frame={frame}
+            ~ standby={standby}
+            ~ stageSize={stageSize}
+            ~ width={width}
+            ~ scale={scale}
+            ~ inspector={designing ? { selected: selectedNode, edited: !!targetNode && !!targetBlock?.overrides?.[targetNode.nodeId], onEdit: applyEdit, onEditText: () => selectedNode && preview.current?.editText(selectedNode.nodeId, true), onReset: resetNode, onDismiss: () => setSelectedNode(undefined) } : undefined}
+            ~ )
+            if designing && ready
+              DesignOverlay(
+                ~ selected={selectedNode}
+                ~ hovered={hoveredNode}
+                ~ scale={scale}
+                ~ onEdit={applyEdit}
+                ~ )
+          StudioAside(
+            ~ onBrowseFullstack={() => setBrowsingApps(true)}
+            ~ className={cn('order-1 max-h-[45dvh] shrink-0 border-b border-edge', !panels.aside && 'hidden')}
+            ~ blocks={blocks}
+            ~ presets={presets}
+            ~ recipes={recipes}
+            ~ selected={focused?.name}
+            ~ onSelect={select}
+            ~ onReorder={next => setBlocks(next)}
+            ~ onRemove={remove}
+            ~ onRecipe={startRecipe}
+            ~ activeRecipe={activeRecipe}
+            ~ theme={pageTheme}
+            ~ onPreviewTheme={previewGenerated}
+            ~ )
       else
-        div(id='design-studio-body')
+        if laidOut
+          // Dragging a separator across the preview would lose the pointer to its frame, so frames ignore it meanwhile.
+          Group(
+            ~ id='design-studio-body'
+            ~ orientation='horizontal'
+            ~ className='min-h-0 has-[[data-separator=active]]:[&_iframe]:pointer-events-none'
+            ~ defaultLayout={savedLayout.defaultLayout}
+            ~ onLayoutChanged={layoutChanged}
+            ~ )
+            Panel(id='library' panelRef={libraryPanel} defaultSize={PANEL_SIZES.library.initial + 'px'} minSize={PANEL_SIZES.library.min + 'px'} maxSize='45%' collapsible={true} collapsedSize={0} className='min-w-0 overflow-hidden')
+              SectionLibrary(blocks={blocks} presets={presets} targetOf={targetOf} openKind={openKind} onOpenKind={setOpenKind} onUse={chooseDesign} onAdd={addAnother} className='h-full')
+            Separator(className={panelSeparator} aria-label='Resize the section library')
+            Panel(id='stage' minSize='320px' className='min-w-0 overflow-hidden')
+              StudioStage(
+                ~ className={mainClass}
+                ~ view={view}
+                ~ onView={setView}
+                ~ focusedName={focused?.name}
+                ~ codeFile={codeFile}
+                ~ onCodeFile={setCodeFile}
+                ~ code={code}
+                ~ codePath={codePath}
+                ~ copied={copied}
+                ~ onCopy={copyCode}
+                ~ status={{ text: statusText, state: blocks.length ? status.state : 'idle' }}
+                ~ empty={!blocks.length}
+                ~ catalogLoading={catalogLoading}
+                ~ recipes={recipes}
+                ~ onRecipe={startRecipe}
+                ~ stage={stage}
+                ~ frame={frame}
+                ~ standby={standby}
+                ~ stageSize={stageSize}
+                ~ width={width}
+                ~ scale={scale}
+                ~ inspector={designing ? { selected: selectedNode, edited: !!targetNode && !!targetBlock?.overrides?.[targetNode.nodeId], onEdit: applyEdit, onEditText: () => selectedNode && preview.current?.editText(selectedNode.nodeId, true), onReset: resetNode, onDismiss: () => setSelectedNode(undefined) } : undefined}
+                ~ )
+                if designing && ready
+                  DesignOverlay(
+                    ~ selected={selectedNode}
+                    ~ hovered={hoveredNode}
+                    ~ scale={scale}
+                    ~ onEdit={applyEdit}
+                    ~ )
+            Separator(className={panelSeparator} aria-label='Resize the outline and theme panel')
+            Panel(id='aside' panelRef={asidePanel} defaultSize={PANEL_SIZES.aside.initial + 'px'} minSize={PANEL_SIZES.aside.min + 'px'} maxSize='40%' collapsible={true} collapsedSize={0} className='min-w-0 overflow-hidden')
+              StudioAside(
+                ~ onBrowseFullstack={() => setBrowsingApps(true)}
+                ~ className='h-full'
+                ~ blocks={blocks}
+                ~ presets={presets}
+                ~ recipes={recipes}
+                ~ selected={focused?.name}
+                ~ onSelect={select}
+                ~ onReorder={next => setBlocks(next)}
+                ~ onRemove={remove}
+                ~ onRecipe={startRecipe}
+                ~ activeRecipe={activeRecipe}
+                ~ theme={pageTheme}
+                ~ onPreviewTheme={previewGenerated}
+                ~ )
+        else
+          div(id='design-studio-body')
 
-    StudioFooter(
-      ~ note={installNote}
-      ~ overwriteNote={overwriteNote}
-      ~ editedNodes={editedNodes}
-      ~ onClearDesign={clearDesign}
-      ~ canDiscard={dirty && saved.length > 0}
-      ~ onDiscard={discard}
-      ~ onClose={closeFromButton}
-      ~ applyLabel={upToDate ? 'Page is up to date' : themeOnly ? 'Apply theme' : saved.length ? 'Update page' : 'Add page to project'}
-      ~ canApply={!!install && !upToDate}
-      ~ onApply={apply}
-      ~ )
+      StudioFooter(
+        ~ note={installNote}
+        ~ overwriteNote={overwriteNote}
+        ~ editedNodes={editedNodes}
+        ~ onClearDesign={clearDesign}
+        ~ canDiscard={dirty && saved.length > 0}
+        ~ onDiscard={discard}
+        ~ onClose={closeFromButton}
+        ~ applyLabel={upToDate ? 'Page is up to date' : themeOnly ? 'Apply theme' : saved.length ? 'Update page' : 'Add page to project'}
+        ~ canApply={!!install && !upToDate}
+        ~ onApply={apply}
+        ~ )
+    if browsingApps
+      FullstackBrowser(session={session} onInstalled={() => { setBrowsingApps(false); closeFromButton(); }} onBack={backToDesigner} onClose={() => { setBrowsingApps(false); closeFromButton(); }})

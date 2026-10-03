@@ -12,6 +12,13 @@ test('Fullstack store browses, installs, persists a bag and checks out', async (
   const dialog = page.getByRole('dialog', { name: 'Fullstack app preview', exact: true });
   const shop = dialog.frameLocator('iframe');
   await expect(shop.locator('.product-card')).toHaveCount(36, { timeout: 30000 });
+  await expect(shop.getByRole('heading', { name: 'Serious tools. Wild ideas.' })).toBeVisible();
+  await page.screenshot({ path: '/tmp/fullstack-hero-desktop.png' });
+  await shop.getByRole('button', { name: '02 Vision', exact: true }).click();
+  await expect(shop.locator('.object-label')).toHaveText('THE FOCUS / STUDY NO. 002');
+  await shop.getByRole('button', { name: 'See things differently.' }).click();
+  await expect(shop.locator('.product-card')).toHaveCount(6);
+  await shop.getByRole('button', { name: 'All 36', exact: true }).click();
   await page.screenshot({ path: '/tmp/fullstack-desktop.png' });
   await shop.getByRole('button', { name: 'Grippers 6', exact: true }).click();
   await expect(shop.locator('.product-card')).toHaveCount(6);
@@ -25,6 +32,8 @@ test('Fullstack store browses, installs, persists a bag and checks out', async (
   await shop.getByRole('button', { name: 'Close product details' }).click();
   await dialog.getByRole('button', { name: 'Mobile preview' }).click();
   await expect.poll(() => shop.locator('body').evaluate(element => element.scrollWidth <= window.innerWidth)).toBe(true);
+  await shop.locator('html').evaluate(element => { element.style.scrollBehavior = 'auto'; window.scrollTo({ top: 0, behavior: 'instant' }); });
+  await expect.poll(() => shop.locator('html').evaluate(() => window.scrollY)).toBe(0);
   await page.screenshot({ path: '/tmp/fullstack-mobile.png' });
   await dialog.getByRole('button', { name: 'Use this app' }).click();
   await dialog.getByRole('button', { name: 'Replace project with Form Supply' }).click();
