@@ -1,6 +1,10 @@
 const fenceLine = /^([ \t]*)(`{3,}|~{3,})(.*)$/;
 const glued = /^(.*?\S)[ \t]*(`{3,}[\w+-]*(?:[ \t]+\S+)*)[ \t]*$/;
-const language = /^[\w+-]*(?:[ \t]+\S+=\S*)*$/;
+function isLanguage(info: string): boolean {
+  const [name, ...attributes] = info.split(/[ \t]+/);
+  return /^[\w+-]*$/.test(name) && attributes.every(attribute =>
+    attribute.lastIndexOf('=') > 0 && !/\s/.test(attribute));
+}
 
 /**
  * Models often mangle code fences in ways CommonMark reads as prose: an opening fence glued to
@@ -24,7 +28,7 @@ export function normalizeFences(content: string) {
       }
       // "Here is the fix: ```btsx patch=/src/App.btsx". Skip lines holding inline ``` spans.
       const match = glued.exec(line);
-      if (match && !match[1].includes('```') && language.test(match[2].replace(/^`+/, ''))) {
+      if (match && !match[1].includes('```') && isLanguage(match[2].replace(/^`+/, ''))) {
         out.push(match[1], match[2]);
         open = /^`+/.exec(match[2])![0];
         continue;
