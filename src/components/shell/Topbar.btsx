@@ -77,10 +77,12 @@ setup
     const name = window.prompt('Name your new team:')?.trim();
     if (name) void cloud.createTeam(name, starterWorkspace());
   };
-  const createProject = () => {
-    if (!cloudState.activeTeamId) return;
-    const name = window.prompt('Name your new project:')?.trim();
-    if (name) void cloud.createProject(cloudState.activeTeamId, name, starterWorkspace());
+  const createProject = async (name: string) => {
+    const teamId = cloud.getSnapshot().activeTeamId;
+    if (!teamId) throw new Error('Select a team before creating a project.');
+    await cloud.createProject(teamId, name, starterWorkspace());
+    const error = cloud.getSnapshot().error;
+    if (error) throw new Error(error);
   };
   const toggleArrangement = () => {
     // Moving panes re-inserts the preview iframe, which drops its document; reload it once the new order is in place.
@@ -135,7 +137,8 @@ div
         ~   busy={cloudState.isSwitching || (auth.isAuthenticated && Boolean(cloudState.activeTeamId) && projectsResult === undefined)}
         ~   createLabel={auth.isAuthenticated && cloudState.activeTeamId ? 'Create project' : undefined}
         ~   onSelect={chooseProject}
-        ~   onCreate={auth.isAuthenticated && cloudState.activeTeamId ? createProject : undefined}
+        ~   createNameLabel='Project name'
+        ~   onCreateWithName={auth.isAuthenticated && cloudState.activeTeamId ? createProject : undefined}
         ~ )
 
     ViewToolbar(session={session} layout={layout} toggleArrangement={toggleArrangement})

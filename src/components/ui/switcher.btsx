@@ -2,6 +2,8 @@ module "use client";
 import DropdownMenu, { DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu.btsx";
 import Button from '@/components/ui/button.btsx'
 import { Icon, type IconName } from "@/lib/icons";
+import { useEffect, useId, useRef, useState } from 'octane';
+import { useField, useForm, useSelector } from '@octanejs/tanstack-form';
 
 module
   interface SwitcherItem {
@@ -19,42 +21,83 @@ module
     createLabelIcon?: IconName
     onSelect?: (item: SwitcherItem) => void
     onCreate?: () => void
+    createNameLabel?: string
+    onCreateWithName?: (name: string) => Promise<void>
     icon?: IconName
   }
 
-component SwitcherRoot
-  props { items, title, activeId, emptyLabel, busy = false, createLabel, createLabelIcon, onSelect, onCreate, icon }: SwitcherProps
+component SwitcherCreateForm
+  props { label, onCreate, onCancel, onCreated }: { label: string; onCreate: (name: string) => Promise<void>; onCancel: () => void; onCreated: () => void }
   setup
+    const id = useId();
+    const input = useRef<HTMLInputElement | null>(null);
+    const form = useForm({ defaultValues: { name: '' }, onSubmit: async ({ value }) => {
+      form.setErrorMap({ onSubmit: undefined });
+      try {
+        await onCreate(value.name.trim());
+        onCreated();
+      } catch (error) {
+        form.setErrorMap({ onSubmit: { fields: {}, form: error instanceof Error ? error.message : 'Unable to create. Please try again.' } });
+      }
+    } });
+    const field = useField({ form, name: 'name', validators: {
+      onSubmit: ({ value }) => value.trim() ? undefined : 'Enter a name.'
+    } });
+    const submitting = useSelector(form.store, state => state.isSubmitting);
+    const submitError = useSelector(form.store, state => state.errors.join(' '));
+    const error = field.state.meta.errors.join(' ') || submitError;
+    useEffect(() => { input.current?.focus(); }, []);
+    const submit = (event: SubmitEvent) => { event.preventDefault(); if (!submitting) void form.handleSubmit(); };
+
+  form(className='space-y-2 p-2' onSubmit={submit} onKeyDown={event => { if (event.key !== 'Escape') event.stopPropagation(); }} aria-busy={submitting})
+    label(for={id} className='block text-xs text-muted-foreground') #{label}
+    input(id={id} ref={input} type='text' autocomplete='off' value={field.state.value} onInput={event => { field.handleChange(event.currentTarget.value); form.setErrorMap({ onSubmit: undefined }); }} onBlur={field.handleBlur} disabled={submitting} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : undefined} className='h-8 w-full min-w-0 rounded-md border border-border bg-muted px-2 text-sm text-fg outline-none focus:border-accent disabled:opacity-50')
+    if error
+      p(id={`${id}-error`} role='alert' className='text-xs text-destructive') #{error}
+    div(className='flex justify-end gap-1')
+      Button(type='button' variant='ghost' size='sm' onClick={onCancel} disabled={submitting}) Cancel
+      Button(type='submit' size='sm' disabled={submitting || !field.state.value.trim()}) #{submitting ? 'Creating…' : 'Create'}
+
+component SwitcherRoot
+  props { items, title, activeId, emptyLabel, busy = false, createLabel, createLabelIcon, onSelect, onCreate, createNameLabel, onCreateWithName, icon }: SwitcherProps
+  setup
+    const [open, setOpen] = useState(false);
+    const [creating, setCreating] = useState(false);
+    const close = () => { setOpen(false); setCreating(false); };
     const activeItem = items.find(item => item.id === activeId) ?? items[0];
     const trigger = <Button/>;
     const label = busy ? 'Loading…' : activeItem?.label ?? emptyLabel;
 
-  DropdownMenu
+  DropdownMenu(open={open} onOpenChange={next => { setOpen(next); if (!next) setCreating(false); }})
     DropdownMenuTrigger(render={trigger} className='h-9 bg-background/80 dark:bg-muted/50 hover:dark:bg-muted text-fg hover:bg-background/90 data-pressed:bg-background px-1 gap-0 light:border rounded-lg light:bg-panel light:border-panel-deep' disabled={busy})
       div(className="flex aspect-square size-7 md:size-6 items-center justify-center")
         Icon(name={activeItem?.icon ?? icon ?? 'circle-plus'} className='size-5 md:size-4 text-accent')
       div(className='min-w-0 h-6 flex items-center gap-1 max-[760px]:hidden')
         span(className='font-sans font-normal text-muted-foreground text-sm -tracking-[0.02em] truncate capitalize' title={label}) #{label}
         Icon(name='select-caret' className='hidden md:flex size-2.5 md:size-3 shrink-0 m-0 opacity-70')
-    DropdownMenuContent(className="min-w-44 max-w-72 bg-background" align="start" side="bottom" sideOffset={4})
-      DropdownMenuGroup
-        DropdownMenuLabel(className="font-normal text-xs text-muted-foreground opacity-80") #{title}
-        if items.length
-          DropdownMenuSeparator
-        each item in items key item.id
-          DropdownMenuItem(onClick={() => onSelect?.(item)} disabled={item.id === activeItem?.id} className="gap-1 p-2 hover:bg-foreground/10!")
-            div(className="flex size-6 items-center justify-center")
-              Icon(name={item.icon} className='size-7 md:size-5')
-            span(className='truncate pe-2') #{item.label}
-        empty
-          DropdownMenuItem(disabled className='hidden p-2 text-xs text-muted-foreground') #{emptyLabel}
-      if onCreate && createLabel
-        DropdownMenuGroup
-          DropdownMenuSeparator
-          DropdownMenuItem(onClick={onCreate} className="gap-1 p-2 text-muted-foreground hover:bg-muted-foreground/10! hover:text-accent")
-            div(className="flex size-6 items-center justify-center rounded-md")
-              Icon(name={createLabelIcon ?? 'plus'} className='size-3.5')
-            div(className="font-sans text-sm -tracking-[0.02em]") #{createLabel}
+    DropdownMenuContent(className={creating ? 'min-w-64 max-w-72 bg-background' : 'min-w-44 max-w-72 bg-background'} align="start" side="bottom" sideOffset={4})
+      if creating && onCreateWithName
+        SwitcherCreateForm(label={createNameLabel ?? 'Name'} onCreate={onCreateWithName} onCancel={close} onCreated={close})
+      else
+        fragment
+          DropdownMenuGroup
+            DropdownMenuLabel(className="font-normal text-xs text-muted-foreground opacity-80") #{title}
+            if items.length
+              DropdownMenuSeparator
+            each item in items key item.id
+              DropdownMenuItem(onClick={() => onSelect?.(item)} disabled={item.id === activeItem?.id} className="gap-1 p-2 hover:bg-foreground/10!")
+                div(className="flex size-6 items-center justify-center")
+                  Icon(name={item.icon} className='size-7 md:size-5')
+                span(className='truncate pe-2') #{item.label}
+            empty
+              DropdownMenuItem(disabled className='hidden p-2 text-xs text-muted-foreground') #{emptyLabel}
+          if (onCreate || onCreateWithName) && createLabel
+            DropdownMenuGroup
+              DropdownMenuSeparator
+              DropdownMenuItem(closeOnClick={!onCreateWithName} onClick={() => { if (onCreateWithName) setCreating(true); else onCreate?.(); }} className="gap-1 p-2 text-muted-foreground hover:bg-muted-foreground/10! hover:text-accent")
+                div(className="flex size-6 items-center justify-center rounded-md")
+                  Icon(name={createLabelIcon ?? 'plus'} className='size-3.5')
+                div(className="font-sans text-sm -tracking-[0.02em]") #{createLabel}
 
 props {...props}: SwitcherProps
 SwitcherRoot({...props})
