@@ -132,7 +132,7 @@ component FluidTooltipRoot
       showArrowRef,
       contentClassNameRef,
     }), [align, disabled, id, side, sideOffset]);
-  RootContext.Provider(value={context}) #{children}
+  RootContext(value={context}) #{children}
 component FluidTooltipTrigger
   props { children, keepOpenOnClick = false, ref, ...props }: FluidTooltipTriggerProps & { ref: Ref<HTMLElement|null> }
   setup
@@ -229,7 +229,7 @@ setup
     }
   }
 T.Provider(delay={Math.max(0, openDelay)} closeDelay={Math.max(0, closeDelay)} timeout={50})
-  GroupContext.Provider(value={context}) #{children}
+  GroupContext(value={context}) #{children}
   T.Root(
     ~ handle={handle}
     ~ disabled={disabled}

@@ -239,9 +239,9 @@ main.page
   h1 Context & nested providers
   p.description Toggle the shared preference and compare the three scopes.
   button(type='button' onClick={() => setDensity(value => value === 'comfortable' ? 'compact' : 'comfortable')}) Toggle density
-  DensityContext.Provider(value={density})
+  DensityContext(value={density})
     Workspace
-    DensityContext.Provider(value='compact')
+    DensityContext(value='compact')
       DensityCard(label='Nested override')
   DensityCard(label='Outside provider')
 `, {

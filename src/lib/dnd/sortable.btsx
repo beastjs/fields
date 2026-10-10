@@ -179,7 +179,7 @@ component SortableContent
     })
     const content = withoutSlot ? children : renderedContent
 
-  SortableContentContext.Provider(value={true})
+  SortableContentContext(value={true})
     | #{content}
 
 component SortableItem
@@ -242,7 +242,7 @@ component SortableItem
       },
     })
 
-  SortableItemContext.Provider(value={itemContext})
+  SortableItemContext(value={itemContext})
     | #{item}
 
 component SortableItemHandle
@@ -292,7 +292,7 @@ component SortableOverlay
         ...overlayProps,
         className: cn(!context.flatCursor && 'cursor-grabbing', className),
         dropAnimation,
-        children: createElement(SortableOverlayContext.Provider, { value: true }, overlayChildren),
+        children: createElement(SortableOverlayContext, { value: true }, overlayChildren),
       },
     )
     const portal = container ? createPortal(overlay, container) : null
@@ -441,7 +441,7 @@ setup
     [id, items, activeModifiers, config.collisionDetector, activeId, flatCursor],
   )
 
-SortableRootContext.Provider(value={contextValue})
+SortableRootContext(value={contextValue})
   DragDropProvider(
     ~ modifiers={activeModifiers}
     ~ plugins={plugins}

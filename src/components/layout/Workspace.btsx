@@ -131,33 +131,34 @@ section(className='workspace relative isolate min-w-0 min-h-0 overflow-hidden be
           SortableContent(withoutSlot={true})
             Group(id={'dock-group-' + view.order.join('-')} className={dockGroup} orientation={narrow ? 'vertical' : 'horizontal'} disabled={view.arranging} groupRef={layout.groups.dock} defaultLayout={layout.currentDockLayout()} onLayoutChange={layout.sync} onLayoutChanged={layout.commit})
               each pane, index in renderedOrder key pane
-                SortableItem(
-                  ~ id={'view-' + pane}
-                  ~ value={pane}
-                  ~ referenceProp='elementRef'
-                  ~ asHandle={true}
-                  ~ disabled={!view.arranging}
-                  ~ tabIndex={view.arranging ? 0 : -1}
-                  ~ role={view.arranging ? 'button' : 'region'}
-                  ~ aria-label={view.arranging ? 'Move ' + paneLabel(pane) + ' pane' : paneLabel(pane)}
-                  ~ render={createElement(Panel, {
-                  ~   panelRef: layout.panels[pane],
-                  ~   minSize: pane === 'files' ? (narrow ? '20%' : '9%') : pane === 'chat' ? (narrow ? '45%' : '24%') : '20%',
-                  ~   maxSize: '100%',
-                  ~   collapsible: true,
-                  ~   collapsedSize: '0%',
-                  ~   className: panelContainer + ' ' + paneCard,
-                  ~ })}
-                  ~ )
-                  span(className='absolute top-2 left-2 z-10 rounded-md bg-[#090909] px-2 py-1 text-[11px] leading-none tracking-[-0.01em] text-[#f7f7f4] shadow-[0_4px_12px_#0004]' hidden={!view.arranging} aria-hidden='true') #{paneLabel(pane)}
-                  PaneContent(pane={pane} session={session} layout={layout} navigate={navigate})
-                if index < view.order.length - 1
-                  Separator(
-                    ~ id={'resize-' + pane + '-' + renderedOrder[index + 1]}
-                    ~ className={separator + ' arranging:hidden'}
-                    ~ aria-label={resizeLabel(pane, renderedOrder[index + 1])}
-                    ~ disabled={view.arranging || (!view[pane] && !view[renderedOrder[index + 1]])}
+                fragment
+                  SortableItem(
+                    ~ id={'view-' + pane}
+                    ~ value={pane}
+                    ~ referenceProp='elementRef'
+                    ~ asHandle={true}
+                    ~ disabled={!view.arranging}
+                    ~ tabIndex={view.arranging ? 0 : -1}
+                    ~ role={view.arranging ? 'button' : 'region'}
+                    ~ aria-label={view.arranging ? 'Move ' + paneLabel(pane) + ' pane' : paneLabel(pane)}
+                    ~ render={createElement(Panel, {
+                    ~   panelRef: layout.panels[pane],
+                    ~   minSize: pane === 'files' ? (narrow ? '20%' : '9%') : pane === 'chat' ? (narrow ? '45%' : '24%') : '20%',
+                    ~   maxSize: '100%',
+                    ~   collapsible: true,
+                    ~   collapsedSize: '0%',
+                    ~   className: panelContainer + ' ' + paneCard,
+                    ~ })}
                     ~ )
+                    span(className='absolute top-2 left-2 z-10 rounded-md bg-[#090909] px-2 py-1 text-[11px] leading-none tracking-[-0.01em] text-[#f7f7f4] shadow-[0_4px_12px_#0004]' hidden={!view.arranging} aria-hidden='true') #{paneLabel(pane)}
+                    PaneContent(pane={pane} session={session} layout={layout} navigate={navigate})
+                  if index < view.order.length - 1
+                    Separator(
+                      ~ id={'resize-' + pane + '-' + renderedOrder[index + 1]}
+                      ~ className={separator + ' arranging:hidden'}
+                      ~ aria-label={resizeLabel(pane, renderedOrder[index + 1])}
+                      ~ disabled={view.arranging || (!view[pane] && !view[renderedOrder[index + 1]])}
+                      ~ )
       Separator(className={separator} aria-label='Resize output' disabled={view.arranging})
       Panel(id='view-output' panelRef={layout.panels.output} minSize='12%' maxSize='70%' collapsible={true} collapsedSize='0%' className={panelContainer})
         OutputPane(session={session} layout={layout} navigate={navigate})

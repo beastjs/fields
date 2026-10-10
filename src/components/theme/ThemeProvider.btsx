@@ -13,4 +13,4 @@ setup
     toggleTheme: session.toggleTheme,
   }), [theme, session]);
 
-ThemeContext.Provider(value={value}) #{children}
+ThemeContext(value={value}) #{children}
