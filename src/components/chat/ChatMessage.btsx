@@ -27,6 +27,7 @@ setup
   const [applyState, setApplyState] = useState('');
   const [applyError, setApplyError] = useState('');
   const pending = useRef<AbortController | null>(null);
+  const pendingAutomatic = useRef(false);
   useEffect(() => () => pending.current?.abort(), []);
 
   // `automatic` marks auto-apply runs, whose failures are fed back to the model.
@@ -34,6 +35,7 @@ setup
     if (recommendation?.source === undefined || !targetContext || message.projectGeneration === undefined || pending.current || applyState === 'Applied · compiled · startup verified') return;
     const abort = new AbortController();
     pending.current = abort;
+    pendingAutomatic.current = automatic;
     setApplyError('');
     setApplyState('Checking compilation and startup…');
     try {
@@ -44,7 +46,7 @@ setup
       const reason = error instanceof Error ? error.message : 'Could not verify this change.';
       setApplyError('Not applied. ' + reason);
       if (automatic) onAutoFailure?.(message, reason);
-    } finally { pending.current = null; }
+    } finally { pending.current = null; pendingAutomatic.current = false; }
   };
 
   // Captured when this message first renders: toggling auto-apply later must not
@@ -52,19 +54,21 @@ setup
   const autoOnArrival = useRef(auto);
   const autoApplied = useRef(false);
   useEffect(() => {
+    if (!auto) { autoApplied.current = true; if (pendingAutomatic.current) pending.current?.abort(); return; }
     if (!autoOnArrival.current || autoApplied.current) return;
     if (message.state !== 'complete' || recommendation?.source === undefined || message.projectGeneration === undefined) return;
     autoApplied.current = true;
     void apply(true);
-  }, [message.id, message.state, message.projectGeneration, recommendation?.file]);
+  }, [auto, message.id, message.state, message.projectGeneration, recommendation?.file]);
 
   // A change that cannot even be applied (no match, wrong file, cut off) is fed back the same way.
   const errorReported = useRef(false);
   useEffect(() => {
+    if (!auto) { errorReported.current = true; return; }
     if (!autoOnArrival.current || errorReported.current || message.state !== 'complete' || !recommendation?.error) return;
     errorReported.current = true;
     onAutoFailure?.(message, recommendation.error);
-  }, [message.id, message.state, recommendation?.error]);
+  }, [auto, message.id, message.state, recommendation?.error]);
   const exhausted = autoOnArrival.current && (message.attempt ?? 1) >= MAX_ATTEMPTS && !!(recommendation?.error || applyError);
   // Running out of attempts is one way the loop stops; `haltReason` carries the others.
   const halt = haltReason ?? (exhausted ? EXHAUSTED : '');
@@ -76,7 +80,7 @@ article(className={'chat-message mb-6 ' + message.role} data-message-state={mess
   div(className='mb-[9px] flex items-center gap-[7px]')
 
     span(className={cn('grid size-5 place-items-center rounded-full border border-edge-strong bg-surface-hover text-[11px] text-dim', message.role === 'assistant' && 'border-[#70503a] text-brand')}) #{message.role === 'user' ? '↗' : '✦'}
-    strong(className='text-[10px] font-medium text-fg') #{message.role === 'user' ? (message.attempt ? 'Auto-fix' : 'You') : 'Assistant'}
+    strong(className='text-[10px] font-medium text-fg') #{message.role === 'user' ? (message.attempt || message.origin === 'editor' ? 'Auto-fix' : 'You') : 'Assistant'}
     if message.attempt && message.attempt > 1
       span(className={messageState}) #{'ATTEMPT ' + message.attempt + '/' + MAX_ATTEMPTS}
     if message.role === 'assistant'

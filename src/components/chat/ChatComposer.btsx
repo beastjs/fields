@@ -105,8 +105,8 @@ form(className='shrink-0 border-t border-edge bg-editor p-3 chat-short:p-2' onSu
       label(className='mb-[9px] flex flex-wrap items-center gap-[5px] text-[8px] text-dim [&_input]:m-0 [&_input]:size-[11px] [&_input]:accent-brand')
         Checkbox(checked={includeFile.state.value} onCheckedChange={includeFile.handleChange} disabled={selecting} aria-label={'Include ' + fileLabel(project.activeFile)} indicatorClass='bg-accent' className=' data-checked:border-accent!')
         code(className='max-w-full overflow-hidden text-ellipsis rounded-[3px] border border-edge bg-surface-hover px-1 py-px font-code text-2xs text-brand-hover' title={project.activeFile}) #{fileLabel(project.activeFile)}
-    label(className='mb-[9px] flex flex-wrap items-center gap-[5px] text-2xs text-dim [&_input]:m-0 [&_input]:size-[11px] [&_input]:accent-brand' htmlFor='auto')
-      Checkbox#auto(aria-label='Auto-apply' checked={auto} onCheckedChange={toggleAuto} indicatorClass='bg-accent' className=' data-checked:border-accent!')
+    label(className='mb-[9px] flex flex-wrap items-center gap-[5px] text-2xs text-dim [&_input]:m-0 [&_input]:size-[11px] [&_input]:accent-brand' htmlFor='auto' title='Automatically fix detected editor errors and apply changes after compilation and startup checks')
+      Checkbox#auto(aria-label='Auto-apply and fix editor errors' checked={auto} onCheckedChange={toggleAuto} indicatorClass='bg-accent' className=' data-checked:border-accent!')
       span(className='select-none') Auto
 
   details(className='mb-2 rounded-md bg-edge/50 px-2 py-1 text-[10px] text-dim' open={false})

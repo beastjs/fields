@@ -25,7 +25,7 @@ export function compileOctaneModule(source: string, filename: string, sourceMap?
   const result = compileOctane(source, filename, { mode: 'client', hmr: hmr ? 'vite' : false, dev: false });
   return { code: result.code, sourceMap: composeMaps(JSON.stringify(result.map), sourceMap),
     diagnostics: result.diagnostics.map(d => ({
-      file: filename, source: 'octane' as const, code: d.code, severity: d.severity, message: d.message,
+      file: filename, source: 'octane' as const, code: d.code, severity: d.severity === 'hint' ? 'info' as const : d.severity, message: d.message,
       start: mapPosition({ line: d.start.line, column: d.start.column + 1 }, sourceMap),
       end: mapPosition({ line: d.end.line, column: d.end.column + 1 }, sourceMap),
     })) };

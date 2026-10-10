@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'octane'
 import { ChatController } from '../../chat/controller'
+import { EditorErrorRepair } from '../../chat/editor-errors'
 import { readChatSettings, saveChatSettings } from '../../chat/settings'
 import PaneSurface from '../layout/PaneSurface.btsx'
 import CollapseButton from '../layout/CollapseButton.btsx'
@@ -50,6 +51,9 @@ setup
   const errorButton = cn(secondaryButton, 'px-[7px] py-1 text-[9px]');
   const [isAutoApply, setIsAutoApply] = useState(true)
   const toggleAuto = () => setIsAutoApply(v => !v)
+  const editorRepair = useMemo(() => new EditorErrorRepair(session, chat, { onRepair: () => layout.expand('chat') }), [session, chat, layout]);
+  useEffect(() => () => editorRepair.dispose(), [editorRepair]);
+  useEffect(() => { editorRepair.setEnabled(isAutoApply && connected && !!state.settings.model.trim()); }, [editorRepair, isAutoApply, connected, state.settings.model]);
   const repairLifetime = useMemo(() => new AbortController(), []);
   useEffect(() => () => repairLifetime.abort(), [repairLifetime]);
   const autoRef = useRef(isAutoApply)
@@ -73,18 +77,22 @@ setup
     if (!file) return;
     const attempt = message.attempt ?? 1;
     if (session.read(file) === undefined) return;
+    // An automatic editor repair belongs to the source that raised the error.
+    // Typing a new version cancels that repair instead of rewriting the new work.
+    if (message.origin === 'editor' && attached.some(context => session.read(context.file) !== context.source)) return;
     const messages = chat.getSnapshot().messages;
     const reply = messages.findIndex(entry => entry.id === message.id);
     const request = messages.slice(0, reply < 0 ? 0 : reply).filter(entry => entry.role === 'user' && !entry.attempt).at(-1)?.content ?? '';
-    void planRepair({ prompt: request, file, source: session.read(file), error, attempt }, undefined, repairLifetime.signal).then(plan => {
+    const repairSource = session.read(file);
+    void planRepair({ prompt: request, file, source: repairSource, error, attempt }, undefined, repairLifetime.signal).then(plan => {
       // Deciding took a round trip, in which the developer may have turned auto off or moved on.
-      if (!current(message) || session.getSnapshot().projectGeneration !== message.projectGeneration) return;
+      if (!current(message) || session.getSnapshot().projectGeneration !== message.projectGeneration || session.read(file) !== repairSource) return;
       if (plan.action === 'stop') { setHalted(reasons => ({ ...reasons, [message.id]: plan.reason })); return; }
       const source = session.read(file);
       if (source === undefined) return;
       const snapshot = session.getSnapshot();
       const { references } = chatReferences(snapshot.project, [], attached.filter(reference => reference.file !== file).map(reference => reference.file));
-      void chat.submit(plan.prompt, { file, source }, snapshot.projectGeneration, references, attempt + 1, Object.keys(snapshot.project.files));
+      void chat.submit(plan.prompt, { file, source }, snapshot.projectGeneration, references, attempt + 1, Object.keys(snapshot.project.files), message.origin);
     }).catch(() => { /* Unmount cancelled the pending repair. */ });
   }
 

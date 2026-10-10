@@ -96,16 +96,33 @@ storage or restore failure. **Reset project** asks before replacing files and th
 saved copy with Hello World. It clears editor history and the running preview,
 while retaining the Vim preference, panel layout, and chat settings.
 
-**AI chat** supports Meta (the default), Cohere, OpenRouter, and a custom compatible endpoint, with
+**AI chat** defaults to Meta's `muse-spark-1.3-contributor` and also supports Cohere, OpenRouter, and a custom compatible endpoint, with
 optional active-file context and stop/retry controls. Provider/model settings
 are remembered; keys and conversations are not saved in browser storage.
+
+For local chat, set `META_API_KEY` and `META_BASE_URL` (or `META_URL`) in `.env` and restart the dev or preview server.
+The base URL must be the OpenAI-compatible API root, including `/v1` when required; chat appends `/chat/completions`.
+The hosted editor needs the same variables as Worker secrets in `editor-host/`.
+`/api/ai/status` reports which server connections are configured without exposing credentials.
+Switching providers requires a model ID supported by that provider.
+
+The separate Convex agent action uses environment variables on the Convex deployment: `META_API_KEY`,
+`META_BASE_URL` (or `META_URL`), and optionally `META_MODEL` to override `muse-spark-1.3-contributor`.
 
 For file recommendations, leave **Include active file** enabled and ask for a
 change. Complete replacement recommendations offer **Apply & verify** with the
 target filename. The playground compiles the proposed project in a separate
 worker before updating the file, reports errors in chat, and preserves the current
 source on failure or stale context. Successful edits refresh the preview, autosave,
-and can be undone in the editor. This checks compilation, not runtime correctness.
+and can be undone in the editor. Verification checks compilation and startup; it does not prove every runtime interaction.
+
+With **Auto** enabled, a configured chat connection starts a repair when the editor
+reports a compiler error or a runtime error with a current source location. After
+a short typing debounce, chat attaches the affected file, diagnostics, and related
+project files, then verifies the proposed change before applying it. Failed proposals
+can retry up to five attempts. The same unchanged error is sent once, repairs wait
+while chat is busy, and editing the project cancels an in-flight automatic response.
+Turn **Auto** off to stop automatic repairs and application; manual chat remains available.
 
 Runtime errors appear in the console with clickable source locations. Click a
 frame such as `Counter.btsx:3:5` to open the authored file and highlight the line.

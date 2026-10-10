@@ -5,6 +5,9 @@ import { handleJevRequest } from '../../server/jev-api';
 interface Env {
   ASSETS: { fetch(request: Request): Promise<Response> };
   COHERE_API_KEY?: string;
+  META_API_KEY?: string;
+  META_BASE_URL?: string;
+  META_URL?: string;
   OPENROUTER_API_KEY?: string;
   AI_CUSTOM_API_KEY?: string;
   AI_CUSTOM_BASE_URL?: string;
@@ -34,6 +37,9 @@ export default {
         ? await handleJevRequest(routed, { TYPESAFE_API_KEY: env.TYPESAFE_API_KEY })
         : await handleAIRequest(routed, {
             COHERE_API_KEY: env.COHERE_API_KEY,
+            META_API_KEY: env.META_API_KEY,
+            META_BASE_URL: env.META_BASE_URL,
+            META_URL: env.META_URL,
             OPENROUTER_API_KEY: env.OPENROUTER_API_KEY,
             AI_CUSTOM_API_KEY: env.AI_CUSTOM_API_KEY,
             AI_CUSTOM_BASE_URL: env.AI_CUSTOM_BASE_URL,

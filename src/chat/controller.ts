@@ -4,7 +4,7 @@ import { MAX_PROJECT_PATHS, MAX_REFERENCE_CHARS, MAX_REFERENCES, type AIStatus, 
 import { streamChat } from './transport';
 import { requestedFiles } from './context-request';
 
-export interface ChatMessage extends ChatTurn { reasoning?: string; context?: FileContext; references?: FileContext[]; attachments?: string[]; projectGeneration?: number; id: number; attempt?: number; model?: string; state?: 'complete' | 'streaming' | 'stopped' | 'error' }
+export interface ChatMessage extends ChatTurn { reasoning?: string; context?: FileContext; references?: FileContext[]; attachments?: string[]; projectGeneration?: number; id: number; attempt?: number; model?: string; origin?: 'editor'; state?: 'complete' | 'streaming' | 'stopped' | 'error' }
 export interface ChatSnapshot {
   settings: ChatSettings;
   messages: ChatMessage[];
@@ -22,6 +22,7 @@ export class ChatController {
   private lastRequest?: ChatRequest;
   private lastGeneration?: number;
   private lastAttempt = 1;
+  private lastOrigin?: 'editor';
   private disposed = false;
   constructor(settings: ChatSettings, private persist: (settings: ChatSettings) => void, private send: FetchLike = fetch,
     private workspace?: () => { files: Record<string, string>; generation: number; activeFile?: string }) {
@@ -50,23 +51,25 @@ export class ChatController {
     this.patch({ settings: { ...settings }, error: '' });
   };
   /**
-   * `attempt` counts automatic fix-up rounds for one request: 1 for the user's own message.
+   * `attempt` counts automatic fix-up rounds for one request, starting at 1.
    * `files` lists every current project path, so the model knows what exists beyond the attached sources.
+   * `origin` keeps editor-triggered repairs visible in the log but out of later manual history.
    */
-  async submit(prompt: string, context?: FileContext, projectGeneration?: number, references: FileContext[] = [], attempt = 1, files: string[] = []) {
+  async submit(prompt: string, context?: FileContext, projectGeneration?: number, references: FileContext[] = [], attempt = 1, files: string[] = [], origin?: 'editor') {
     if (this.disposed || this.state.busy || !prompt.trim()) return;
     if (prompt.length > 32000) { this.patch({ error: 'Keep your message under 32,000 characters.' }); return; }
     if (context && context.source.length > 60000) { this.patch({ error: 'This file is too large to attach. Turn off active-file context or select a smaller file.' }); return; }
     if (references.length > MAX_REFERENCES) { this.patch({ error: `Include at most ${MAX_REFERENCES} other files.` }); return; }
     if (references.reduce((sum, reference) => sum + reference.source.length, 0) > MAX_REFERENCE_CHARS) { this.patch({ error: 'The included files are too large together (60,000 characters maximum). Remove one and retry.' }); return; }
     const attachments = [...(context ? [context.file] : []), ...references.map(reference => reference.file)];
-    const user: ChatMessage = { id: ++this.sequence, role: 'user', content: prompt.trim(), attachments: attachments.length ? attachments : undefined, attempt: attempt > 1 ? attempt : undefined };
+    const user: ChatMessage = { id: ++this.sequence, role: 'user', content: prompt.trim(), attachments: attachments.length ? attachments : undefined, attempt: attempt > 1 ? attempt : undefined, origin };
     const messages = [...this.state.messages, user];
     this.patch({ messages });
     const settings = this.state.settings;
     // Do not let rejected patches and repair chatter become evidence for the next edit.
     // A repair is self-contained: original intent, exact current source, and located lines.
-    const history = attempt > 1 ? [user] : messages.filter(message => {
+    const history = attempt > 1 || origin === 'editor' ? [user] : messages.filter(message => {
+      if (message.origin === 'editor') return false;
       if (message.state === 'error' || message.state === 'stopped') return false;
       if (message.role === 'user') return !message.attempt;
       return message.attempt === 1 && !fileRecommendation(message.content, message.context, message.references)?.error;
@@ -75,13 +78,14 @@ export class ChatController {
     this.lastRequest = request;
     this.lastGeneration = projectGeneration;
     this.lastAttempt = attempt;
+    this.lastOrigin = origin;
     await this.run(request);
   }
   private async run(request: ChatRequest) {
     if (this.disposed) return;
     const abort = new AbortController(); this.abort = abort;
     const id = ++this.sequence;
-    this.patch({ busy: true, error: '', messages: [...this.state.messages, { id, role: 'assistant', content: '', model: request.model, state: 'streaming', context: request.context ? { ...request.context } : undefined, references: request.references?.map(reference => ({ ...reference })), projectGeneration: this.lastGeneration, attempt: this.lastAttempt }] });
+    this.patch({ busy: true, error: '', messages: [...this.state.messages, { id, role: 'assistant', content: '', model: request.model, origin: this.lastOrigin, state: 'streaming', context: request.context ? { ...request.context } : undefined, references: request.references?.map(reference => ({ ...reference })), projectGeneration: this.lastGeneration, attempt: this.lastAttempt }] });
     const update = (patch: Partial<ChatMessage>) => this.patch({ messages: this.state.messages.map(message => message.id === id ? { ...message, ...patch } : message) });
     try {
       for (let round = 0; ; round++) {

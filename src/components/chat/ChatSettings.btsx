@@ -26,7 +26,7 @@ setup
   const changeProvider = (event: Event) => {
     const value = (event.currentTarget as HTMLSelectElement).value as AIProvider;
     provider.handleChange(value);
-    model.handleChange(value === 'custom' ? '' : DEFAULT_MODEL);
+    model.handleChange(value === 'meta' ? DEFAULT_MODEL : '');
     apiKey.handleChange('');
     baseURL.handleChange(value === 'custom' ? initial.status?.customBaseURL ?? 'http://127.0.0.1:11434/v1' : '');
   };

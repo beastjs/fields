@@ -19,11 +19,11 @@ section#overview
         // Two set lines on wide screens; on narrow ones the phrase flows and balances instead.
         h1(className='text-[clamp(24px,4.4vw,50px)] leading-[1.06] font-semibold md:font-bold tracking-[-0.045em] text-center md:text-balance max-w-[15ch]')
           span(className='min-[640px]:block opacity-60')
-            | #{'Let the '}
-            em(className='pr-[0.04em] font-bold light:text-[#f3adbc] opacity-100') machines
-            | #{' build'}
+            span(className='opacity-60') #{'Let the '}
+            span(className='pr-[0.04em] font-bold light:text-[#f3adbc] dark:text-emerald-300 opacity-100') machines
+            span(className='opacity-60') #{' build.'}
           | #{' '}
-          span(className='min-[640px]:block') your billion dollar ideas!
+          span(className='min-[640px]:block') concept to production.
         p(className='hidden max-w-[540px] text-[15px] leading-[1.65] text-pretty text-(--fl-dim)') Build Beast components with an agent at your side. Read the Octane they compile to, and watch them run live in the browser — no install, no build step.
 
   div(className='relative border-y border-(--fl-rule) light:border-panel-deep light:bg-panel-deep/20')

@@ -28,7 +28,7 @@ PaneSurface(layout={layout} pane='editor' label='Code editor' className='flex fl
     // CLOSE PANE
     CollapseButton(layout={layout} pane='editor')
 
-  div#editor(className='min-h-0 flex-1 overflow-hidden' ref={mount} data-keymap={state.keymap})
+  div#editor(className='min-h-0 flex-1 overflow-hidden font-mono' ref={mount} data-keymap={state.keymap})
 
   div(className='flex items-center justify-between h-6 gap-2.5 px-6 text-[10px] text-faint')
     span(className='space-x-1')

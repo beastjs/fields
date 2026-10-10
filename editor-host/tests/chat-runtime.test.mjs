@@ -18,11 +18,11 @@ before(async () => {
   });
   runtime = new Miniflare(convertV4MiniflareOptions({
     modules: true, script: bundle.outputFiles[0].text, compatibilityDate: '2026-09-01',
-    bindings: { COHERE_API_KEY: 'test-cohere', TYPESAFE_API_KEY: 'test-typesafe' },
+    bindings: { COHERE_API_KEY: 'test-cohere', META_API_KEY: 'test-meta', META_BASE_URL: 'https://meta.test/v1', TYPESAFE_API_KEY: 'test-typesafe' },
     outboundService: async request => {
-      calls.push({ url: request.url, auth: request.headers.get('authorization') });
+      calls.push({ url: request.url, auth: request.headers.get('authorization'), model: (await request.clone().json()).model });
       if (redirectStatus) return new Response(null, { status: redirectStatus, headers: { location: 'https://redirect.invalid/secret-sink' } });
-      if (new URL(request.url).hostname === 'api.cohere.ai') {
+      if (['api.cohere.ai', 'meta.test'].includes(new URL(request.url).hostname)) {
         return new Response('data: {"choices":[{"delta":{"content":"Hello world"},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n', { headers: { 'content-type': 'text/event-stream' } });
       }
       return Response.json(evaluation);
@@ -33,6 +33,18 @@ after(async () => { await runtime?.dispose(); });
 
 const post = (route, body) => runtime.dispatchFetch(`https://editor.test/api/${route}`, {
   method: 'POST', headers: { 'content-type': 'application/json', origin: 'https://editor.test' }, body: JSON.stringify(body),
+});
+
+test('the Worker forwards Meta configuration, reports availability, and streams the corrected model', async () => {
+  calls = [];
+  const status = await runtime.dispatchFetch('https://editor.test/api/ai/status');
+  const settings = await status.json();
+  assert.equal(settings.configured.meta, true);
+  assert.equal(JSON.stringify(settings).includes('test-meta'), false);
+  const response = await post('ai/chat', { ...chat, provider: 'meta', model: 'muse-spark-1.3-contributor' });
+  assert.equal(response.status, 200);
+  assert.match(await response.text(), /\[DONE\]/);
+  assert.deepEqual(calls, [{ url: 'https://meta.test/v1/chat/completions', auth: 'Bearer test-meta', model: 'muse-spark-1.3-contributor' }]);
 });
 
 test('deployed Worker streams chat and evaluates TypeSafe using native Workers fetch', async () => {

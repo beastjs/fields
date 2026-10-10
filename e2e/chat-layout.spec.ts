@@ -1,12 +1,12 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import type { ChatRequest } from '../src/chat/contracts'
 
-async function ready(page: Page, url = '/') {
+async function ready(page: Page, url = '/playground') {
   await page.route('**/api/ai/status', (route) =>
     route.fulfill({ json: { configured: { cohere: false, meta: true, openrouter: true, custom: false } } })
   )
-  await page.goto(url)
-  await expect(page.locator('#preview-status')).toHaveText('Live', { timeout: 20000 })
+  await page.goto(url === '/' || url.startsWith('/?') ? `/playground${url.slice(1)}` : url)
+  await expect(page.getByRole('region', { name: 'Application preview', exact: true }).getByText('Live', { exact: true })).toBeVisible({ timeout: 20000 })
 }
 const answer = (text: string) =>
   `data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\ndata: [DONE]\n\n`
@@ -51,7 +51,7 @@ test('panel URLs restore proportions, collapsed views, back navigation, and rese
   await expect(page.locator('#pane-files')).toBeHidden()
   await expect(page.locator('#pane-chat')).toBeVisible()
   await page.getByRole('button', { name: 'Reset layout', exact: true }).click()
-  await expect(page).toHaveURL('/?keep=hello')
+  await expect(page).toHaveURL('/playground?keep=hello')
   await expect(page.locator('#pane-files')).toBeVisible()
   await expect(page.locator('#pane-chat')).toBeHidden()
 })
@@ -208,16 +208,15 @@ test('chat sends the default model with optional file context and safely renders
   })
   await ready(page)
   await openChat(page)
-  await expect(page.locator('.connection-label')).toHaveText('READY')
-  await page.getByRole('button', { name: 'Improve this file ↗', exact: true }).click()
-  await expect(page.getByRole('textbox', { name: 'Message AI' })).toHaveValue('Improve active file.')
+  await expect(page.getByRole('button', { name: 'Set up your connection ↗', exact: true })).toBeHidden()
+  await page.getByRole('textbox', { name: 'Message AI' }).fill('Improve active file.')
   await page.getByRole('button', { name: 'Send message', exact: true }).click()
   await expect(page.locator('.chat-markdown strong')).toHaveText('Counter')
   await expect(page.locator('.chat-markdown pre')).toContainText('h1 Hello')
   await expect(page.locator('.chat-markdown img, .chat-markdown script')).toHaveCount(0)
   expect(await page.evaluate(() => 'chatInjected' in window)).toBe(false)
   expect(requests[0].provider).toBe('meta')
-  expect(requests[0].model).toBe('muse-spark-1.5-contributor')
+  expect(requests[0].model).toBe('muse-spark-1.3-contributor')
   expect(requests[0].context?.file).toBe('/src/App.btsx')
   expect(requests[0].context?.source).toContain('import Counter')
   await page.getByRole('checkbox', { name: /Include App\.btsx/ }).uncheck()
@@ -242,13 +241,18 @@ test('provider and model settings persist while API keys stay out of storage and
   await openChat(page)
   await page.getByRole('button', { name: 'AI settings', exact: true }).click()
   await expect(page.getByRole('dialog', { name: 'AI settings' })).toBeVisible()
+  await expect(page.getByLabel('Model ID', { exact: true })).toHaveValue('muse-spark-1.3-contributor')
+  await page.getByLabel('Provider', { exact: true }).selectOption('cohere')
+  await expect(page.getByLabel('Model ID', { exact: true })).toHaveValue('')
+  await page.getByLabel('Provider', { exact: true }).selectOption('meta')
+  await expect(page.getByLabel('Model ID', { exact: true })).toHaveValue('muse-spark-1.3-contributor')
   await page.getByLabel('Provider', { exact: true }).selectOption('custom')
   await page.getByLabel('Model ID', { exact: true }).fill('my-coding-model')
   await page.getByLabel('API base URL', { exact: true }).fill('http://127.0.0.1:11434/v1')
   await page.getByLabel('API key', { exact: true }).fill('test-key-not-for-storage')
   await page.getByRole('button', { name: 'Save connection', exact: true }).click()
   await expect(page.getByRole('dialog')).toHaveCount(0)
-  await expect(page.locator('.model-name')).toHaveText('my-coding-model')
+  await expect(page.getByRole('region', { name: 'AI chat', exact: true }).getByText('my-coding-model', { exact: true })).toBeVisible()
   await page.getByRole('textbox', { name: 'Message AI' }).fill('Hello')
   await page.getByRole('button', { name: 'Send message', exact: true }).click()
   await expect(page.locator('.chat-markdown')).toContainText('Custom connection works.')

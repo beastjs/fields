@@ -44,6 +44,9 @@ export function aiMiddleware(req: IncomingMessage, res: ServerResponse, next: ()
       ? await handleJevRequest(request, { TYPESAFE_API_KEY: process.env.TYPESAFE_API_KEY })
       : await handleAIRequest(request, {
           COHERE_API_KEY: process.env.COHERE_API_KEY,
+          META_API_KEY: process.env.META_API_KEY,
+          META_BASE_URL: process.env.META_BASE_URL,
+          META_URL: process.env.META_URL,
           OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
           AI_CUSTOM_API_KEY: process.env.AI_CUSTOM_API_KEY,
           AI_CUSTOM_BASE_URL: process.env.AI_CUSTOM_BASE_URL

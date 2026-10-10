@@ -42,7 +42,7 @@ test('Cohere defaults use the real compatibility endpoint and unprefixed native 
 })
 
 test('the Muse Spark model is the default on the Meta endpoint and passes through unchanged', async () => {
-  expect(DEFAULT_MODEL).toBe('muse-spark-1.5-contributor')
+  expect(DEFAULT_MODEL).toBe('muse-spark-1.3-contributor')
   expect(defaultSettings).toEqual({ provider: 'meta', model: DEFAULT_MODEL, baseURL: '', apiKey: '' })
   let url: unknown, options: RequestInit | undefined
   const fetcher = (async (target, init) => {
@@ -59,7 +59,7 @@ test('the Muse Spark model is the default on the Meta endpoint and passes throug
   expect(url).toBe('https://api.meta.ai/v1/chat/completions')
   expect(new Headers(options!.headers).get('Authorization')).toBe('Bearer server-key')
   const payload = JSON.parse(options!.body as string)
-  expect(payload.model).toBe('muse-spark-1.5-contributor')
+  expect(payload.model).toBe('muse-spark-1.3-contributor')
   expect(payload).not.toHaveProperty('reasoning_effort')
 })
 

@@ -3,24 +3,14 @@
 import { Agent } from '@convex-dev/agent'
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
 import { ConvexError, v } from 'convex/values'
+import { DEFAULT_MODEL } from '../src/chat/contracts'
 import { components, internal } from './_generated/api'
 import { action } from './_generated/server'
 
-const meta = createOpenAICompatible({
-  name: 'meta',
-  baseURL: process.env.META_BASE_URL ?? process.env.META_URL ?? 'https://api.meta.ai/v1',
-  apiKey: process.env.META_API_KEY ?? ''
-})
-
-const assistant = new Agent(components.agent, {
-  name: 'Beast Playground',
-  languageModel: meta(process.env.META_MODEL ?? 'muse-spark-1.5-contributor'),
-  instructions:
-    'You are the coding assistant inside the Beast to Octane web playground. Give concise, practical help. ' +
-    'When recommending a complete file replacement, use a fenced code block whose info string contains the exact project path.'
-})
-
 const fileContextValidator = v.object({ file: v.string(), source: v.string() })
+const assistantInstructions =
+  'You are the coding assistant inside the Beast to Octane web playground. Give concise, practical help. ' +
+  'When recommending a complete file replacement, use a fenced code block whose info string contains the exact project path.'
 
 export const send = action({
   args: {
@@ -57,6 +47,17 @@ export const send = action({
       chatId: args.chatId,
       tokenIdentifier: identity.tokenIdentifier
     })
+    const baseURL = process.env.META_BASE_URL?.trim() || process.env.META_URL?.trim()
+    const apiKey = process.env.META_API_KEY?.trim()
+    if (!baseURL || !apiKey) {
+      throw new ConvexError({ code: 'NOT_CONFIGURED', message: 'Configure META_API_KEY and META_BASE_URL on this Convex deployment.' })
+    }
+    const meta = createOpenAICompatible({ name: 'meta', baseURL, apiKey })
+    const assistant = new Agent(components.agent, {
+      name: 'Beast Playground',
+      languageModel: meta(process.env.META_MODEL?.trim() || DEFAULT_MODEL),
+      instructions: assistantInstructions
+    })
     const contextSections = [args.context, ...(args.references ?? [])]
       .filter((file): file is { file: string; source: string } => file !== undefined)
       .map((file) => `\nFile ${file.file}:\n\`\`\`\n${file.source}\n\`\`\``)
@@ -68,7 +69,7 @@ export const send = action({
       threadId: access.threadId,
       userId: access.userId
     })
-    const result: { text: string } = await thread.generateText({ prompt, instructions })
+    const result: { text: string } = await thread.generateText({ prompt, instructions: `${assistantInstructions}\n\n${instructions}` })
     await ctx.runMutation(internal.chats.touchAfterMessage, {
       chatId: access.chatId,
       suggestedTitle: prompt

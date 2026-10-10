@@ -4,15 +4,27 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script>
-      try { document.documentElement.dataset.theme = localStorage.getItem('beast-playground.theme.v1') === 'light' ? 'light' : 'dark'; }
-      catch { document.documentElement.dataset.theme = 'dark'; }
+      try {
+        document.documentElement.dataset.theme =
+          localStorage.getItem('beast-playground.theme.v1') === 'light' ? 'light' : 'dark'
+      } catch {
+        document.documentElement.dataset.theme = 'dark'
+      }
     </script>
     <link rel="icon" href="/logo.svg" type="image/svg+xml" />
-    <meta name="description" content="Write Beast components, inspect Octane output, and run your application in an isolated browser preview." />
+    <meta
+      name="description"
+      content="Write Beast components, inspect Octane output, and run your application in an isolated browser preview."
+    />
     <title>Beast Playground</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist+Mono:ital,wght@0,100..900;1,100..900&family=Geist:ital,wght@0,100..900;1,100..900&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
     <div id="app"></div>
-
   </body>
 </html>
