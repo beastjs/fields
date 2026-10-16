@@ -66,7 +66,7 @@ setup
   const spacingStep = Math.max(0.01, (selected?.step ?? 4) / 4);
   const spacingMax = 96 * (selected?.step ?? 4);
 
-section(className='flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-edge-strong bg-panel shadow-elevation' aria-label='Element properties')
+section(className='flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-muted-foreground bg-panel shadow-elevation' aria-label='Element properties')
   header(className='flex shrink-0 items-start justify-between gap-3 border-b border-edge/70 px-4 py-3.5')
     div(className='min-w-0')
       p(className='text-[10px] font-medium tracking-[0.12em] text-dim uppercase') Layout

@@ -33,7 +33,7 @@ setup
   // The app's own light/dark theme, shared with the topbar's toggle; the studio preview follows it too.
   const { theme, toggleTheme } = useTheme();
 
-header(className='flex min-w-0 flex-wrap items-center justify-between gap-y-2 border-b border-edge-strong px-3 py-2')
+header(className='flex min-w-0 flex-wrap items-center justify-between gap-y-2 border-b border-muted-foreground/60 px-3 py-2')
   div(className='min-w-0 -space-y-1.5')
     div(className='flex flex-wrap items-baseline gap-x-3')
       h2#design-studio-title(className='font-semibold text-foreground/80 text-sm -tracking-[0.03em]') Design Studio

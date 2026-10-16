@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@beastjs/devtools": "^0.1.21",
     "esbuild": "0.28.1",
     "miniflare": "5.20260921.1-alpha",
     "typescript": "^5.9.3",

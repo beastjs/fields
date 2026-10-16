@@ -41,7 +41,7 @@ component TemplateCard
     const [expanded, setExpanded] = useState(false);
 
   // The card chrome sits on the wrapper so the description toggle can live beside, not inside, the main button.
-  div(className={cn('group/card relative rounded-md border border-edge bg-surface-recessed transition-colors hover:border-edge-strong hover:bg-surface-hover has-[[aria-pressed=true]]:border-brand/50 has-[[aria-pressed=true]]:shadow-[inset_0_0_0_1px_var(--brand)] p-px', state === 'current' ? 'bg-accent/20' : 'bg-panel')})
+  div(className={cn('group/card relative rounded-md border light:border-muted-foreground bg-surface-recessed transition-colors hover:border-edge-strong hover:bg-surface-hover has-[[aria-pressed=true]]:border-brand/50 has-[[aria-pressed=true]]:shadow-[inset_0_0_0_1px_var(--brand)] p-px', state === 'current' ? 'bg-accent/20' : 'bg-panel')})
     button(
       ~ type='button'
       ~ aria-pressed={state === 'current'}
