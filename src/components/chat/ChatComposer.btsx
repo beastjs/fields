@@ -33,7 +33,7 @@ setup
     return { picked, ...chatReferences(snapshot.project, picked, related) };
   };
   const form = useForm({ defaultValues: { prompt: '', includeFile: true }, onSubmit: async ({ value }) => {
-    if (chat.getSnapshot().busy || selection.current) return;
+    if (chat.getSnapshot().busy || chat.getSnapshot().memoryLoading || selection.current) return;
     const snapshot = session.getSnapshot();
     const active = snapshot.activeFile;
     const context = value.includeFile ? { file: active, source: snapshot.project.files[active] } : undefined;
@@ -134,4 +134,4 @@ form(className='shrink-0 border-t border-edge bg-editor p-3 chat-short:p-2' onSu
       elseif state.busy
         button(className={cn(roundButton, 'text-[10px]')} type='button' onClick={chat.stop} aria-label='Stop response') ■
       else
-        button(className={cn(roundButton, 'disabled:text-faint disabled:opacity-65')} type='submit' disabled={!prompt.state.value.trim()} aria-label='Send message') ↑
+        button(className={cn(roundButton, 'disabled:text-faint disabled:opacity-65')} type='submit' disabled={!prompt.state.value.trim() || state.memoryLoading} aria-label='Send message') ↑

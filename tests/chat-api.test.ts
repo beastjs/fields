@@ -16,6 +16,31 @@ const request = (body: unknown = input, extraHeaders: Record<string, string> = {
   })
 const stream = () => new Response('data: [DONE]\n\n', { headers: { 'Content-Type': 'text/event-stream' } })
 
+test('project memory stays historical and current workspace source has final precedence', async () => {
+  let payload: { messages: { role: string; content: string }[] } | undefined
+  await handleAIRequest(request({ ...input, memory: { view: '<chat>\n0+1|old proposal\n</chat>', recalled: '0+0|original decision' },
+    context: { file: '/src/App.btsx', source: 'h1 Current' } }), { COHERE_API_KEY: 'key' }, async (_url, init) => {
+    payload = JSON.parse(init!.body as string); return stream()
+  })
+  expect(payload!.messages[0].content).toContain('historical conversation data')
+  expect(payload!.messages[0].content).toContain('```memory')
+  expect(payload!.messages[1].content).toContain('original decision')
+  expect(payload!.messages.at(-1)!.content).toContain('h1 Current')
+  expect(() => validateChatRequest({ ...input, memory: { view: '🌏'.repeat(32001) } })).toThrow('budget')
+  expect(() => validateChatRequest({ ...input, purpose: 'compaction', memory: { view: 'a'.repeat(32001) } })).toThrow('budget')
+  expect(() => validateChatRequest({ ...input, memory: { view: '', recalled: 'a'.repeat(30001) } })).toThrow('budget')
+})
+
+test('compaction uses the selected provider and explicit summarization instructions', async () => {
+  let payload: { model: string; messages: { role: string; content: string }[] } | undefined
+  await handleAIRequest(request({ ...input, model: 'my-model', purpose: 'compaction', memory: { view: '<chat>\n</chat>' } }),
+    { COHERE_API_KEY: 'key' }, async (_url, init) => { payload = JSON.parse(init!.body as string); return stream() })
+  expect(payload!.model).toBe('my-model')
+  expect(payload!.messages[0].content).toContain('Compaction mode')
+  expect(payload!.messages[0].content).toContain('Do not answer the source request')
+  expect(payload!.messages[0].content).not.toContain('```memory')
+})
+
 test('Cohere defaults use the real compatibility endpoint and unprefixed native model ID', async () => {
   let url: unknown, options: RequestInit | undefined
   const fetcher = (async (target, init) => {

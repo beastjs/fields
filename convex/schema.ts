@@ -2,6 +2,7 @@ import { storeProductValidator, storeCartItemValidator, storeOrderValidator } fr
 import { v } from 'convex/values'
 import { defineSchema, defineTable } from 'convex/server'
 import { userValidator } from './users/v'
+import { memoryRecord, memoryState } from './memoryValidators'
 import {
   buildRunValidator,
   chatValidator,
@@ -19,6 +20,11 @@ import {
 } from './validators'
 
 export default defineSchema({
+  projectMemories: defineTable({ projectId: v.id('projects'), revision: v.number(), state: memoryState })
+    .index('by_projectId', ['projectId']),
+  projectMemoryRecords: defineTable({ projectId: v.id('projects'), key: v.string(), record: memoryRecord })
+    .index('by_projectId', ['projectId'])
+    .index('by_projectId_and_key', ['projectId', 'key']),
   storeDemoProducts: defineTable(storeProductValidator).index('by_sku', ['sku']),
   storeDemoCarts: defineTable({ token: v.string(), items: v.array(storeCartItemValidator), updatedAt: v.number() }).index('by_token', ['token']),
   storeDemoOrders: defineTable({ ...storeOrderValidator.fields, token: v.string(), requestId: v.string() })

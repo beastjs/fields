@@ -9,10 +9,11 @@
     "build": "bun run prepare:runtime && rsbuild build",
     "preview": "rsbuild preview",
     "typecheck": "bun run prepare:runtime && bun scripts/typecheck.ts && tsrx-tsc --noEmit -p tsconfig.tests.json",
-    "test": "bun run prepare:runtime && bun test tests",
+    "test": "bun run prepare:runtime && bun test ./tests",
+    "test:convex": "vitest run",
     "test:browser": "playwright test",
     "test:browser:hosted": "playwright test --config playwright.hosted.config.ts",
-    "check": "bun run typecheck && bun run test && bun run build",
+    "check": "bun run typecheck && bun run test && bun run test:convex && bun run build",
     "probe:isolation": "bun run prepare:runtime && bun scripts/probe-preview-isolation.mjs",
     "seed:presets": "bun run scripts/seed-presets.ts"
   },
@@ -20,7 +21,6 @@
     "@ai-sdk/openai-compatible": "3.0.67",
     "@ai-sdk/provider": "^4.0.26",
     "@ai-sdk/provider-utils": "^5.0.58",
-    "@beastjs/devtools": "^0.1.21",
     "@beastjs/metal-fx": "^2.0.1",
     "@beastjs/thinking-orbs": "^1.0.0",
     "@codemirror/commands": "6.11.1",
@@ -66,6 +66,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@beastjs/devtools": "^0.1.22",
     "@octanejs/rsbuild-plugin": "0.1.63",
     "@playwright/test": "1.64.0",
     "@rsbuild/core": "^2.2.12",
@@ -74,8 +75,11 @@
     "@tsrx/typescript-plugin": "0.6.3",
     "@types/bun": "1.4.2",
     "@types/node": "^26.6.5",
+    "convex-test": "^0.0.62",
     "esbuild": "0.28.2",
+    "fake-indexeddb": "^6.2.5",
     "tailwindcss": "^4.3.3",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.5"
   }
 }

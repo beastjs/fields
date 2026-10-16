@@ -3,6 +3,7 @@ import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import { handleAIRequest } from './chat-api'
 import { handleJevRequest } from './jev-api'
+import { MAX_CHAT_REQUEST_BYTES } from '../src/chat/contracts'
 
 /** Runs on both Rsbuild dev and preview servers. Never imported by the browser. */
 export function aiMiddleware(req: IncomingMessage, res: ServerResponse, next: () => void) {
@@ -20,7 +21,7 @@ export function aiMiddleware(req: IncomingMessage, res: ServerResponse, next: ()
     let size = 0
     for await (const chunk of req) {
       size += chunk.length
-      if (size > 256000) {
+      if (size > (route.startsWith('/api/ai/') ? MAX_CHAT_REQUEST_BYTES : 256000)) {
         res.writeHead(413, { 'Content-Type': 'application/json' })
         res.end('{"error":"Chat request is too large."}')
         return

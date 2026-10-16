@@ -98,13 +98,18 @@ while retaining the Vim preference, panel layout, and chat settings.
 
 **AI chat** defaults to Meta's `muse-spark-1.3-contributor` and also supports Cohere, OpenRouter, and a custom compatible endpoint, with
 optional active-file context and stop/retry controls. Provider/model settings
-are remembered; keys and conversations are not saved in browser storage.
+are remembered; API keys stay in the current tab. Conversation memory persists per project.
 
 For local chat, set `META_API_KEY` and `META_BASE_URL` (or `META_URL`) in `.env` and restart the dev or preview server.
 The base URL must be the OpenAI-compatible API root, including `/v1` when required; chat appends `/chat/completions`.
 The hosted editor needs the same variables as Worker secrets in `editor-host/`.
 `/api/ai/status` reports which server connections are configured without exposing credentials.
 Switching providers requires a model ID supported by that provider.
+
+Chat uses [Victral project memory](docs/project-memory.md): each cloud project has
+its own persistent summary tree and retrievable originals. **New chat** retains
+that project's memory; switching projects opens a separate instance. Guest memory
+persists locally in IndexedDB. Compaction uses the selected model and connection.
 
 The separate Convex agent action uses environment variables on the Convex deployment: `META_API_KEY`,
 `META_BASE_URL` (or `META_URL`), and optionally `META_MODEL` to override `muse-spark-1.3-contributor`.

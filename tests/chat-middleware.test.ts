@@ -47,6 +47,14 @@ test('local middleware forwards Meta credentials and both endpoint variable name
       expect(await response.text()).toContain('[DONE]')
     }
     expect(captured).toEqual(Array.from({ length: 2 }, () => ({ model: 'muse-spark-1.3-contributor', auth: 'Bearer test-meta-key', path: '/v1/chat/completions' })))
+    const large = await fetch(`${origin}/api/ai/chat`, {
+      method: 'POST', headers: { 'content-type': 'application/json', origin },
+      body: JSON.stringify({ ...defaultSettings, messages: [{ role: 'user', content: 'question '.repeat(2000) }],
+        memory: { view: 'm'.repeat(128000) }, context: { file: '/a.ts', source: 'a'.repeat(60000) },
+        references: [{ file: '/b.ts', source: 'b'.repeat(60000) }] })
+    })
+    expect(large.status).toBe(200)
+    expect(await large.text()).toContain('[DONE]')
   } finally {
     for (const name of names) {
       if (original[name] === undefined) delete process.env[name]

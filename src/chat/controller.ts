@@ -3,6 +3,7 @@ import type { FetchLike } from './contracts';
 import { MAX_PROJECT_PATHS, MAX_REFERENCE_CHARS, MAX_REFERENCES, type AIStatus, type ChatRequest, type ChatSettings, type ChatTurn, type FileContext } from './contracts';
 import { streamChat } from './transport';
 import { requestedFiles } from './context-request';
+import { ProjectMemory, requestedMemory } from './memory';
 
 export interface ChatMessage extends ChatTurn { reasoning?: string; context?: FileContext; references?: FileContext[]; attachments?: string[]; projectGeneration?: number; id: number; attempt?: number; model?: string; origin?: 'editor'; state?: 'complete' | 'streaming' | 'stopped' | 'error' }
 export interface ChatSnapshot {
@@ -12,6 +13,9 @@ export interface ChatSnapshot {
   error: string;
   status?: AIStatus;
   connectionError: string;
+  memoryLoading?: boolean;
+  memoryError?: string;
+  memoryCount?: number;
 }
 export class ChatController {
   private state: ChatSnapshot;
@@ -24,6 +28,7 @@ export class ChatController {
   private lastAttempt = 1;
   private lastOrigin?: 'editor';
   private disposed = false;
+  private memory?: ProjectMemory;
   constructor(settings: ChatSettings, private persist: (settings: ChatSettings) => void, private send: FetchLike = fetch,
     private workspace?: () => { files: Record<string, string>; generation: number; activeFile?: string }) {
     this.state = { settings, messages: [], busy: false, error: '', connectionError: '' };
@@ -50,13 +55,21 @@ export class ChatController {
     this.persist(settings);
     this.patch({ settings: { ...settings }, error: '' });
   };
+  setProjectMemory(memory?: ProjectMemory, loading = false, error = '') {
+    this.clear(); this.memory = memory;
+    this.patch({ memoryLoading: loading, memoryError: error, memoryCount: memory?.core.roots.length });
+  }
+  refreshMemoryStatus() {
+    this.patch({ memoryCount: this.memory?.core.roots.length, memoryError: this.memory?.error ?? this.state.memoryError });
+  }
   /**
    * `attempt` counts automatic fix-up rounds for one request, starting at 1.
    * `files` lists every current project path, so the model knows what exists beyond the attached sources.
    * `origin` keeps editor-triggered repairs visible in the log but out of later manual history.
    */
   async submit(prompt: string, context?: FileContext, projectGeneration?: number, references: FileContext[] = [], attempt = 1, files: string[] = [], origin?: 'editor') {
-    if (this.disposed || this.state.busy || !prompt.trim()) return;
+    if (this.disposed || this.state.busy || this.state.memoryLoading || !prompt.trim()) return;
+    if (!this.memory && this.state.memoryError) { this.patch({ error: this.state.memoryError }); return; }
     if (prompt.length > 32000) { this.patch({ error: 'Keep your message under 32,000 characters.' }); return; }
     if (context && context.source.length > 60000) { this.patch({ error: 'This file is too large to attach. Turn off active-file context or select a smaller file.' }); return; }
     if (references.length > MAX_REFERENCES) { this.patch({ error: `Include at most ${MAX_REFERENCES} other files.` }); return; }
@@ -74,7 +87,7 @@ export class ChatController {
       if (message.role === 'user') return !message.attempt;
       return message.attempt === 1 && !fileRecommendation(message.content, message.context, message.references)?.error;
     });
-    const request: ChatRequest = { ...settings, messages: history.slice(-30).map(({ role, content }) => ({ role, content })), context, references: references.length ? references : undefined, files: files.length ? files.slice(0, MAX_PROJECT_PATHS) : undefined };
+    const request: ChatRequest = { ...settings, messages: (this.memory ? [user] : history.slice(-30)).map(({ role, content }) => ({ role, content })), context, references: references.length ? references : undefined, files: files.length ? files.slice(0, MAX_PROJECT_PATHS) : undefined };
     this.lastRequest = request;
     this.lastGeneration = projectGeneration;
     this.lastAttempt = attempt;
@@ -84,15 +97,28 @@ export class ChatController {
   private async run(request: ChatRequest) {
     if (this.disposed) return;
     const abort = new AbortController(); this.abort = abort;
+    const memory = this.memory;
+    const memoryPrompt = request.messages.at(-1)!.content;
     const id = ++this.sequence;
     this.patch({ busy: true, error: '', messages: [...this.state.messages, { id, role: 'assistant', content: '', model: request.model, origin: this.lastOrigin, state: 'streaming', context: request.context ? { ...request.context } : undefined, references: request.references?.map(reference => ({ ...reference })), projectGeneration: this.lastGeneration, attempt: this.lastAttempt }] });
     const update = (patch: Partial<ChatMessage>) => this.patch({ messages: this.state.messages.map(message => message.id === id ? { ...message, ...patch } : message) });
     try {
+      if (memory && this.lastAttempt === 1 && this.lastOrigin !== 'editor') {
+        request = { ...request, memory: { view: await memory.prepare(abort.signal) } };
+      }
       for (let round = 0; ; round++) {
         let reply = '';
         await streamChat(request, content => { reply = content; if (this.abort === abort) update({ content }); }, abort.signal, this.send, reasoning => { if (this.abort === abort) update({ reasoning }); });
         abort.signal.throwIfAborted();
         if (this.abort !== abort) return;
+        const recalled = request.memory && requestedMemory(reply);
+        if (recalled && memory) {
+          if (round >= 8) throw new Error('The assistant could not finish retrieving project memory. Try a more focused request.');
+          const detail = memory.core.zoom(recalled.id, recalled.n, recalled.page);
+          request = { ...request, memory: { view: request.memory!.view, recalled: detail } };
+          update({ content: '', reasoning: undefined });
+          continue;
+        }
         const workspace = this.workspace?.();
         if (!workspace) break;
         const attached = [request.context, ...(request.references ?? [])].filter((file): file is FileContext => !!file);
@@ -132,7 +158,14 @@ export class ChatController {
         if (user) this.patch({ messages: this.state.messages.map(message => message.id === user.id
           ? { ...message, attachments: [context.file, ...references.map(file => file.file)] } : message) });
       }
-      if (this.abort === abort) update({ state: 'complete' });
+      if (this.abort === abort) {
+        const reply = this.state.messages.find(message => message.id === id)?.content ?? '';
+        if (memory && this.lastAttempt === 1 && this.lastOrigin !== 'editor' && !fileRecommendation(reply, request.context, request.references)?.error) {
+          await memory.append(memoryPrompt, reply);
+          this.refreshMemoryStatus();
+        }
+        if (this.abort === abort) update({ state: 'complete' });
+      }
     } catch (error) {
       if (this.abort !== abort) return;
       update({ state: abort.signal.aborted ? 'stopped' : 'error' });

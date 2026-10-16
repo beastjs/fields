@@ -1,5 +1,6 @@
 import { handleAIRequest } from '../../server/chat-api';
 import { handleJevRequest } from '../../server/jev-api';
+import { MAX_CHAT_REQUEST_BYTES } from '../../src/chat/contracts';
 
 /** The editor's server routes, which run as Rsbuild middleware locally (server/middleware.ts). */
 interface Env {
@@ -14,8 +15,6 @@ interface Env {
   TYPESAFE_API_KEY?: string;
 }
 
-/** Same bound as the Node middleware: chat requests carry project context, but never this much. */
-const MAX_BODY_BYTES = 256_000;
 const json = (body: unknown, status: number) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
 
@@ -23,13 +22,14 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const path = new URL(request.url).pathname;
     const jev = path.startsWith('/api/jev/');
+    const maxBodyBytes = jev ? 256_000 : MAX_CHAT_REQUEST_BYTES;
     if (!jev && !path.startsWith('/api/ai/')) return env.ASSETS.fetch(request);
 
     let routed = request;
     if (request.body) {
-      if (Number(request.headers.get('content-length')) > MAX_BODY_BYTES) return json({ error: 'Chat request is too large.' }, 413);
+      if (Number(request.headers.get('content-length')) > maxBodyBytes) return json({ error: 'Chat request is too large.' }, 413);
       const body = await request.arrayBuffer();
-      if (body.byteLength > MAX_BODY_BYTES) return json({ error: 'Chat request is too large.' }, 413);
+      if (body.byteLength > maxBodyBytes) return json({ error: 'Chat request is too large.' }, 413);
       routed = new Request(request, { body });
     }
     try {

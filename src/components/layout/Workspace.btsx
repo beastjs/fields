@@ -51,7 +51,7 @@ module
   const settleOnEnd: NonNullable<DragDropProviderProps['onDragEnd']> = event => setLift(event.operation.source?.element, null);
 
 component PaneContent
-  props { pane, session, layout, navigate }: WorkspaceProps & { pane: PaneId; navigate: NavigateToSource }
+  props { pane, session, layout, navigate, cloud }: WorkspaceProps & { pane: PaneId; navigate: NavigateToSource }
   if pane === 'files'
     FilesPane(session={session} layout={layout} navigate={navigate})
   elseif pane === 'editor'
@@ -61,9 +61,9 @@ component PaneContent
   elseif pane === 'output'
     OutputPane(session={session} layout={layout} navigate={navigate})
   else
-    ChatPane(layout={layout} session={session})
+    ChatPane(layout={layout} session={session} cloud={cloud})
 
-props { session, layout }: WorkspaceProps
+props { session, layout, cloud }: WorkspaceProps
 setup
   const [narrow, setNarrow] = useState(layout.narrow);
   const view = useSyncExternalStore(layout.subscribe, layout.getSnapshot);
@@ -112,7 +112,7 @@ section(className='workspace relative isolate min-w-0 min-h-0 overflow-hidden be
         ~ )
         each pane in carouselPanes key pane
           div(className='h-full w-full shrink-0 snap-center px-[3px] pb-[3px]' role='group' aria-roledescription='slide' aria-label={paneLabel(pane)})
-            PaneContent(pane={pane} session={session} layout={layout} navigate={navigate})
+            PaneContent(pane={pane} session={session} layout={layout} navigate={navigate} cloud={cloud})
       nav(className='flex shrink-0 items-center justify-center gap-1 bg-seam pt-1 pb-0.5' aria-label='Panes')
         each pane, index in carouselPanes key pane
           button(
@@ -151,7 +151,7 @@ section(className='workspace relative isolate min-w-0 min-h-0 overflow-hidden be
                     ~ })}
                     ~ )
                     span(className='absolute top-2 left-2 z-10 rounded-md bg-[#090909] px-2 py-1 text-[11px] leading-none tracking-[-0.01em] text-[#f7f7f4] shadow-[0_4px_12px_#0004]' hidden={!view.arranging} aria-hidden='true') #{paneLabel(pane)}
-                    PaneContent(pane={pane} session={session} layout={layout} navigate={navigate})
+                    PaneContent(pane={pane} session={session} layout={layout} navigate={navigate} cloud={cloud})
                   if index < view.order.length - 1
                     Separator(
                       ~ id={'resize-' + pane + '-' + renderedOrder[index + 1]}

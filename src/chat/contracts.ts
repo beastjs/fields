@@ -26,6 +26,8 @@ export const MAX_REFERENCES = 8
 export const MAX_REFERENCE_CHARS = 60000
 /** Every project path is listed so the model knows which files exist, including ones added since the chat began. */
 export const MAX_PROJECT_PATHS = 200
+/** Serialized memory, current source and request text together, in UTF-8. */
+export const MAX_CHAT_REQUEST_BYTES = 1_000_000
 export interface ChatRequest {
   provider: AIProvider
   model: string
@@ -35,6 +37,8 @@ export interface ChatRequest {
   context?: FileContext
   references?: FileContext[]
   files?: string[]
+  purpose?: 'compaction'
+  memory?: { view: string; recalled?: string }
 }
 export interface AIStatus {
   configured: Record<AIProvider, boolean>
