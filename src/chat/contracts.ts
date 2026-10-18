@@ -1,4 +1,4 @@
-export const DEFAULT_MODEL = 'muse-spark-1.3-contributor'
+export const DEFAULT_MODEL = 'muse-wonder-1.0'
 export type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
 export type AIProvider = 'cohere' | 'openrouter' | 'meta' | 'custom'
 export const providers = [
