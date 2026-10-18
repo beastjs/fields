@@ -110,6 +110,9 @@ Chat uses [Victral project memory](docs/project-memory.md): each cloud project h
 its own persistent summary tree and retrievable originals. **New chat** retains
 that project's memory; switching projects opens a separate instance. Guest memory
 persists locally in IndexedDB. Compaction uses the selected model and connection.
+The current conversation also survives refresh in this browser, scoped to the
+user and project. Restored replies are marked **HISTORY** for reading without
+reapplying old changes. **New chat** starts an empty conversation and keeps memory.
 
 The separate Convex agent action uses environment variables on the Convex deployment: `META_API_KEY`,
 `META_BASE_URL` (or `META_URL`), and optionally `META_MODEL` to override `muse-spark-1.3-contributor`.

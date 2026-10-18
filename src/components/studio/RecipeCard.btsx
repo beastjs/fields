@@ -1,38 +1,78 @@
-import { useState } from 'octane'
-import { Icon } from '@/lib/icons'
-import { cn } from '@/lib/utils'
-import type { PresetRecipe } from '../../playground/studio/presets'
+import type { PresetLookup, PresetRecipe } from '../../playground/studio/presets'
+import { sectionKind } from '../../playground/studio/kinds'
 import { plural } from './studio'
+import Wireframe from './Wireframe.btsx'
 
 module
   interface RecipeCardProps {
     recipe: PresetRecipe
+    presets: PresetLookup
+    index: number
     onRecipe: (recipe: PresetRecipe) => void
-    /** The page is still exactly this recipe; marked like a selected outline item. */
     selected?: boolean
-    /** The tighter card for the side panel's Recipes tab, which counts sections without naming the unit. */
-    compact?: boolean
   }
+  const palettes = [
+    { background: '#2439ed', paper: '#f5f3eb', ink: '#2439ed', accent: '#dfff79' },
+    { background: '#e9dfcf', paper: '#fcf8ef', ink: '#641f34', accent: '#cb6446' },
+    { background: '#455844', paper: '#f3ede1', ink: '#455844', accent: '#eed69d' },
+    { background: '#641f34', paper: '#f7e9df', ink: '#641f34', accent: '#ffb58d' }
+  ]
 
-props { recipe, onRecipe, selected = false, compact = false }: RecipeCardProps
+props { recipe, presets, index, onRecipe, selected = false }: RecipeCardProps
 setup
-  // Collapsed so the recipes scan as titles, like the section library's cards.
-  const [expanded, setExpanded] = useState(false);
+  const palette = palettes[index % palettes.length];
+  const sections = recipe.presetIds.map(id => presets.summary(id));
+  const tags = [...new Set(sections.flatMap(section => section ? [sectionKind(section.kind).label] : []))].slice(0, 3);
 
-// The card chrome sits on the wrapper so the description toggle can live beside, not inside, the main button.
-div(data-selected={selected} className={cn('rounded-[6px] border border-edge text-left transition-colors hover:bg-surface-hover data-pressed:bg-inset data-[selected=true]:border-brand/70 data-[selected=true]:bg-surface-hover', compact ? 'hover:border-edge-strong' : 'hover:border-brand')})
-  button(type='button' className={cn('flex w-full items-baseline justify-between gap-2 text-left bg-inset/20', compact ? 'px-2.5 pt-2 pb-0.5' : 'px-3 pt-3 pb-1')} aria-current={selected ? 'true' : undefined} onClick={() => onRecipe(recipe)})
-    span(className={cn('text-fg  capitalize', compact ? 'text-xs' : 'text-base')}) #{recipe.title}
-    span(className='font-code text-[9px] text-faint') #{compact ? recipe.presetIds.length : plural(recipe.presetIds.length, 'section')}
-  if recipe.description
-    button(
-      ~ type='button'
-      ~ aria-expanded={expanded}
-      ~ aria-label={(expanded ? 'Hide' : 'Show') + ' description of ' + recipe.title}
-      ~ className={cn('group/about flex w-full items-center gap-1 text-left text-base text-faint hover:text-fg-secondary', compact ? 'px-2.5 pb-1.5' : 'px-3 pb-2')}
-      ~ onClick={() => setExpanded(value => !value)}
-      ~ )
-      // Icon(name='chevron-down-tiny' className='size-3 shrink-0 -rotate-90 transition-transform group-aria-expanded/about:rotate-0')
-    //   span About
-    // if expanded
-    //   p(className={cn('text-[10px] leading-[1.5] text-dim', compact ? 'px-2.5 pb-2' : 'px-3 pb-3')}) #{recipe.description}
+article.recipe-card(data-selected={selected} aria-label={recipe.title})
+  button.recipe-art(type='button' aria-label={'Use recipe: ' + recipe.title} aria-pressed={selected} onClick={() => onRecipe(recipe)} style={{ background: palette.background, color: index % palettes.length === 1 ? palette.ink : palette.paper, '--recipe-paper': palette.paper, '--recipe-ink': palette.ink, '--recipe-accent': palette.accent }})
+    div.art-topline
+      span #{selected ? 'ON YOUR PAGE' : 'PAGE RECIPE'}
+      span #{String(index + 1).padStart(2, '0')}
+    div.page-model(aria-hidden='true')
+      div.model-bar
+        span
+        span
+        span
+      each section, position in sections.slice(0, 4) key position
+        div.model-section
+          Wireframe(rows={section?.wireframe ?? ['^ title', '^ long', '^ btn']} className='min-h-6')
+      if sections.length > 4
+        div.model-more +#{sections.length - 4} sections
+    span.art-open(aria-hidden='true') ↗
+  div.recipe-copy
+    div.title-line
+      h3 #{recipe.title}
+      span.section-count #{plural(recipe.presetIds.length, 'section')}
+    p.recipe-description #{recipe.description}
+    ul.recipe-tags(aria-label='Included sections')
+      each tag in tags key tag
+        li #{tag}
+    button.recipe-use(type='button' onClick={() => onRecipe(recipe)})
+      span #{selected ? 'Use recipe again' : 'Use recipe'}
+      span(aria-hidden='true') ↗
+
+style
+  .recipe-card { display: flex; flex-direction: column; min-width: 0; border: 1px solid var(--edge); border-radius: 14px; overflow: hidden; }
+  .recipe-card[data-selected=true] { border-color: var(--brand); box-shadow: 0 0 0 1px var(--brand); }
+  .recipe-art { position: relative; display: block; width: 100%; height: 260px; overflow: hidden; text-align: left; isolation: isolate; }
+  .recipe-art:focus-visible, .recipe-use:focus-visible { outline: 3px solid var(--brand); outline-offset: -4px; }
+  .art-topline { position: absolute; top: 18px; left: 18px; right: 18px; display: flex; justify-content: space-between; font: 8px 'IBM Plex Mono', monospace; letter-spacing: .08em; }
+  .page-model { position: absolute; top: 48px; left: 16%; width: 68%; padding: 10px; background: var(--recipe-paper); color: var(--recipe-ink); border-radius: 5px 5px 0 0; box-shadow: 8px 12px 0 #0002; transform: rotate(-5deg); transition: transform .35s; }
+  .recipe-art:hover .page-model { transform: rotate(0) translateY(-5px); }
+  .model-bar { display: flex; gap: 3px; border-bottom: 1px solid currentColor; padding-bottom: 7px; opacity: .5; }
+  .model-bar span { width: 3px; height: 3px; background: currentColor; border-radius: 50%; }
+  .model-section { padding: 8px 0; border-bottom: 1px solid color-mix(in srgb, currentColor 15%, transparent); }
+  .model-section:nth-child(3) { background: var(--recipe-accent); margin: 0 -4px; padding: 10px 4px; }
+  .model-more { padding-top: 7px; text-align: center; font: 7px 'IBM Plex Mono', monospace; }
+  .art-open { position: absolute; right: 16px; bottom: 14px; width: 25px; height: 25px; display: grid; place-items: center; border: 1px solid currentColor; border-radius: 50%; font-size: 15px; }
+  .recipe-copy { display: flex; flex: 1; flex-direction: column; padding: 18px; }
+  .title-line { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 10px; }
+  .title-line h3 { font-size: 18px; font-weight: 500; letter-spacing: -.035em; }
+  .section-count { flex-shrink: 0; font: 8px 'IBM Plex Mono', monospace; opacity: .5; }
+  .recipe-description { font-size: 11px; line-height: 1.75; opacity: .65; margin: 12px 0 16px; }
+  .recipe-tags { display: flex; flex-wrap: wrap; gap: 5px; list-style: none; padding: 0; margin: auto 0 18px; }
+  .recipe-tags li { border: 1px solid var(--edge); border-radius: 20px; padding: 5px 8px; font-size: 8px; }
+  .recipe-use { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; border: 1px solid var(--edge-strong); border-radius: 7px; padding: 10px 12px; font-size: 11px; transition: background .2s; }
+  .recipe-use:hover { background: var(--control); }
+  @media (prefers-reduced-motion: reduce) { .page-model, .recipe-use { transition: none; } }

@@ -5,6 +5,52 @@ import { addSection, planPageInstall } from '../src/playground/studio/page';
 import { builtInThemes, THEME_BASE } from '../src/playground/studio/themes';
 import { builtInPresets } from '../tests/built-in-presets';
 
+test('studio preview shows the current app without declared sections on desktop and mobile', async ({ page }) => {
+  const project = { ...helloWorld, files: {
+    ...helloWorld.files,
+    '/src/App.btsx': "import Counter from './Counter.btsx'\n\nmain\n  h1.current-app My current app\n  Counter\n",
+    '/src/style.css': 'h1.current-app { color: rgb(102, 51, 153); }\n',
+  } };
+  await page.addInitScript(({ key, project }) => localStorage.setItem(key, JSON.stringify(project)), { key: PROJECT_STORAGE_KEY, project });
+  await page.goto('/playground');
+  await page.getByRole('button', { name: 'Design Studio' }).click();
+  const draft = page.frameLocator('iframe[data-front="true"]');
+  await expect(draft.getByRole('heading', { name: 'My current app' })).toBeVisible();
+  await expect(draft.getByRole('heading', { name: 'My current app' })).toHaveCSS('color', 'rgb(102, 51, 153)');
+  await draft.getByRole('button', { name: 'Increase count' }).click();
+  await expect(draft.locator('strong.value')).toHaveText('1');
+
+  await page.setViewportSize({ width: 600, height: 900 });
+  await expect(draft.getByRole('heading', { name: 'My current app' })).toBeVisible();
+  await draft.getByRole('button', { name: 'Increase count' }).click();
+  await expect(draft.locator('strong.value')).toHaveText('1');
+});
+
+test('studio preview keeps app content around declared sections and after removing the last section', async ({ page }) => {
+  const project = { ...helloWorld, files: {
+    ...helloWorld.files,
+    '/src/App.btsx': "import Page from './Page.btsx'\nimport Counter from './Counter.btsx'\n\nmain\n  h1 My current app\n  Counter\n  Page\n  footer App footer\n",
+    '/src/Page.btsx': "import Hero from './sections/Hero.btsx'\n\ndiv(data-page='home')\n  Hero\n  p Custom page content\n",
+    '/src/sections/Hero.btsx': "section(data-section='hero')\n  h2 Existing hero\n",
+  } };
+  await page.addInitScript(({ key, project }) => localStorage.setItem(key, JSON.stringify(project)), { key: PROJECT_STORAGE_KEY, project });
+  await page.goto('/playground');
+  await page.getByRole('button', { name: 'Design Studio' }).click();
+  const studio = page.getByRole('dialog', { name: 'Design Studio' });
+  const draft = page.frameLocator('iframe[data-front="true"]');
+  await expect(draft.getByRole('heading', { name: 'Existing hero' })).toBeVisible();
+  await expect(draft.getByRole('heading', { name: 'My current app' })).toBeVisible();
+  await expect(draft.getByText('Custom page content')).toBeVisible();
+  await expect(draft.getByText('App footer')).toBeVisible();
+
+  await studio.getByRole('button', { name: 'Remove Hero', exact: true }).click();
+  await expect(draft.getByRole('heading', { name: 'Existing hero' })).toHaveCount(0);
+  await expect(draft.getByRole('heading', { name: 'My current app' })).toBeVisible();
+  await expect(draft.getByText('App footer')).toBeVisible();
+  await draft.getByRole('button', { name: 'Increase count' }).click();
+  await expect(draft.locator('strong.value')).toHaveText('1');
+});
+
 test('design studio composes a page from a recipe, swaps a design, installs it, and reads it back', async ({ page }) => {
   await page.goto('/playground');
   const errors: string[] = [];
@@ -18,9 +64,12 @@ test('design studio composes a page from a recipe, swaps a design, installs it, 
   await page.keyboard.press('Escape');
   await expect(studio).toBeVisible();
   const draft = page.frameLocator('iframe[data-front="true"]');
+  await expect(draft.getByRole('heading', { name: 'Hello, world.' })).toBeVisible();
 
-  await studio.getByRole('button', { name: /Pre-launch waitlist/ }).first().click();
-  const outline = studio.getByRole('complementary', { name: 'Page outline' });
+  await studio.getByRole('tab', { name: 'Recipes', exact: true }).click();
+  await studio.getByRole('button', { name: 'Use recipe: Pre-launch waitlist', exact: true }).click();
+  await studio.getByRole('tab', { name: 'Outline', exact: true }).click();
+  const outline = studio.getByRole('complementary', { name: 'Page outline, theme, recipes and Fullstack' });
   await expect(outline.getByRole('button', { name: /^0\d/ })).toHaveCount(6);
   await expect(draft.getByRole('heading', { name: 'The calm way to run your company' })).toBeVisible();
   await draft.getByLabel('Email address').fill('ada@example.com');

@@ -129,9 +129,9 @@ PaneSurface(layout={layout} pane='chat' label='AI chat' className='flex flex-col
         button(className='border-0 bg-none p-0 text-[10px] text-[#efa571] light:text-brand' type='button' hidden={connected} onClick={() => setSettingsOpen(true)}) Set up your connection ↗
     each message in state.messages key message.id
       ChatMessage(message={message} session={session} auto={isAutoApply} onAutoFailure={autoFix} haltReason={halted[message.id]})
-    if state.error || state.connectionError || state.memoryError
+    if state.error || state.connectionError || state.memoryError || state.historyError
       div(className='chat-error rounded-[5px] border border-[#755335] bg-surface-hover p-2.5 text-[10px] leading-[1.7] text-[#deb68a] light:border-notice-edge light:bg-notice-surface light:text-notice' role='alert')
-        p(className='mb-2') #{state.error || state.connectionError || state.memoryError}
+        p(className='mb-2') #{state.error || state.connectionError || state.memoryError || state.historyError}
         div(className='flex flex-wrap gap-1.5')
           button(className={errorButton} type='button' hidden={!state.connectionError} onClick={() => { void chat.checkConnection(); }}) Reconnect
           button(className={errorButton} type='button' hidden={!state.error || state.busy} onClick={chat.retry}) Retry response

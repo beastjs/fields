@@ -1,29 +1,88 @@
+import { useEffect, useRef } from 'octane'
 import { useField, useForm } from '@octanejs/tanstack-form'
-import { cn } from '@/lib/utils'
-import type { PresetRecipe } from '../../playground/studio/presets'
+import type { PresetLookup, PresetRecipe } from '../../playground/studio/presets'
 import RecipeCard from './RecipeCard.btsx'
 
 module
   interface Props {
     recipes: PresetRecipe[]
+    presets: PresetLookup
+    loading: boolean
     onRecipe: (recipe: PresetRecipe) => void
+    onBack: () => void
     active?: string
-    compact?: boolean
   }
 
-props { recipes, onRecipe, active, compact = false }: Props
+props { recipes, presets, loading, onRecipe, onBack, active }: Props
 setup
+  const backButton = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => { backButton.current?.focus(); }, []);
   const form = useForm({ defaultValues: { search: '' } });
   const search = useField({ form, name: 'search' });
   const words = search.state.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
   const matches = recipes.filter(recipe => words.every(word => `${recipe.title} ${recipe.description}`.toLowerCase().includes(word)));
 
-section(className={cn('flex min-h-0 w-full flex-col gap-3 text-left', compact ? 'flex-1' : 'max-w-2xl flex-1')} aria-label='Page recipes')
-  div(className='flex shrink-0 items-center gap-2 border-b border-panel-deep pb-1')
-    input(type='search' aria-label='Search recipes' placeholder='Search recipes…' value={search.state.value} onInput={event => search.handleChange(event.currentTarget.value)} onBlur={() => search.handleBlur()} className='h-9 min-w-0 flex-1 rounded-lg border border-edge-strong bg-panel px-3 text-[12px] text-fg outline-none placeholder:text-dim focus:border-brand')
-    span(className='shrink-0 font-code text-[10px] text-dim' role='status' aria-live='polite') #{matches.length} / #{recipes.length}
-  div(className={cn('grid min-h-0 content-start gap-2 overflow-y-auto overscroll-contain pr-1', !compact && 'sm:grid-cols-2')})
-    each recipe in matches key recipe.recipeId
-      RecipeCard(recipe={recipe} onRecipe={onRecipe} selected={recipe.recipeId === active} compact={compact})
-    empty
-      p(className='col-span-full py-6 text-center text-[12px] text-dim') No matching recipes. Try “product”, “studio”, or “minimal”.
+section.recipe-gallery(aria-label='Page recipes')
+  header.gallery-bar
+    button.gallery-back(ref={backButton} type='button' onClick={onBack}) ← Page designer
+    p Design Studio / Recipes
+    button.gallery-close(type='button' aria-label='Close Recipes gallery' onClick={onBack}) ×
+  div.gallery-scroll
+    div.gallery-intro
+      div
+        p.gallery-eyebrow A LITTLE STRUCTURE. A LOT OF POSSIBILITY.
+        h2 Find your starting point.
+          br
+          em Make it your own.
+      div.gallery-intro-note
+        span.gallery-asterisk(aria-hidden='true') ✳︎
+        p Thoughtful pages, already composed.
+          br
+          | Choose a recipe, then make every section yours.
+    div.gallery-search
+      input(type='search' aria-label='Search recipes' placeholder='Search recipes…' value={search.state.value} onInput={event => search.handleChange(event.currentTarget.value)} onBlur={() => search.handleBlur()})
+      span(role='status' aria-live='polite') #{loading ? 'Loading recipes…' : matches.length + ' / ' + recipes.length + ' RECIPES'}
+    div.recipe-grid
+      each recipe in matches key recipe.recipeId
+        RecipeCard(recipe={recipe} presets={presets} index={recipes.indexOf(recipe)} onRecipe={onRecipe} selected={recipe.recipeId === active})
+      empty
+        p.gallery-empty(role='status') #{loading ? 'Loading the recipe catalog…' : 'No matching recipes. Try “product”, “studio”, or “minimal”.'}
+    div.gallery-footnote
+      p Every recipe is a starting point. Swap, reorder, and style its sections in the page designer.
+      span #{recipes.length} RECIPES / ENDLESS DIRECTIONS
+
+style
+  .recipe-gallery { position: absolute; inset: 0; z-index: 30; display: flex; flex-direction: column; min-width: 0; background: var(--panel); color: var(--text); }
+  .gallery-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 28px; border-bottom: 1px solid var(--edge); }
+  .gallery-bar p, .gallery-back { font-size: 11px; }
+  .gallery-bar p { opacity: .5; }
+  .gallery-back:hover { color: var(--brand); }
+  .gallery-close { font-size: 26px; line-height: 1; padding: 2px 8px; }
+  .gallery-back:focus-visible, .gallery-close:focus-visible { outline: 3px solid var(--brand); outline-offset: 4px; }
+  .gallery-scroll { min-height: 0; overflow: auto; padding: 48px clamp(20px, 4vw, 64px) 28px; }
+  .gallery-intro { display: flex; justify-content: space-between; align-items: end; gap: 40px; max-width: 1440px; margin: 0 auto 36px; }
+  .gallery-eyebrow { font: 9px 'IBM Plex Mono', monospace; letter-spacing: .12em; opacity: .6; }
+  .gallery-intro h2 { font-size: clamp(36px, 4.2vw, 64px); font-weight: 500; letter-spacing: -.065em; line-height: 1.02; margin-top: 20px; }
+  .gallery-intro h2 em { font-family: Georgia, serif; font-weight: 400; }
+  .gallery-intro-note { max-width: 285px; }
+  .gallery-intro-note p { font-size: 12px; line-height: 1.8; margin: 12px 0 0; opacity: .7; }
+  .gallery-asterisk { color: var(--brand); font-size: 40px; line-height: 1; }
+  .gallery-search { display: flex; align-items: center; justify-content: space-between; gap: 16px; max-width: 1440px; margin: 0 auto 24px; }
+  .gallery-search input { width: min(100%, 360px); min-width: 0; border: 1px solid var(--edge-strong); border-radius: 7px; padding: 12px 14px; background: var(--panel); color: inherit; font-size: 12px; }
+  .gallery-search input:focus { outline: 2px solid var(--brand); outline-offset: 2px; }
+  .gallery-search span { flex-shrink: 0; font: 9px 'IBM Plex Mono', monospace; opacity: .6; }
+  .recipe-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; max-width: 1440px; margin: auto; }
+  .gallery-empty { grid-column: 1 / -1; padding: 48px 12px; text-align: center; font-size: 12px; opacity: .65; }
+  .gallery-footnote { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; max-width: 1440px; margin: 28px auto 0; font-size: 10px; opacity: .5; }
+  @media (max-width: 1023px) { .recipe-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 600px) {
+    .gallery-bar { padding: 14px 18px; }
+    .gallery-bar p { display: none; }
+    .gallery-scroll { padding: 28px 18px; }
+    .gallery-intro { display: block; margin-bottom: 24px; }
+    .gallery-intro-note { max-width: none; margin-top: 20px; }
+    .gallery-asterisk { display: none; }
+    .gallery-search { flex-wrap: wrap; gap: 12px; }
+    .gallery-search input { width: 100%; }
+    .recipe-grid { grid-template-columns: 1fr; }
+  }

@@ -205,16 +205,18 @@ export function blockSource(project: CompilationProject, block: PageBlock, prese
   return (block.presetId === undefined ? undefined : presets.source(block.presetId, block.overrides)) ?? file ?? ''
 }
 
-/** A minimal, self-contained project that renders the page exactly as it would be installed. */
+/** The current app with staged section changes, using the same wiring and styles as an install. */
 export function pagePreviewProject(project: CompilationProject, blocks: PageBlock[], presets: PresetLookup, inspectable = false): CompilationProject {
-  const files: Record<string, string> = {
-    '/src/main.ts': helloWorld.files['/src/main.ts'].replace("console.info('Hello from the preview.');\n", ''),
-    [STYLE_FILE]: STUDIO_STYLESHEET,
-    [APP_FILE]: PAGE_APP,
-    [PAGE_FILE]: composePage(blocks)
-  }
+  const current = readPage(project, presets)
+  // An app does not need a studio page to be previewable. In particular, opening the studio must not replace it.
+  if (!blocks.length && !current.length) return project
+  const install = planPageInstall(project, blocks, presets)
+  const files = { ...project.files, ...install.files }
+  for (const path of install.removes) delete files[path]
+  // Keep markup authored alongside the managed sections until the section list itself changes.
+  if (samePage(blocks, current) && project.files[PAGE_FILE] !== undefined) files[PAGE_FILE] = project.files[PAGE_FILE]
   for (const block of blocks) files[sectionFile(block.name)] = blockSource(project, block, presets, inspectable)
-  return { entry: helloWorld.entry, files }
+  return { ...project, files }
 }
 
 export interface PageInstall {

@@ -24,6 +24,7 @@ import { dialogPanel } from '../ui/styles'
 import SectionLibrary from './SectionLibrary.btsx'
 import StudioAside from './StudioAside.btsx'
 import FullstackBrowser from './FullstackBrowser.btsx'
+import RecipeBrowser from './RecipeBrowser.btsx'
 import StudioFooter from './StudioFooter.btsx'
 import StudioHeader from './StudioHeader.btsx'
 import StudioStage from './StudioStage.btsx'
@@ -99,11 +100,12 @@ setup
   const preview = useRef<TemplatePreview | null>(null);
   const pendingReveal = useRef<{ name: string; highlight: boolean } | undefined>(undefined);
   const [open, setOpen] = useState(false);
-  const [browsingApps, setBrowsingApps, getBrowsingApps] = useState(false);
+  const [browsing, setBrowsing, getBrowsing] = useState<'recipes' | 'fullstack' | undefined>(undefined);
   const backToDesigner = () => {
-    setBrowsingApps(false);
+    const source = getBrowsing();
+    setBrowsing(undefined);
     // The shell becomes interactive in the next commit; focus it after inert has been removed.
-    requestAnimationFrame(() => dialog.current?.querySelector<HTMLButtonElement>('[data-fullstack-trigger]')?.focus());
+    requestAnimationFrame(() => dialog.current?.querySelector<HTMLButtonElement>(`[data-${source}-trigger]`)?.focus());
   };
   /**
    * The project, and only while the studio is open.
@@ -244,7 +246,6 @@ setup
   }, [open, savedThemeId, generated, hunted, repainted, themeRows]);
   const pageTheme = themeById(themes, themeId);
   const paintStyle = paintOf(pageTheme);
-  const catalogLoading = open && catalog === undefined;
   // Composing and installing need every referenced tree and theme in hand; until then the studio waits rather than
   // writing a page with sections missing or replacing an applied theme with a loading fallback.
   const ready = open && themeRows !== undefined && presets.loaded(needed);
@@ -270,11 +271,10 @@ setup
   const mainClass = cn('flex min-h-0 min-w-0 flex-col bg-canvas', narrow ? 'order-1 h-[80dvh] shrink-0' : 'h-full');
   const targetOf = (kind: SectionKindId) => (focused?.kind === kind ? focused : blocks.find(block => block.kind === kind));
   const designLabel = (block: PageBlock) => (block.presetId === undefined ? undefined : presets.summary(block.presetId)?.title) ?? 'Edited in code';
-  const statusText = !blocks.length ? (catalogLoading ? 'Loading sections…' : 'Empty page')
-    : !ready ? 'Loading sections…'
+  const statusText = blocks.length && !ready ? 'Loading sections…'
     : status.state === 'compiling' ? 'Building preview…'
     : status.state === 'error' ? status.message
-    : focused ? sectionKind(focused.kind).label + ' · ' + designLabel(focused) : '';
+    : focused ? sectionKind(focused.kind).label + ' · ' + designLabel(focused) : 'Current app';
 
   const editedNodes = blocks.reduce((total, block) => total + overrideCount(block.overrides), 0);
   const clearDesign = () => setBlocks(blocks.map(block => ({ ...block, overrides: undefined })));
@@ -544,11 +544,11 @@ setup
       event.preventDefault();
       // Esc already reaches the dialog and is discarded. It steps back one mode at a time: Fine Layout first, then
       // the maximised preview. Esc pressed inside the preview frame arrives as a design `exit` event instead.
-      if (getBrowsingApps()) backToDesigner();
+      if (getBrowsing()) backToDesigner();
       else if (designingRef.current) exitDesigning();
       else if (maximizedRef.current) toggleMaximized();
     };
-    const onClose = () => { settleThemePreview(); setBrowsingApps(false); setOpen(false); session.setStudioThemePreview(undefined); };
+    const onClose = () => { settleThemePreview(); setBrowsing(undefined); setOpen(false); session.setStudioThemePreview(undefined); };
     element.addEventListener('cancel', onCancel);
     element.addEventListener('close', onClose);
     return () => { element.removeEventListener('cancel', onCancel); element.removeEventListener('close', onClose); settleThemePreview(); session.setStudioThemePreview(undefined); element.close(); };
@@ -566,7 +566,7 @@ setup
   }, [open, narrow]);
   // Rebuild shortly after the page settles, so a drag or a burst of clicks compiles once.
   useEffect(() => {
-    if (!open || !blocks.length || !ready) return;
+    if (!open || (blocks.length && !ready)) return;
     setStatus({ state: 'compiling' });
     const timer = setTimeout(() => {
       const focus = pendingReveal.current;
@@ -575,7 +575,7 @@ setup
       preview.current?.show(pagePreviewProject(project, blocks, presets, designing), index >= 0 ? { selector: blockSelector(index), highlight: focus!.highlight } : undefined);
     }, 140);
     return () => clearTimeout(timer);
-  }, [open, blocks, ready, designing, previewEpoch]);
+  }, [open, project, blocks, ready, presets, designing, previewEpoch]);
   useEffect(() => {
     if (!open || !stage.current) return;
     const observer = new ResizeObserver(([entry]) => {
@@ -632,7 +632,7 @@ fragment
   // No backdrop blur: the dialog covers nearly the whole window, and a blur over the live preview behind it is
   // recomputed every frame that preview animates.
   dialog(className={cn(dialogPanel, 'backdrop:backdrop-blur-none h-[min(920px,calc(100dvh-12px))] w-[min(1720px,calc(100vw-12px))] max-h-none overflow-hidden p-0 open:grid grid-rows-[auto_minmax(0,1fr)_auto] light:rounded-2xl')} ref={dialog} aria-labelledby='design-studio-title')
-    div(className='contents' inert={browsingApps} aria-hidden={browsingApps || undefined})
+    div(className='contents' inert={!!browsing} aria-hidden={!!browsing || undefined})
       StudioHeader(
         ~ width={width}
         ~ scale={scale}
@@ -677,11 +677,8 @@ fragment
             ~ codePath={codePath}
             ~ copied={copied}
             ~ onCopy={copyCode}
-            ~ status={{ text: statusText, state: blocks.length ? status.state : 'idle' }}
+            ~ status={{ text: statusText, state: status.state }}
             ~ empty={!blocks.length}
-            ~ catalogLoading={catalogLoading}
-            ~ recipes={recipes}
-            ~ onRecipe={startRecipe}
             ~ stage={stage}
             ~ frame={frame}
             ~ standby={standby}
@@ -698,17 +695,15 @@ fragment
                 ~ onEdit={applyEdit}
                 ~ )
           StudioAside(
-            ~ onBrowseFullstack={() => setBrowsingApps(true)}
+            ~ onBrowseFullstack={() => setBrowsing('fullstack')}
+            ~ onBrowseRecipes={() => setBrowsing('recipes')}
             ~ className={cn('order-1 max-h-[45dvh] shrink-0 border-b border-edge', !panels.aside && 'hidden')}
             ~ blocks={blocks}
             ~ presets={presets}
-            ~ recipes={recipes}
             ~ selected={focused?.name}
             ~ onSelect={select}
             ~ onReorder={next => setBlocks(next)}
             ~ onRemove={remove}
-            ~ onRecipe={startRecipe}
-            ~ activeRecipe={activeRecipe}
             ~ theme={pageTheme}
             ~ onPreviewTheme={previewGenerated}
             ~ )
@@ -737,11 +732,8 @@ fragment
                 ~ codePath={codePath}
                 ~ copied={copied}
                 ~ onCopy={copyCode}
-                ~ status={{ text: statusText, state: blocks.length ? status.state : 'idle' }}
+                ~ status={{ text: statusText, state: status.state }}
                 ~ empty={!blocks.length}
-                ~ catalogLoading={catalogLoading}
-                ~ recipes={recipes}
-                ~ onRecipe={startRecipe}
                 ~ stage={stage}
                 ~ frame={frame}
                 ~ standby={standby}
@@ -760,17 +752,15 @@ fragment
             Separator(className={panelSeparator} aria-label='Resize the outline and theme panel')
             Panel(id='aside' panelRef={asidePanel} defaultSize={PANEL_SIZES.aside.initial + 'px'} minSize={PANEL_SIZES.aside.min + 'px'} maxSize='40%' collapsible={true} collapsedSize={0} className='min-w-0 overflow-hidden')
               StudioAside(
-                ~ onBrowseFullstack={() => setBrowsingApps(true)}
+                ~ onBrowseFullstack={() => setBrowsing('fullstack')}
+                ~ onBrowseRecipes={() => setBrowsing('recipes')}
                 ~ className='h-full'
                 ~ blocks={blocks}
                 ~ presets={presets}
-                ~ recipes={recipes}
                 ~ selected={focused?.name}
                 ~ onSelect={select}
                 ~ onReorder={next => setBlocks(next)}
                 ~ onRemove={remove}
-                ~ onRecipe={startRecipe}
-                ~ activeRecipe={activeRecipe}
                 ~ theme={pageTheme}
                 ~ onPreviewTheme={previewGenerated}
                 ~ )
@@ -789,5 +779,7 @@ fragment
         ~ canApply={!!install && !upToDate}
         ~ onApply={apply}
         ~ )
-    if browsingApps
-      FullstackBrowser(session={session} onInstalled={() => { setBrowsingApps(false); closeFromButton(); }} onBack={backToDesigner} onClose={() => { setBrowsingApps(false); closeFromButton(); }})
+    if browsing === 'fullstack'
+      FullstackBrowser(session={session} onInstalled={() => { setBrowsing(undefined); closeFromButton(); }} onBack={backToDesigner})
+    if browsing === 'recipes'
+      RecipeBrowser(recipes={recipes} presets={presets} loading={recipeRows === undefined} active={activeRecipe} onRecipe={recipe => { startRecipe(recipe); backToDesigner(); }} onBack={backToDesigner})

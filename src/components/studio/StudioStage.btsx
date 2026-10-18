@@ -1,10 +1,7 @@
 import DesignInspector from './DesignInspector.btsx'
 import type { InspectorProps } from './DesignInspector.btsx'
 import type { OctaneNode, RefObject } from 'octane'
-import { Icon } from '@/lib/icons'
 import { sectionFile } from '../../playground/studio/page'
-import type { PresetRecipe } from '../../playground/studio/presets'
-import RecipeBrowser from './RecipeBrowser.btsx'
 import { fileLabel, type CodeFile, type StudioView } from './studio'
 import { cn } from '@/lib/utils';
 
@@ -23,9 +20,6 @@ module
     onCopy: () => void
     status: { text: string; state: string }
     empty: boolean
-    catalogLoading: boolean
-    recipes: PresetRecipe[]
-    onRecipe: (recipe: PresetRecipe) => void
     stage: RefObject<HTMLDivElement | null>
     frame: RefObject<HTMLIFrameElement | null>
     standby: RefObject<HTMLIFrameElement | null>
@@ -37,28 +31,9 @@ module
     children?: OctaneNode
   }
 
-  interface EmptyPageProps {
-    catalogLoading: boolean
-    recipes: PresetRecipe[]
-    onRecipe: (recipe: PresetRecipe) => void
-  }
-
   const frameClass = 'absolute top-0 left-0 m-0 origin-top-left rounded-[6px] border border-edge shadow-elevation data-[front=false]:pointer-events-none data-[front=false]:opacity-0'
 
-component EmptyPage
-  props { catalogLoading, recipes, onRecipe }: EmptyPageProps
-
-  div(className='absolute inset-0 flex flex-col items-center justify-center gap-5 rounded-[6px] border border-dashed border-edge-strong bg-canvas p-6 text-center')
-    Icon(name='design' className='size-7 shrink-0 text-brand')
-    div(className='shrink-0')
-      p(className='text-[15px] font-medium text-fg') Start with a recipe, or pick sections one by one
-      p(className='mt-1 text-[11px] text-dim') Every section is a real Beast component styled with Tailwind, and it follows your theme.
-    if catalogLoading
-      p(className='text-[11px] text-dim' role='status') Loading the section catalog…
-    else
-      RecipeBrowser(recipes={recipes} onRecipe={onRecipe})
-
-props { className, view, onView, focusedName, codeFile, onCodeFile, code, codePath, copied, onCopy, status, empty, catalogLoading, recipes, onRecipe, stage, frame, standby, stageSize, width, scale, inspector, children }: StageProps
+props { className, view, onView, focusedName, codeFile, onCodeFile, code, codePath, copied, onCopy, status, empty, stage, frame, standby, stageSize, width, scale, inspector, children }: StageProps
 setup
   // An identity transform would still promote the frame to its own layer, so it is left off at 100%.
   const frameStyle = stageSize.height
@@ -85,8 +60,6 @@ main(className={cn('@container/studio-stage bg-background', className)})
           iframe(ref={frame} style={frameStyle} className={frameClass})
           iframe(ref={standby} style={frameStyle} className={frameClass})
           | #{children}
-        if empty
-          EmptyPage(catalogLoading={catalogLoading} recipes={recipes} onRecipe={onRecipe})
       if view === 'code'
         pre(className='absolute inset-0 m-0 overflow-auto bg-inset p-4 font-code text-[11px]/[1.75] text-fg-secondary' aria-label={fileLabel(codePath)}) #{code}
     if inspector && view === 'preview'

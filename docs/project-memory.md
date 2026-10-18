@@ -8,15 +8,26 @@ checkout, filesystem storage, Effect 4 runtime, or terminal UI.
 
 Each signed-in **project ID** has one memory instance in Convex. Chats in that
 project share it. Switching projects cancels the current response, closes its
-compactor, clears the visible conversation, and opens the selected project's
-memory. Renaming a project or editing its files preserves the instance.
+compactor, and opens the selected project's memory and saved conversation.
+Renaming a project or editing its files preserves the instance.
 Signing out closes cloud memory. Guests use a separate IndexedDB record for the
 single local workspace; guest and cloud histories are never implicitly merged.
 Project exports and share links contain source only, without chat memory or keys.
 
 **New chat** clears the visible conversation and retains project memory.
-Reloading also starts a blank conversation while restoring stored memory;
-old edit proposals are not replayed into the editor. The status line reports
+Reloading restores the current conversation from a separate IndexedDB transcript,
+scoped to the signed-in user and project (or the guest workspace). It includes
+code proposals, attached source, reasoning, automatic repairs, and partial or
+failed replies. Restored replies are marked **HISTORY** and are read-only;
+old edit proposals are not replayed into the editor. Interrupted streams reopen
+as stopped. **New chat** also saves an empty transcript, so reloading keeps the
+new conversation empty. The full transcript is local to this browser; on first
+load without a transcript, retained project-memory originals recover older
+manual exchanges. Transcript storage failures appear in chat and preserve the
+last saved copy. Project switches detach the old transcript writer before
+clearing the view, and stale tabs cannot overwrite a newer saved transcript.
+
+The status line reports
 the number of stored message chunks. Only completed manual exchanges enter
 memory; intermediate file requests, automatic repairs, failed replies, and
 interrupted streams do not. Historical assistant changes are labeled as

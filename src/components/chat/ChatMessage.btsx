@@ -55,7 +55,7 @@ setup
   const autoApplied = useRef(false);
   useEffect(() => {
     if (!auto) { autoApplied.current = true; if (pendingAutomatic.current) pending.current?.abort(); return; }
-    if (!autoOnArrival.current || autoApplied.current) return;
+    if (message.restored || !autoOnArrival.current || autoApplied.current) return;
     if (message.state !== 'complete' || recommendation?.source === undefined || message.projectGeneration === undefined) return;
     autoApplied.current = true;
     void apply(true);
@@ -65,7 +65,7 @@ setup
   const errorReported = useRef(false);
   useEffect(() => {
     if (!auto) { errorReported.current = true; return; }
-    if (!autoOnArrival.current || errorReported.current || message.state !== 'complete' || !recommendation?.error) return;
+    if (message.restored || !autoOnArrival.current || errorReported.current || message.state !== 'complete' || !recommendation?.error) return;
     errorReported.current = true;
     onAutoFailure?.(message, recommendation.error);
   }, [auto, message.id, message.state, recommendation?.error]);
@@ -84,7 +84,7 @@ article(className={'chat-message mb-6 ' + message.role} data-message-state={mess
     if message.attempt && message.attempt > 1
       span(className={messageState}) #{'ATTEMPT ' + message.attempt + '/' + MAX_ATTEMPTS}
     if message.role === 'assistant'
-      span(className={messageState}) #{message.state === 'streaming' ? 'WORKING' : message.state === 'stopped' ? 'STOPPED' : message.state === 'error' ? 'INTERRUPTED' : recommendation ? (applyState === 'Applied · compiled · startup verified' ? 'VERIFIED' : applyError || recommendation.error || halt ? 'NEEDS REPAIR' : applyState ? 'VERIFYING' : 'PROPOSED') : 'DONE'}
+      span(className={messageState}) #{message.restored ? 'HISTORY' : message.state === 'streaming' ? 'WORKING' : message.state === 'stopped' ? 'STOPPED' : message.state === 'error' ? 'INTERRUPTED' : recommendation ? (applyState === 'Applied · compiled · startup verified' ? 'VERIFIED' : applyError || recommendation.error || halt ? 'NEEDS REPAIR' : applyState ? 'VERIFYING' : 'PROPOSED') : 'DONE'}
   if message.role === 'user'
     fragment
       p(className='m-0 whitespace-pre-wrap text-[11px] leading-[1.8] text-fg-secondary [overflow-wrap:anywhere]') #{message.content}

@@ -5,7 +5,7 @@ import { streamChat } from './transport';
 import { requestedFiles } from './context-request';
 import { ProjectMemory, requestedMemory } from './memory';
 
-export interface ChatMessage extends ChatTurn { reasoning?: string; context?: FileContext; references?: FileContext[]; attachments?: string[]; projectGeneration?: number; id: number; attempt?: number; model?: string; origin?: 'editor'; state?: 'complete' | 'streaming' | 'stopped' | 'error' }
+export interface ChatMessage extends ChatTurn { reasoning?: string; context?: FileContext; references?: FileContext[]; attachments?: string[]; projectGeneration?: number; restored?: boolean; id: number; attempt?: number; model?: string; origin?: 'editor'; state?: 'complete' | 'streaming' | 'stopped' | 'error' }
 export interface ChatSnapshot {
   settings: ChatSettings;
   messages: ChatMessage[];
@@ -16,6 +16,7 @@ export interface ChatSnapshot {
   memoryLoading?: boolean;
   memoryError?: string;
   memoryCount?: number;
+  historyError?: string;
 }
 export class ChatController {
   private state: ChatSnapshot;
@@ -29,6 +30,7 @@ export class ChatController {
   private lastOrigin?: 'editor';
   private disposed = false;
   private memory?: ProjectMemory;
+  private persistConversation?: (messages: ChatMessage[]) => Promise<void>;
   constructor(settings: ChatSettings, private persist: (settings: ChatSettings) => void, private send: FetchLike = fetch,
     private workspace?: () => { files: Record<string, string>; generation: number; activeFile?: string }) {
     this.state = { settings, messages: [], busy: false, error: '', connectionError: '' };
@@ -38,6 +40,12 @@ export class ChatController {
   private patch(patch: Partial<ChatSnapshot>) {
     if (this.disposed) return;
     this.state = { ...this.state, ...patch };
+    if (patch.messages && this.persistConversation) {
+      const persist = this.persistConversation;
+      void persist(patch.messages).catch(error => {
+        if (this.persistConversation === persist) this.patch({ historyError: error instanceof Error ? error.message : 'Conversation history could not be saved. Check browser storage and reload.' });
+      });
+    }
     for (const listener of this.listeners) listener();
   }
   async checkConnection() {
@@ -56,8 +64,17 @@ export class ChatController {
     this.patch({ settings: { ...settings }, error: '' });
   };
   setProjectMemory(memory?: ProjectMemory, loading = false, error = '') {
+    // Detach the previous project's writer before clearing its visible messages.
+    this.persistConversation = undefined;
     this.clear(); this.memory = memory;
-    this.patch({ memoryLoading: loading, memoryError: error, memoryCount: memory?.core.roots.length });
+    this.patch({ memoryLoading: loading, memoryError: error, memoryCount: memory?.core.roots.length, historyError: '' });
+  }
+  restoreConversation(messages: ChatMessage[], persist?: (messages: ChatMessage[]) => Promise<void>, error = '') {
+    this.persistConversation = persist;
+    const restored = messages.map(message => ({ ...message, restored: true, projectGeneration: undefined,
+      state: message.state === 'streaming' ? 'stopped' as const : message.state }));
+    this.sequence = restored.reduce((sequence, message) => Math.max(sequence, message.id), this.sequence);
+    this.patch({ messages: restored, historyError: error });
   }
   refreshMemoryStatus() {
     this.patch({ memoryCount: this.memory?.core.roots.length, memoryError: this.memory?.error ?? this.state.memoryError });

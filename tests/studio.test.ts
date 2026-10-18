@@ -79,6 +79,62 @@ test('search matches kinds, keywords, and template text', () => {
   expect(searchTemplates('zzz')).toEqual([]);
 });
 
+test('a studio preview with no sections shows the current app unchanged', async () => {
+  const project = { entry: '/src/start.ts', files: {
+    '/src/start.ts': helloWorld.files[helloWorld.entry].replace('./style.css', './custom.css'),
+    '/src/App.btsx': "import Counter from './Counter.btsx'\n\nmain\n  h1 My current app\n  Counter\n",
+    '/src/Counter.btsx': helloWorld.files['/src/Counter.btsx'],
+    '/src/custom.css': 'h1 { color: rebeccapurple; }\n',
+  } };
+  const preview = pagePreviewProject(project, [], presets);
+  expect(preview).toEqual(project);
+  expect((await compileProject(preview)).diagnostics).toEqual([]);
+});
+
+test('staged sections preview inside the current app with its entry, components, and styles', async () => {
+  const project = { entry: '/src/start.ts', files: {
+    '/src/start.ts': helloWorld.files[helloWorld.entry].replace('./style.css', './custom.css'),
+    '/src/App.btsx': "import Counter from './Counter.btsx'\n\nmain\n  h1 My current app\n  Counter\n",
+    '/src/Counter.btsx': helloWorld.files['/src/Counter.btsx'],
+    '/src/custom.css': '@import "tailwindcss";\nh1 { color: rebeccapurple; }\n',
+  } };
+  const before = structuredClone(project);
+  const blocks = addSection([], 'hero-centered', presets).blocks;
+  const preview = pagePreviewProject(project, blocks, presets);
+  expect(preview.entry).toBe(project.entry);
+  expect(preview.files['/src/App.btsx']).toContain('Page\nmain\n  h1 My current app\n  Counter');
+  expect(preview.files['/src/Counter.btsx']).toBe(project.files['/src/Counter.btsx']);
+  expect(preview.files['/src/custom.css']).toContain(project.files['/src/custom.css']);
+  expect(preview.files['/src/start.ts']).toBe(project.files['/src/start.ts']);
+  expect((await compileProject(preview)).diagnostics).toEqual([]);
+  expect(project).toEqual(before);
+});
+
+test('previewing existing sections retains markup authored alongside them', async () => {
+  const blocks = addSection([], 'hero-centered', presets).blocks;
+  const install = planPageInstall(helloWorld, blocks, presets);
+  const project = withFiles(helloWorld, install.files, install.removes);
+  project.files['/src/Page.btsx'] += '  p Hand-written page content\n';
+  project.files['/src/App.btsx'] += 'footer My app footer\n';
+  const preview = pagePreviewProject(project, readPage(project, presets), presets, true);
+  expect(preview.files['/src/Page.btsx']).toBe(project.files['/src/Page.btsx']);
+  expect(preview.files['/src/App.btsx']).toBe(project.files['/src/App.btsx']);
+  expect(preview.files[sectionFile('Hero')]).toContain('data-node');
+  expect((await compileProject(preview)).diagnostics).toEqual([]);
+});
+
+test('removing the final staged section keeps the surrounding app in the preview', async () => {
+  const app = withFiles(helloWorld, { '/src/App.btsx': 'h1 Keep this app\n' });
+  const blocks = addSection([], 'hero-centered', presets).blocks;
+  const install = planPageInstall(app, blocks, presets);
+  const project = withFiles(app, install.files, install.removes);
+  const preview = pagePreviewProject(project, [], presets);
+  expect(preview.files['/src/App.btsx']).toContain('h1 Keep this app');
+  expect(preview.files['/src/Page.btsx']).not.toContain('  Hero');
+  expect(preview.files).not.toHaveProperty(sectionFile('Hero'));
+  expect((await compileProject(preview)).diagnostics).toEqual([]);
+});
+
 test('every recipe is distinct and compiles as a complete installable page', async () => {
   await init();
   expect(new Set(pageRecipes.map(recipe => recipe.id)).size).toBe(pageRecipes.length);

@@ -7,6 +7,7 @@ import type { ChatController } from './controller'
 import { ProjectMemory, type MemoryRepository, type MemoryRoot, type MemorySnapshot, type MemoryUpdate } from './memory'
 import { BrowserMemoryRepository } from './memory-storage'
 import { createMemoryCompactor } from './memory-compactor'
+import { BrowserConversationRepository, conversationFromMemory, conversationWriter } from './history'
 
 const get = 'projectMemory:get' as unknown as typeof api.projectMemory.get
 const list = 'projectMemory:listRecords' as unknown as typeof api.projectMemory.listRecords
@@ -63,11 +64,21 @@ export function connectProjectMemory(chat: ChatController, cloud: CloudProjectCo
     const repository = auth.isAuthenticated && project.activeProjectId
       ? new CloudMemoryRepository(project.activeProjectId)
       : new BrowserMemoryRepository(key)
-    void ProjectMemory.open(repository, createMemoryCompactor(() => chat.getSnapshot().settings), () => chat.refreshMemoryStatus())
-      .then(memory => {
-        if (disposed || ticket !== operation) { memory.close(); return }
-        current = memory; chat.setProjectMemory(memory)
-      }).catch(error => { if (!disposed && ticket === operation) chat.setProjectMemory(undefined, false, error instanceof Error ? error.message : 'Project memory could not be loaded.') })
+    const history = new BrowserConversationRepository(key)
+    void Promise.allSettled([
+      ProjectMemory.open(repository, createMemoryCompactor(() => chat.getSnapshot().settings), () => chat.refreshMemoryStatus()),
+      history.load()
+    ]).then(([memory, conversation]) => {
+      if (disposed || ticket !== operation) { if (memory.status === 'fulfilled') memory.value.close(); return }
+      current = memory.status === 'fulfilled' ? memory.value : undefined
+      chat.setProjectMemory(current, false, memory.status === 'rejected'
+        ? memory.reason instanceof Error ? memory.reason.message : 'Project memory could not be loaded.' : '')
+      chat.restoreConversation(
+        conversation.status === 'fulfilled' && conversation.value !== null ? conversation.value : conversationFromMemory(current?.core.roots ?? []),
+        conversation.status === 'fulfilled' ? conversationWriter(history) : undefined,
+        conversation.status === 'rejected' ? 'Conversation history could not be loaded. Existing saved history has been kept.' : ''
+      )
+    })
   }
   const uncloud = cloud.subscribe(change), unauth = subscribeToConvexAuthState(change)
   change()
