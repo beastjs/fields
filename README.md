@@ -1,8 +1,10 @@
-# Beast Playground
+# Fields
 
 A browser IDE that runs the **actual Beast → Octane → Web pipeline** in a worker.
 The initial Hello World vertical slice from [MASTER_PLAN.md](MASTER_PLAN.md) is
 implemented. The host also uses Beast, Octane, Rsbuild, and Tailwind.
+
+![Mural](public/fields-ss.png)
 
 ## Run locally
 
